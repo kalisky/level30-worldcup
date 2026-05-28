@@ -83,6 +83,35 @@ export default async function MatchPage(props: {
           {match.status === "final" && (
             <p className="mt-2 text-center text-sm text-zinc-500">Final</p>
           )}
+
+          {hasDirectionOdds && (
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <div className="rounded-xl bg-zinc-100 px-3 py-2 text-center dark:bg-zinc-800">
+                <div className="text-xs uppercase tracking-wide text-zinc-500">
+                  {match.homeTeam}
+                </div>
+                <div className="font-mono text-lg font-semibold">
+                  {oddsHome.toFixed(2)}x
+                </div>
+              </div>
+              <div className="rounded-xl bg-zinc-100 px-3 py-2 text-center dark:bg-zinc-800">
+                <div className="text-xs uppercase tracking-wide text-zinc-500">
+                  Draw
+                </div>
+                <div className="font-mono text-lg font-semibold">
+                  {oddsDraw.toFixed(2)}x
+                </div>
+              </div>
+              <div className="rounded-xl bg-zinc-100 px-3 py-2 text-center dark:bg-zinc-800">
+                <div className="text-xs uppercase tracking-wide text-zinc-500">
+                  {match.awayTeam}
+                </div>
+                <div className="font-mono text-lg font-semibold">
+                  {oddsAway.toFixed(2)}x
+                </div>
+              </div>
+            </div>
+          )}
         </section>
 
         {myBet ? (

@@ -19,7 +19,7 @@ export default async function DashboardPage(props: {
 
   const [members, upcoming, customBets, myBets] = await Promise.all([
     getRoomUsers(room.id),
-    listUpcomingMatches(8),
+    listUpcomingMatches(100),
     listOpenCustomBets(room.id, 10),
     getMyMatchBets(room.id, user.id),
   ]);

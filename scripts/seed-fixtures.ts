@@ -1,4 +1,7 @@
-import "dotenv/config";
+import { config } from "dotenv";
+config({ path: ".env.local" });
+config();
+
 import { db } from "../lib/db";
 import { matches } from "../lib/db/schema";
 import { buildGroupStageFixtures } from "../lib/fixtures";

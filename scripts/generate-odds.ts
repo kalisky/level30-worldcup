@@ -1,4 +1,7 @@
-import "dotenv/config";
+import { config } from "dotenv";
+config({ path: ".env.local" });
+config();
+
 import { isNull, or, eq } from "drizzle-orm";
 import { db } from "../lib/db";
 import { matches, type ScoreOddsCache } from "../lib/db/schema";

@@ -12,6 +12,8 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "seed": "tsx scripts/seed-fixtures.ts",
+    "fixtures:fetch-real": "tsx scripts/fetch-real-fixtures.ts",
+    "odds:compute": "tsx scripts/compute-odds.ts",
     "odds:generate": "tsx scripts/generate-odds.ts"
   },
   "dependencies": {

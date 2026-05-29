@@ -54,7 +54,6 @@ export default function Home() {
             </button>
           </form>
         </section>
-
         <footer className="mt-12 text-center text-xs text-zinc-500">
           Tournament kicks off June 11, 2026.
         </footer>

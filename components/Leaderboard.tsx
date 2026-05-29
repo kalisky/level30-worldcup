@@ -1,5 +1,11 @@
 import type { User } from "@/lib/db/schema";
 
+const podiumStyles = [
+  "border-l-4 border-[#EAB308] bg-[#FFF9DB]",
+  "border-l-4 border-slate-400 bg-slate-100",
+  "border-l-4 border-[#C2410C] bg-[#FFF1E8]",
+];
+
 export default function Leaderboard({
   users,
   meId,
@@ -8,31 +14,60 @@ export default function Leaderboard({
   meId: string;
 }) {
   return (
-    <section className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+    <section className="rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.08)]">
+      <h2 className="mb-4 text-[0.72rem] font-bold uppercase tracking-[0.28em] text-slate-500">
         Leaderboard
       </h2>
-      <ol className="space-y-1.5">
+      <ol className="space-y-2">
         {users.map((u, i) => (
           <li
             key={u.id}
             className={
-              "flex items-center justify-between rounded-lg px-3 py-2 " +
+              "flex items-center justify-between rounded-[22px] border px-4 py-3 " +
               (u.id === meId
-                ? "bg-amber-50 dark:bg-amber-900/20"
-                : "bg-zinc-50 dark:bg-zinc-800/50")
+                ? "border-[#BFDBFE] bg-[#EFF6FF] shadow-[0_10px_24px_rgba(59,130,246,0.12)]"
+                : i < 3
+                  ? `border-transparent ${podiumStyles[i]}`
+                  : "border-[#e4edf7] bg-[#F8FBFF]"
+              )
             }
           >
-            <span className="flex items-center gap-2.5">
-              <span className="w-5 text-right font-mono text-sm text-zinc-500">
-                {i + 1}.
+            <span className="flex items-center gap-3">
+              <span
+                className={
+                  "inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-black " +
+                  (i === 0
+                    ? "bg-[#FDE68A] text-[#92400E]"
+                    : i === 1
+                      ? "bg-slate-200 text-slate-700"
+                      : i === 2
+                        ? "bg-[#FED7AA] text-[#9A3412]"
+                        : u.id === meId
+                          ? "bg-[#DBEAFE] text-[#1D4ED8]"
+                          : "bg-white text-slate-500 ring-1 ring-[#dbe5f2]")
+                }
+              >
+                {i < 3 ? ["1", "2", "3"][i] : i + 1}
               </span>
-              <span className="font-medium">{u.name}</span>
-              {u.id === meId && (
-                <span className="text-xs text-zinc-500">(you)</span>
-              )}
+              <span>
+                <span className="block text-base font-bold text-[#1E3A8A]">
+                  {u.name}
+                </span>
+                {u.id === meId && (
+                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#1D4ED8]">
+                    You
+                  </span>
+                )}
+              </span>
             </span>
-            <span className="font-mono text-sm">{u.chips}</span>
+            <span className="text-right">
+              <span className="block font-mono text-xl font-black text-[#1E3A8A]">
+                {u.chips}
+              </span>
+              <span className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                chips
+              </span>
+            </span>
           </li>
         ))}
       </ol>

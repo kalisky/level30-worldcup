@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import AppHeader from "@/components/AppHeader";
 
 export const metadata: Metadata = {
   title: "Rules | World Cup Bets",
@@ -21,41 +22,48 @@ const rules = [
 
 export default function RulesPage() {
   return (
-    <main className="flex flex-1 justify-center px-6 py-12">
-      <div className="w-full max-w-2xl">
-        <div className="mb-6">
-          <Link
-            href="/"
-            className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-          >
-            ← Back
-          </Link>
-        </div>
-
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Rules</h1>
-          <p className="mt-2 max-w-xl text-zinc-600 dark:text-zinc-400">
-            Short version: predict matches better than your friends and finish
-            with the most chips.
-          </p>
-        </header>
-
-        <ol className="space-y-3">
-          {rules.map((rule, index) => (
-            <li
-              key={rule}
-              className="flex gap-4 rounded-2xl border border-zinc-200 bg-white px-4 py-4 dark:border-zinc-800 dark:bg-zinc-900"
+    <>
+      <AppHeader />
+      <main className="flex flex-1 justify-center px-6 py-12">
+        <div className="w-full max-w-3xl rounded-[32px] border border-[#dbe5f2] bg-white p-8 shadow-[0_24px_70px_rgba(30,58,138,0.10)]">
+          <div className="mb-6">
+            <Link
+              href="/"
+              className="text-sm font-semibold text-slate-500 transition hover:text-[#1E3A8A]"
             >
-              <span className="mt-0.5 w-7 shrink-0 rounded-full bg-zinc-100 text-center font-mono text-sm leading-7 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                {index + 1}
-              </span>
-              <p className="text-sm leading-6 text-zinc-700 dark:text-zinc-300">
-                {rule}
-              </p>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </main>
+              ← Back
+            </Link>
+          </div>
+
+          <header className="mb-8">
+            <div className="inline-flex rounded-full bg-[#FFF1E8] px-3 py-1 text-[0.7rem] font-bold uppercase tracking-[0.24em] text-[#EA580C]">
+              Quick rules
+            </div>
+            <h1 className="mt-4 text-4xl font-black tracking-tight text-[#1E3A8A]">
+              Rules
+            </h1>
+            <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
+              Short version: predict matches better than your friends, manage
+              your chips well, and finish the tournament at the top of the
+              board.
+            </p>
+          </header>
+
+          <ol className="space-y-3">
+            {rules.map((rule, index) => (
+              <li
+                key={rule}
+                className="flex gap-4 rounded-[24px] border border-[#dbe5f2] bg-[#F8FBFF] px-5 py-4"
+              >
+                <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#1E3A8A_0%,#3B82F6_100%)] text-sm font-black text-white shadow-[0_8px_20px_rgba(30,58,138,0.25)]">
+                  {index + 1}
+                </span>
+                <p className="text-sm leading-7 text-slate-700">{rule}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </main>
+    </>
   );
 }

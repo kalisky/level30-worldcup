@@ -87,8 +87,8 @@ export default function SettleMatchForm({
   const isFinal = match.status === "final";
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="flex items-center justify-between text-xs text-zinc-500">
+    <div className="rounded-[26px] border border-[#dbe5f2] bg-white p-4 shadow-[0_14px_32px_rgba(30,58,138,0.07)]">
+      <div className="flex items-center justify-between text-[0.72rem] font-semibold uppercase tracking-[0.22em] text-slate-500">
         <span>Group {match.groupLabel}</span>
         <span>{new Date(match.kickoff).toLocaleString()}</span>
       </div>
@@ -98,23 +98,23 @@ export default function SettleMatchForm({
           type="text"
           value={homeTeam}
           onChange={(e) => setHomeTeam(e.target.value)}
-          className="w-full rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+          className="w-full rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-sm font-semibold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
         />
-        <span className="text-zinc-400">vs</span>
+        <span className="font-bold text-slate-400">vs</span>
         <input
           type="text"
           value={awayTeam}
           onChange={(e) => setAwayTeam(e.target.value)}
-          className="w-full rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+          className="w-full rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-sm font-semibold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
         />
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
         <button
           type="button"
           onClick={submitRename}
           disabled={pending || (homeTeam === match.homeTeam && awayTeam === match.awayTeam)}
-          className="rounded border border-zinc-300 px-2 py-1 disabled:opacity-50 dark:border-zinc-700"
+          className="rounded-full border border-[#cdd9ea] px-3 py-1.5 font-semibold text-slate-600 transition hover:border-[#3B82F6] hover:bg-[#F8FBFF] disabled:opacity-50"
         >
           Save names
         </button>
@@ -122,12 +122,12 @@ export default function SettleMatchForm({
           type="button"
           onClick={submitOdds}
           disabled={pending || isFinal}
-          className="rounded border border-zinc-300 px-2 py-1 disabled:opacity-50 dark:border-zinc-700"
+          className="rounded-full border border-[#cdd9ea] px-3 py-1.5 font-semibold text-slate-600 transition hover:border-[#3B82F6] hover:bg-[#F8FBFF] disabled:opacity-50"
         >
           {match.oddsHome ? "Regenerate odds" : "Generate odds"}
         </button>
         {match.oddsHome && (
-          <span className="font-mono text-zinc-500">
+          <span className="font-mono font-semibold text-slate-500">
             H {Number(match.oddsHome).toFixed(2)} / D {Number(match.oddsDraw).toFixed(2)} / A{" "}
             {Number(match.oddsAway).toFixed(2)}
           </span>
@@ -135,14 +135,14 @@ export default function SettleMatchForm({
       </div>
 
       <div className="mt-3 flex items-center gap-2">
-        <span className="text-sm text-zinc-500">Final score:</span>
+        <span className="text-sm font-semibold text-slate-600">Final score:</span>
         <input
           type="number"
           min={0}
           max={99}
           value={homeScore}
           onChange={(e) => setHomeScore(Number(e.target.value))}
-          className="w-14 rounded border border-zinc-300 px-2 py-1 text-right font-mono dark:border-zinc-700 dark:bg-zinc-950"
+          className="w-14 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-2 py-2 text-right font-mono font-bold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
           disabled={isFinal}
         />
         <span>:</span>
@@ -152,11 +152,11 @@ export default function SettleMatchForm({
           max={99}
           value={awayScore}
           onChange={(e) => setAwayScore(Number(e.target.value))}
-          className="w-14 rounded border border-zinc-300 px-2 py-1 text-right font-mono dark:border-zinc-700 dark:bg-zinc-950"
+          className="w-14 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-2 py-2 text-right font-mono font-bold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
           disabled={isFinal}
         />
         {isFinal ? (
-          <span className="ml-auto rounded bg-zinc-200 px-2 py-0.5 text-xs dark:bg-zinc-700">
+          <span className="ml-auto rounded-full bg-slate-200 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-700">
             FINAL
           </span>
         ) : (
@@ -166,7 +166,7 @@ export default function SettleMatchForm({
               onClick={submitSuggest}
               disabled={pending}
               title="Use AI + web search to look up the score"
-              className="rounded border border-zinc-300 px-3 py-1 text-sm hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+              className="rounded-full border border-[#cdd9ea] px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-[#3B82F6] hover:bg-[#F8FBFF] disabled:opacity-50"
             >
               Suggest with AI
             </button>
@@ -174,7 +174,7 @@ export default function SettleMatchForm({
               type="button"
               onClick={submitSettle}
               disabled={pending}
-              className="rounded bg-zinc-900 px-3 py-1 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-zinc-900"
+              className="rounded-full bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-2 text-sm font-bold text-white shadow-[0_14px_26px_rgba(249,115,22,0.24)] disabled:opacity-50"
             >
               Settle
             </button>
@@ -183,10 +183,14 @@ export default function SettleMatchForm({
       </div>
 
       {error && (
-        <p className="mt-2 text-xs text-red-600 dark:text-red-300">{error}</p>
+        <p className="mt-3 rounded-2xl bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
+          {error}
+        </p>
       )}
       {info && (
-        <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-300">{info}</p>
+        <p className="mt-3 rounded-2xl bg-[#EFF6FF] px-3 py-2 text-xs font-medium text-[#1D4ED8]">
+          {info}
+        </p>
       )}
     </div>
   );

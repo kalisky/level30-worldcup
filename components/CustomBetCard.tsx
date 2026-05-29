@@ -25,10 +25,11 @@ export default function CustomBetCard({
   const [stake, setStake] = useState<number>(25);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [now] = useState(() => Date.now());
 
   const isLocked =
     bet.status !== "open" ||
-    (bet.locksAt ? new Date(bet.locksAt).getTime() <= Date.now() : false);
+    (bet.locksAt ? new Date(bet.locksAt).getTime() <= now : false);
 
   function submit() {
     if (optionIdx === null) return;
@@ -49,16 +50,18 @@ export default function CustomBetCard({
   }
 
   return (
-    <article className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+    <article className="rounded-[26px] border border-[#dbe5f2] bg-white p-5 shadow-[0_14px_32px_rgba(30,58,138,0.07)]">
       <header className="flex items-baseline justify-between gap-3">
-        <h3 className="font-semibold">{bet.title}</h3>
-        <span className="text-xs text-zinc-500">by {proposerName}</span>
+        <h3 className="text-lg font-black text-[#1E3A8A]">{bet.title}</h3>
+        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+          by {proposerName}
+        </span>
       </header>
       {bet.description && (
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{bet.description}</p>
+        <p className="mt-1 text-sm leading-6 text-slate-600">{bet.description}</p>
       )}
       {bet.aiReasoning && (
-        <p className="mt-1 text-xs italic text-zinc-500">
+        <p className="mt-2 rounded-2xl bg-[#F8FBFF] px-3 py-2 text-xs italic text-slate-500 ring-1 ring-[#dbe5f2]">
           AI: {bet.aiReasoning}
         </p>
       )}
@@ -74,32 +77,34 @@ export default function CustomBetCard({
               onClick={() => !myWager && !isLocked && setOptionIdx(i)}
               disabled={!!myWager || isLocked}
               className={
-                "rounded-lg border-2 px-3 py-2 text-left transition disabled:cursor-default " +
+                "rounded-[20px] border-2 px-3 py-2 text-left transition disabled:cursor-default " +
                 (selected
-                  ? "border-amber-500 bg-amber-50 dark:bg-amber-900/30"
+                  ? "border-[#3B82F6] bg-[#E0EEFF]"
                   : isMyPick
-                    ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30"
-                    : "border-zinc-200 bg-white hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600")
+                    ? "border-[#F97316] bg-[#FFF1E8]"
+                    : "border-[#dbe5f2] bg-white hover:border-[#3B82F6] hover:bg-[#F8FBFF]")
               }
             >
-              <div className="text-sm font-medium">{o.label}</div>
-              <div className="font-mono text-xs text-zinc-500">{o.odds.toFixed(2)}x</div>
+              <div className="text-sm font-bold text-[#1E3A8A]">{o.label}</div>
+              <div className="font-mono text-xs font-semibold text-slate-500">{o.odds.toFixed(2)}x</div>
             </button>
           );
         })}
       </div>
 
       {myWager ? (
-        <p className="mt-3 text-sm text-emerald-700 dark:text-emerald-300">
+        <p className="mt-4 rounded-2xl bg-[#FFF1E8] px-4 py-3 text-sm text-[#C2410C]">
           You wagered {myWager.stake} chips on{" "}
-          <span className="font-semibold">{bet.options[myWager.optionIdx]?.label}</span>{" "}
+          <span className="font-bold">{bet.options[myWager.optionIdx]?.label}</span>{" "}
           @ {Number(myWager.oddsLocked).toFixed(2)}x.{" "}
-          <span className="text-zinc-500">
+          <span className="text-slate-500">
             (payout {Math.floor(myWager.stake * Number(myWager.oddsLocked))})
           </span>
         </p>
       ) : isLocked ? (
-        <p className="mt-3 text-sm text-zinc-500">Locked.</p>
+        <p className="mt-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+          Locked
+        </p>
       ) : (
         <div className="mt-3 flex items-center gap-2">
           <input
@@ -108,14 +113,16 @@ export default function CustomBetCard({
             max={myChips}
             value={stake}
             onChange={(e) => setStake(Number(e.target.value))}
-            className="w-20 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-right font-mono text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            className="w-20 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-right font-mono text-sm font-bold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
           />
-          <span className="text-xs text-zinc-500">/ {myChips}</span>
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            / {myChips}
+          </span>
           <button
             type="button"
             disabled={optionIdx === null || stake < 1 || stake > myChips || pending}
             onClick={submit}
-            className="ml-auto rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-900"
+            className="ml-auto rounded-[20px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-2 text-sm font-bold text-white shadow-[0_14px_26px_rgba(249,115,22,0.24)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {pending ? "Wagering…" : "Wager"}
           </button>
@@ -123,25 +130,25 @@ export default function CustomBetCard({
       )}
 
       {error && (
-        <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-200">
+        <p className="mt-2 rounded-2xl bg-red-50 px-3 py-3 text-sm font-medium text-red-700">
           {error}
         </p>
       )}
 
       {wagers.length > 0 && (
         <details className="mt-3">
-          <summary className="cursor-pointer text-xs text-zinc-500">
+          <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
             {wagers.length} {wagers.length === 1 ? "wager" : "wagers"} placed
           </summary>
           <ul className="mt-2 space-y-1 text-xs">
             {wagers.map(({ wager, userName }) => (
               <li key={wager.id} className="flex items-center justify-between">
                 <span>
-                  <span className="font-medium">{userName}</span>{" "}
-                  <span className="text-zinc-500">→</span>{" "}
+                  <span className="font-semibold text-[#1E3A8A]">{userName}</span>{" "}
+                  <span className="text-slate-500">→</span>{" "}
                   {bet.options[wager.optionIdx]?.label}
                 </span>
-                <span className="font-mono text-zinc-500">
+                <span className="font-mono font-semibold text-slate-500">
                   {wager.stake} @ {Number(wager.oddsLocked).toFixed(2)}x
                 </span>
               </li>

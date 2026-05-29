@@ -78,13 +78,15 @@ export default function SettleCustomBet({
   }
 
   return (
-    <article className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+    <article className="rounded-[26px] border border-[#dbe5f2] bg-white p-4 shadow-[0_14px_32px_rgba(30,58,138,0.07)]">
       <header className="flex items-baseline justify-between gap-2">
-        <h4 className="text-sm font-semibold">{bet.title}</h4>
-        <span className="text-xs text-zinc-500">by {proposerName}</span>
+        <h4 className="text-sm font-black text-[#1E3A8A]">{bet.title}</h4>
+        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+          by {proposerName}
+        </span>
       </header>
       {bet.description && (
-        <p className="mt-0.5 text-xs text-zinc-500">{bet.description}</p>
+        <p className="mt-1 text-xs leading-6 text-slate-500">{bet.description}</p>
       )}
       <div className="mt-2 flex flex-wrap gap-1.5">
         {bet.options.map((o, i) => (
@@ -93,13 +95,14 @@ export default function SettleCustomBet({
             type="button"
             onClick={() => setIdx(i)}
             className={
-              "rounded-lg border-2 px-2.5 py-1 text-xs transition " +
+              "rounded-[18px] border-2 px-3 py-2 text-xs transition " +
               (idx === i
-                ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30"
-                : "border-zinc-200 hover:border-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-600")
+                ? "border-[#3B82F6] bg-[#E0EEFF]"
+                : "border-[#dbe5f2] hover:border-[#3B82F6] hover:bg-[#F8FBFF]")
             }
           >
-            {o.label} <span className="font-mono text-zinc-500">{o.odds.toFixed(2)}x</span>
+            {o.label}{" "}
+            <span className="font-mono font-semibold text-slate-500">{o.odds.toFixed(2)}x</span>
           </button>
         ))}
       </div>
@@ -109,7 +112,7 @@ export default function SettleCustomBet({
           type="button"
           disabled={idx === null || pending}
           onClick={submitSettle}
-          className="rounded bg-zinc-900 px-3 py-1 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-zinc-900"
+          className="rounded-full bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-2 text-sm font-bold text-white shadow-[0_14px_26px_rgba(249,115,22,0.24)] disabled:opacity-50"
         >
           {pending ? "…" : "Mark winner"}
         </button>
@@ -118,7 +121,7 @@ export default function SettleCustomBet({
           onClick={submitSuggest}
           disabled={pending}
           title="Use AI + web search to suggest the winner"
-          className="rounded border border-zinc-300 px-3 py-1 text-sm hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          className="rounded-full border border-[#cdd9ea] px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-[#3B82F6] hover:bg-[#F8FBFF] disabled:opacity-50"
         >
           Suggest with AI
         </button>
@@ -126,19 +129,21 @@ export default function SettleCustomBet({
           type="button"
           onClick={submitVoid}
           disabled={pending}
-          className="ml-auto rounded border border-zinc-300 px-3 py-1 text-sm text-zinc-600 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          className="ml-auto rounded-full border border-[#cdd9ea] px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-[#3B82F6] hover:bg-[#F8FBFF] disabled:opacity-50"
         >
           Void & refund
         </button>
       </div>
 
       {info && (
-        <p className="mt-2 rounded bg-emerald-50 px-3 py-2 text-xs text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">
+        <p className="mt-2 rounded-2xl bg-[#EFF6FF] px-3 py-2 text-xs font-medium text-[#1D4ED8]">
           {info}
         </p>
       )}
       {error && (
-        <p className="mt-2 text-xs text-red-600 dark:text-red-300">{error}</p>
+        <p className="mt-2 rounded-2xl bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
+          {error}
+        </p>
       )}
     </article>
   );

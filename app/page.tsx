@@ -1,63 +1,94 @@
 import Link from "next/link";
+import AppHeader from "@/components/AppHeader";
 import { joinRoomByCode } from "@/lib/actions/rooms";
 
 export default function Home() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center px-6 py-16">
-      <div className="w-full max-w-md">
-        <header className="mb-10 text-center">
-          <h1 className="text-4xl font-bold tracking-tight">World Cup Bets</h1>
-          <p className="mt-3 text-zinc-600 dark:text-zinc-400">
-            Bet with your friends on the 2026 World Cup. Pre-match picks +
-            custom lines invented live during games.
-          </p>
-        </header>
+    <>
+      <AppHeader />
+      <main className="flex flex-1 items-center justify-center px-6 py-16">
+        <div className="grid w-full max-w-5xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+          <section className="rounded-[32px] border border-[#dbe5f2] bg-white p-8 shadow-[0_24px_70px_rgba(30,58,138,0.10)]">
+            <div className="inline-flex rounded-full bg-[#E0EEFF] px-3 py-1 text-[0.7rem] font-bold uppercase tracking-[0.24em] text-[#1D4ED8]">
+              2026 World Cup
+            </div>
+            <h1 className="mt-5 text-5xl font-black tracking-tight text-[#1E3A8A]">
+              Friendly stakes.
+              <br />
+              Serious matchday energy.
+            </h1>
+            <p className="mt-5 max-w-xl text-base leading-7 text-slate-600">
+              A premium private sportsbook for your group chat: pre-match score
+              picks, live side bets, and a leaderboard that actually feels like
+              a tournament table.
+            </p>
 
-        <section className="space-y-4">
-          <Link
-            href="/room/new"
-            className="block rounded-2xl bg-zinc-900 px-6 py-5 text-center text-lg font-semibold text-white shadow-sm transition hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
-          >
-            Create a room
-          </Link>
+            <div className="mt-10 grid gap-3 sm:grid-cols-3">
+              {[
+                "One score pick per match",
+                "Live custom lines during games",
+                "Chip leaderboard decides the winner",
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-[#dbe5f2] bg-[#F8FBFF] px-4 py-4 text-sm font-semibold text-[#1E3A8A]"
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+          </section>
 
-          <div className="relative my-6 flex items-center">
-            <div className="flex-grow border-t border-zinc-300 dark:border-zinc-700" />
-            <span className="mx-3 text-xs uppercase tracking-wider text-zinc-500">
-              or
-            </span>
-            <div className="flex-grow border-t border-zinc-300 dark:border-zinc-700" />
-          </div>
-
-          <form
-            action={joinRoomByCode}
-            className="space-y-3 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
-          >
-            <label htmlFor="code" className="block text-sm font-medium">
-              Join an existing room
-            </label>
-            <input
-              id="code"
-              name="code"
-              type="text"
-              placeholder="ABCDE"
-              autoCapitalize="characters"
-              autoComplete="off"
-              required
-              className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-lg tracking-widest uppercase placeholder:tracking-normal placeholder:normal-case placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950"
-            />
-            <button
-              type="submit"
-              className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2.5 font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+          <section className="rounded-[32px] border border-[#dbe5f2] bg-white p-6 shadow-[0_24px_70px_rgba(30,58,138,0.10)]">
+            <Link
+              href="/room/new"
+              className="block rounded-[24px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-6 py-5 text-center text-lg font-bold text-white shadow-[0_18px_36px_rgba(249,115,22,0.32)] transition hover:-translate-y-0.5"
             >
-              Continue
-            </button>
-          </form>
-        </section>
-        <footer className="mt-12 text-center text-xs text-zinc-500">
-          Tournament kicks off June 11, 2026.
-        </footer>
-      </div>
-    </main>
+              Create a room
+            </Link>
+
+            <div className="relative my-6 flex items-center">
+              <div className="flex-grow border-t border-[#dbe5f2]" />
+              <span className="mx-3 text-[0.65rem] font-bold uppercase tracking-[0.28em] text-slate-500">
+                or
+              </span>
+              <div className="flex-grow border-t border-[#dbe5f2]" />
+            </div>
+
+            <form
+              action={joinRoomByCode}
+              className="space-y-3 rounded-[24px] border border-[#dbe5f2] bg-[#F8FBFF] p-5"
+            >
+              <label
+                htmlFor="code"
+                className="block text-sm font-bold text-[#1E3A8A]"
+              >
+                Join an existing room
+              </label>
+              <input
+                id="code"
+                name="code"
+                type="text"
+                placeholder="ABCDE"
+                autoCapitalize="characters"
+                autoComplete="off"
+                required
+                className="w-full rounded-2xl border border-[#cdd9ea] bg-white px-4 py-3 text-lg font-semibold tracking-[0.35em] uppercase text-[#1E3A8A] placeholder:tracking-normal placeholder:normal-case placeholder:text-slate-400 focus:border-[#3B82F6] focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="w-full rounded-2xl border border-[#cdd9ea] bg-white px-4 py-3 font-bold text-[#1E3A8A] transition hover:border-[#3B82F6] hover:bg-[#F8FBFF]"
+              >
+                Continue
+              </button>
+            </form>
+
+            <footer className="mt-6 text-center text-xs font-medium uppercase tracking-[0.24em] text-slate-500">
+              Tournament kicks off June 11, 2026.
+            </footer>
+          </section>
+        </div>
+      </main>
+    </>
   );
 }

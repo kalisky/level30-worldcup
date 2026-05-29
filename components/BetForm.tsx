@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import TeamFlag from "@/components/TeamFlag";
 import { placeMatchBet } from "@/lib/actions/bets";
 import { scoreKey, SCORE_RANGE, type ScoreOddsCache } from "@/lib/db/schema";
 
@@ -79,13 +80,16 @@ export default function BetForm({
   }
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-      <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+    <div className="rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.08)]">
+      <h3 className="mb-1 text-[0.72rem] font-bold uppercase tracking-[0.28em] text-slate-500">
         Predict the score
       </h3>
-      <p className="mb-3 text-xs text-zinc-500">
+      <p className="mb-4 text-sm leading-6 text-slate-600">
         Your stake is split 50/50: half on the direction (
-        <span className="font-mono">{oddsHome.toFixed(2)}x / {oddsDraw.toFixed(2)}x / {oddsAway.toFixed(2)}x</span>
+        <span className="font-mono font-bold text-[#1E3A8A]">
+          {oddsHome.toFixed(2)}x / {oddsDraw.toFixed(2)}x /{" "}
+          {oddsAway.toFixed(2)}x
+        </span>
         ), half on the exact score.
       </p>
 
@@ -101,22 +105,22 @@ export default function BetForm({
       />
 
       {home !== null && away !== null && (
-        <div className="mt-4 rounded-xl bg-zinc-50 p-3 text-sm dark:bg-zinc-800">
+        <div className="mt-4 rounded-[24px] border border-[#dbe5f2] bg-[#F8FBFF] p-4 text-sm">
           <div className="flex items-center justify-between">
-            <span>Your prediction:</span>
-            <span className="font-mono font-semibold">
+            <span className="font-semibold text-slate-600">Your prediction</span>
+            <span className="font-mono text-base font-black text-[#1E3A8A]">
               {homeTeam} {home} – {away} {awayTeam}
             </span>
           </div>
-          <div className="mt-1 flex items-center justify-between text-zinc-600 dark:text-zinc-300">
+          <div className="mt-2 flex items-center justify-between text-slate-600">
             <span>
               Direction:{" "}
-              <span className="font-semibold">
+              <span className="font-bold text-[#1E3A8A]">
                 {directionPick === "HOME" ? homeTeam : directionPick === "AWAY" ? awayTeam : "Draw"}
               </span>{" "}
               @ <span className="font-mono">{directionOdds.toFixed(2)}x</span>
             </span>
-            <span className="text-zinc-500">
+            <span className="text-slate-500">
               Exact <span className="font-mono">{scoreOdd.toFixed(2)}x</span>
             </span>
           </div>
@@ -124,33 +128,43 @@ export default function BetForm({
       )}
 
       <div className="mt-4 flex items-center gap-3">
-        <label className="text-sm text-zinc-600 dark:text-zinc-400">Total stake</label>
+        <label className="text-sm font-semibold text-slate-600">Total stake</label>
         <input
           type="number"
           min={2}
           max={maxStake}
           value={stake}
           onChange={(e) => setStake(Number(e.target.value))}
-          className="w-24 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-right font-mono dark:border-zinc-700 dark:bg-zinc-950"
+          className="w-24 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-right font-mono font-bold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
         />
-        <span className="text-xs text-zinc-500">/ {maxStake} chips</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+          / {maxStake} chips
+        </span>
       </div>
 
       {home !== null && away !== null && (
         <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-          <div className="rounded-lg bg-zinc-100 px-3 py-2 dark:bg-zinc-800">
-            <div className="text-zinc-500">If direction is right</div>
-            <div className="font-mono text-base">{directionPayout} chips</div>
+          <div className="rounded-[22px] border border-[#dbe5f2] bg-[#F8FBFF] px-3 py-3">
+            <div className="font-semibold uppercase tracking-[0.18em] text-slate-500">
+              If direction is right
+            </div>
+            <div className="mt-1 font-mono text-base font-black text-[#1E3A8A]">
+              {directionPayout} chips
+            </div>
           </div>
-          <div className="rounded-lg bg-zinc-100 px-3 py-2 dark:bg-zinc-800">
-            <div className="text-zinc-500">If exact score too</div>
-            <div className="font-mono text-base">{bestCase} chips</div>
+          <div className="rounded-[22px] border border-[#dbe5f2] bg-[#F8FBFF] px-3 py-3">
+            <div className="font-semibold uppercase tracking-[0.18em] text-slate-500">
+              If exact score too
+            </div>
+            <div className="mt-1 font-mono text-base font-black text-[#1E3A8A]">
+              {bestCase} chips
+            </div>
           </div>
         </div>
       )}
 
       {error && (
-        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-200">
+        <p className="mt-3 rounded-2xl bg-red-50 px-3 py-3 text-sm font-medium text-red-700">
           {error}
         </p>
       )}
@@ -159,7 +173,7 @@ export default function BetForm({
         type="button"
         disabled={!canSubmit || pending}
         onClick={submit}
-        className="mt-4 w-full rounded-xl bg-zinc-900 px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-900"
+        className="mt-4 w-full rounded-[24px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-3 font-bold text-white shadow-[0_14px_30px_rgba(249,115,22,0.28)] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {pending ? "Placing…" : "Place bet"}
       </button>
@@ -178,7 +192,10 @@ function ScoreRow({
 }) {
   return (
     <div className="mb-2">
-      <div className="mb-1 text-xs font-medium text-zinc-500">{label}</div>
+      <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+        <TeamFlag teamName={label} size={28} />
+        <span>{label}</span>
+      </div>
       <div className="flex flex-wrap gap-1">
         {Array.from({ length: SCORE_RANGE }).map((_, n) => (
           <button
@@ -186,10 +203,10 @@ function ScoreRow({
             type="button"
             onClick={() => onPick(n)}
             className={
-              "h-9 w-9 rounded-lg border-2 font-mono text-sm transition " +
+              "h-9 w-9 rounded-xl border-2 font-mono text-sm font-bold transition " +
               (selected === n
-                ? "border-amber-500 bg-amber-50 dark:bg-amber-900/30"
-                : "border-zinc-200 bg-white hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600")
+                ? "border-[#3B82F6] bg-[#E0EEFF] text-[#1D4ED8]"
+                : "border-[#dbe5f2] bg-white text-slate-600 hover:border-[#3B82F6] hover:bg-[#F8FBFF]")
             }
           >
             {n}

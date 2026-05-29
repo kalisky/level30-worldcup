@@ -3,9 +3,7 @@ import postgres from "postgres";
 import * as schema from "./schema";
 
 declare global {
-  // eslint-disable-next-line no-var
   var __pg__: ReturnType<typeof postgres> | undefined;
-  // eslint-disable-next-line no-var
   var __drizzle__: ReturnType<typeof drizzle<typeof schema>> | undefined;
 }
 
@@ -24,10 +22,10 @@ function getDb() {
       max: 5,
     });
   const d = drizzle(client, { schema });
-  if (process.env.NODE_ENV !== "production") {
-    globalThis.__pg__ = client;
-    globalThis.__drizzle__ = d;
-  }
+  // Cache the client for the lifetime of the current Node.js runtime so
+  // warm serverless invocations reuse it instead of creating a new pool.
+  globalThis.__pg__ = client;
+  globalThis.__drizzle__ = d;
   return d;
 }
 

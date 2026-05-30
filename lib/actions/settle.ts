@@ -178,6 +178,19 @@ export async function settleCustomBet(formData: FormData) {
       throw new Error("Invalid option.");
     }
 
+    // An ad-hoc bet is only "valid" with at least 2 different wagerers —
+    // otherwise there's no real opposition. If under-participated, the admin
+    // should void & refund instead of settling.
+    const distinct = await tx
+      .selectDistinct({ userId: customWagers.userId })
+      .from(customWagers)
+      .where(eq(customWagers.customBetId, customBetId));
+    if (distinct.length < 2) {
+      throw new Error(
+        `This bet needs at least 2 different wagerers before it can be settled (currently ${distinct.length}). Use "Void & refund" instead.`
+      );
+    }
+
     await tx
       .update(customBets)
       .set({ status: "settled", winningOptionIdx })

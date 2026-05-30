@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { Room, User } from "@/lib/db/schema";
 import ProfileDialog from "@/components/ProfileDialog";
 import type { ProfileRoomSummary } from "@/components/ProfileDialog";
 import RoomSettingsDialog from "@/components/RoomSettingsDialog";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 function LogoMark() {
   return (
@@ -198,6 +200,7 @@ export default function AppHeaderClient({
     setProfileMenuMode(null);
   }
 
+  const t = useTranslations("nav");
   const pillName = user?.name ?? viewerName ?? null;
   const showProfilePill = !!pillName;
   const profileMenuOpen = profileMenuMode !== null;
@@ -207,24 +210,24 @@ export default function AppHeaderClient({
     ? [
         {
           href: `/r/${room.code}/dashboard`,
-          label: "Dashboard",
+          label: t("dashboard"),
           tone: active === "dashboard" ? ("blue" as const) : ("neutral" as const),
         },
         {
           href: `/r/${room.code}/admin`,
-          label: "Settle",
+          label: t("settle"),
           tone: active === "admin" ? ("coral" as const) : ("neutral" as const),
         },
         {
           href: "/rules",
-          label: "Read the rules",
+          label: t("rules"),
           tone: "neutral" as const,
         },
       ]
     : [
         {
           href: "/rules",
-          label: "Read the rules",
+          label: t("rules"),
           tone: "neutral" as const,
         },
       ];
@@ -364,13 +367,13 @@ export default function AppHeaderClient({
                           <>
                             <MobileMenuLink
                               href={`/r/${room.code}/dashboard`}
-                              label="Dashboard"
+                              label={t("dashboard")}
                               tone={active === "dashboard" ? "blue" : "neutral"}
                               onClick={() => setMobileMenuOpen(false)}
                             />
                             <MobileMenuLink
                               href={`/r/${room.code}/admin`}
-                              label="Settle"
+                              label={t("settle")}
                               tone={active === "admin" ? "coral" : "neutral"}
                               onClick={() => setMobileMenuOpen(false)}
                             />
@@ -378,10 +381,13 @@ export default function AppHeaderClient({
                         )}
                         <MobileMenuLink
                           href="/rules"
-                          label="Read the rules"
+                          label={t("rules")}
                           tone="neutral"
                           onClick={() => setMobileMenuOpen(false)}
                         />
+                        <div className="px-3 pt-2">
+                          <LanguageSwitcher />
+                        </div>
                       </nav>
                     </div>
                   )}
@@ -396,17 +402,18 @@ export default function AppHeaderClient({
                 <>
                   <HeaderLink
                     href={`/r/${room.code}/dashboard`}
-                    label="Dashboard"
+                    label={t("dashboard")}
                     tone={active === "dashboard" ? "blue" : "neutral"}
                   />
                   <HeaderLink
                     href={`/r/${room.code}/admin`}
-                    label="Settle"
+                    label={t("settle")}
                     tone={active === "admin" ? "coral" : "neutral"}
                   />
                 </>
               )}
-              <HeaderLink href="/rules" label="Read the rules" tone="neutral" />
+              <HeaderLink href="/rules" label={t("rules")} tone="neutral" />
+              <LanguageSwitcher className="ml-1" />
             </nav>
 
             {showProfilePill && (

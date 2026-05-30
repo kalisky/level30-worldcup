@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { User } from "@/lib/db/schema";
 
 const podiumStyles = [
@@ -16,17 +17,19 @@ export default function Leaderboard({
   meId: string;
   roomCode: string;
 }) {
+  const t = useTranslations("dashboard");
+  const tc = useTranslations("common");
   return (
     <section className="rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.08)]">
       <div className="mb-4 flex items-baseline justify-between">
         <h2 className="text-[0.72rem] font-bold uppercase tracking-[0.28em] text-slate-500">
-          Leaderboard
+          {t("leaderboard")}
         </h2>
         <Link
           href={`/r/${roomCode}/history`}
           className="text-xs font-bold uppercase tracking-[0.16em] text-[#1D4ED8] hover:underline"
         >
-          My history →
+          {t("myHistory")}
         </Link>
       </div>
       <ol className="space-y-2">
@@ -67,7 +70,7 @@ export default function Leaderboard({
                 </span>
                 {u.id === meId && (
                   <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#1D4ED8]">
-                    You
+                    {tc("you")}
                   </span>
                 )}
               </span>
@@ -77,7 +80,7 @@ export default function Leaderboard({
                 {u.chips}
               </span>
               <span className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                chips
+                {tc("chips")}
               </span>
             </span>
           </Link>

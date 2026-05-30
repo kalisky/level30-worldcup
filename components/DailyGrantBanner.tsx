@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 
 /**
  * Floating toast shown briefly after a user's daily chip grant has been
@@ -8,6 +9,7 @@ import { useEffect, useState } from "react";
  * is 0 or negative (i.e., no grant happened this visit).
  */
 export default function DailyGrantBanner({ amount }: { amount: number }) {
+  const t = useTranslations("dailyGrant");
   const [shown, setShown] = useState(false);
   const [removed, setRemoved] = useState(amount <= 0);
 
@@ -36,7 +38,7 @@ export default function DailyGrantBanner({ amount }: { amount: number }) {
     >
       <div className="flex items-center gap-2.5 rounded-full bg-gradient-to-r from-[#F97316] to-[#FB923C] px-5 py-3 text-white shadow-2xl shadow-orange-400/50 ring-2 ring-white/40">
         <span className="text-xl" aria-hidden>🎁</span>
-        <span className="text-base font-black">+{amount} daily chips</span>
+        <span className="text-base font-black">{t("banner", { amount })}</span>
       </div>
     </div>
   );

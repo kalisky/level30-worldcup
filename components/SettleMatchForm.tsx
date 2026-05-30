@@ -96,6 +96,7 @@ export default function SettleMatchForm({
       <div className="mt-2 flex items-center gap-2">
         <input
           type="text"
+          dir="auto"
           value={homeTeam}
           onChange={(e) => setHomeTeam(e.target.value)}
           className="w-full rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-sm font-semibold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
@@ -103,6 +104,7 @@ export default function SettleMatchForm({
         <span className="font-bold text-slate-400">vs</span>
         <input
           type="text"
+          dir="auto"
           value={awayTeam}
           onChange={(e) => setAwayTeam(e.target.value)}
           className="w-full rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-sm font-semibold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"

@@ -1,0 +1,2 @@
+CREATE TYPE "public"."custom_bet_kind" AS ENUM('fixed_options', 'open_question');--> statement-breakpoint
+ALTER TABLE "custom_bets" ADD COLUMN "kind" "custom_bet_kind" DEFAULT 'fixed_options' NOT NULL;

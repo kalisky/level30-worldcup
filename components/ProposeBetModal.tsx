@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { proposeCustomBet } from "@/lib/actions/custom-bets";
 
 function formatDateTimeLocal(date: Date) {
@@ -32,18 +33,31 @@ function formatCountdown(targetMs: number, nowMs: number) {
   return parts.join(" ");
 }
 
+// WC 2026 final: Sunday July 19, 2026 — buffer to 22:00 UTC after the final match.
+const TOURNAMENT_END_MS = Date.UTC(2026, 6, 19, 22, 0);
+
+// Group-stage matches finish ~2 hours after kickoff (90' + stoppage + halftime).
+// If we later seed knockout matches that can go to extra time + penalties this
+// constant should be expanded by ~1.5h for those rounds.
+const MATCH_END_OFFSET_MS = 2 * 60 * 60 * 1000;
+
 export default function ProposeBetModal({
   roomCode,
   matchId,
   matchLabel,
+  matchKickoff,
 }: {
   roomCode: string;
   matchId?: string;
   /** When `matchId` is set, the human-readable match label (e.g. "Mexico vs South Africa"). Shown in the modal so the user knows the bet is scoped to this match, not the whole room. */
   matchLabel?: string;
+  /** ISO string of the match's kickoff time. Used to suggest "end of match" as a one-click lock time. */
+  matchKickoff?: string;
 }) {
+  const t = useTranslations("customBet");
   const isMatchBet = Boolean(matchId);
   const [open, setOpen] = useState(false);
+  const [kind, setKind] = useState<"fixed_options" | "open_question">("fixed_options");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [options, setOptions] = useState<string[]>(["Yes", "No"]);
@@ -65,6 +79,23 @@ export default function ProposeBetModal({
   const lockAtIsPast = lockAtValid && lockAtMs <= now;
   const countdown = lockAtValid && !lockAtIsPast ? formatCountdown(lockAtMs, now) : null;
 
+  // Per-scope suggestion for the "Use…" quick-set button. We only surface it
+  // if the suggested time is still in the future.
+  const suggestion = isMatchBet
+    ? matchKickoff
+      ? {
+          label: "End of this match",
+          atMs: new Date(matchKickoff).getTime() + MATCH_END_OFFSET_MS,
+        }
+      : null
+    : { label: "End of tournament", atMs: TOURNAMENT_END_MS };
+  const suggestionUsable = suggestion && suggestion.atMs > now;
+
+  function applySuggestion() {
+    if (!suggestion) return;
+    setLockAtLocal(formatDateTimeLocal(new Date(suggestion.atMs)));
+  }
+
   function setOption(idx: number, value: string) {
     setOptions((o) => o.map((v, i) => (i === idx ? value : v)));
   }
@@ -76,6 +107,7 @@ export default function ProposeBetModal({
   }
 
   function resetForm() {
+    setKind("fixed_options");
     setTitle("");
     setDescription("");
     setOptions(["Yes", "No"]);
@@ -94,10 +126,13 @@ export default function ProposeBetModal({
     const fd = new FormData();
     fd.set("roomCode", roomCode);
     if (matchId) fd.set("matchId", matchId);
+    fd.set("kind", kind);
     fd.set("title", title);
     fd.set("description", description);
     fd.set("locksAt", lockAtIso);
-    options.forEach((o) => fd.append("optionLabels", o));
+    if (kind === "fixed_options") {
+      options.forEach((o) => fd.append("optionLabels", o));
+    }
     startTransition(async () => {
       try {
         await proposeCustomBet(fd);
@@ -120,8 +155,8 @@ export default function ProposeBetModal({
         className="w-full rounded-[24px] border-2 border-dashed border-[#cfdced] bg-[#F8FBFF] px-4 py-3 text-sm font-bold text-[#1E3A8A] transition hover:border-[#3B82F6] hover:bg-white"
       >
         {isMatchBet
-          ? `+ Propose a bet on this match${matchLabel ? ` (${matchLabel})` : ""}`
-          : "+ Propose a room-wide bet"}
+          ? `+ ${t("proposeMatch")}${matchLabel ? ` (${matchLabel})` : ""}`
+          : `+ ${t("proposeRoom")}`}
       </button>
     );
   }
@@ -131,7 +166,7 @@ export default function ProposeBetModal({
       <div className="w-full max-w-md rounded-[30px] border border-[#dbe5f2] bg-white p-6 shadow-[0_28px_80px_rgba(15,23,42,0.28)]">
         <div className="flex items-baseline justify-between">
           <h3 className="text-xl font-black text-[#1E3A8A]">
-            Propose a custom bet
+            {t("propose")}
           </h3>
           <button
             type="button"
@@ -153,49 +188,77 @@ export default function ProposeBetModal({
           <span aria-hidden>{isMatchBet ? "⚽" : "🌐"}</span>
           {isMatchBet ? (
             <span>
-              Match bet{matchLabel ? <span className="normal-case tracking-normal"> — {matchLabel}</span> : null}
+              {t("matchBet")}{matchLabel ? <span className="normal-case tracking-normal"> — {matchLabel}</span> : null}
             </span>
           ) : (
-            <span>Room-wide bet</span>
+            <span>{t("roomBet")}</span>
           )}
         </div>
-
-        <p className="mt-3 text-sm leading-6 text-slate-600">
-          {isMatchBet
-            ? "Wagering on this bet only counts for this specific match. AI will generate odds when you submit."
-            : "This bet applies to the whole room, not a specific match (e.g., \"Brazil wins the World Cup\"). AI will generate odds when you submit."}
-        </p>
 
         <div className="mt-4 space-y-3">
           <div>
             <label className="mb-2 block text-sm font-bold text-[#1E3A8A]">
-              Title
+              {t("betType")}
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setKind("fixed_options")}
+                className={
+                  "rounded-2xl border-2 px-3 py-2.5 text-left text-sm transition " +
+                  (kind === "fixed_options"
+                    ? "border-[#1E3A8A] bg-[#EFF6FF]"
+                    : "border-[#cdd9ea] bg-white hover:border-[#3B82F6]")
+                }
+              >
+                <div className="font-bold text-[#1E3A8A]">{t("multipleChoice")}</div>
+                <div className="text-xs text-slate-500">{t("multipleChoiceHint")}</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setKind("open_question")}
+                className={
+                  "rounded-2xl border-2 px-3 py-2.5 text-left text-sm transition " +
+                  (kind === "open_question"
+                    ? "border-[#1E3A8A] bg-[#EFF6FF]"
+                    : "border-[#cdd9ea] bg-white hover:border-[#3B82F6]")
+                }
+              >
+                <div className="font-bold text-[#1E3A8A]">{t("openQuestion")}</div>
+                <div className="text-xs text-slate-500">{t("openQuestionHint")}</div>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-bold text-[#1E3A8A]">
+              {kind === "open_question" ? t("question") : t("title")}
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={120}
-              placeholder="Will France score in the first half?"
+              dir="auto"
               className="w-full rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-3 text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
             />
           </div>
           <div>
             <label className="mb-2 block text-sm font-bold text-[#1E3A8A]">
-              Description <span className="text-slate-400">(optional)</span>
+              {t("description")} <span className="text-slate-400">{t("descriptionOptional")}</span>
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={500}
               rows={2}
-              placeholder="Clarify the line if needed."
+              dir="auto"
               className="w-full rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-3 text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
             />
           </div>
           <div>
             <label className="mb-2 block text-sm font-bold text-[#1E3A8A]">
-              Lock time <span className="text-[#EA580C]">*</span>
+              {t("lockTime")} <span className="text-[#EA580C]">*</span>
             </label>
             <input
               type="datetime-local"
@@ -207,56 +270,73 @@ export default function ProposeBetModal({
             />
             {!lockAtLocal && (
               <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-                Pick when wagering should close — must set explicitly.
+                {t("lockTimeHint")}
               </p>
+            )}
+            {suggestionUsable && (
+              <button
+                type="button"
+                onClick={applySuggestion}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[#cdd9ea] bg-white px-3 py-1.5 text-xs font-bold text-[#1E3A8A] transition hover:border-[#3B82F6] hover:bg-[#EFF6FF]"
+              >
+                <span aria-hidden>📅</span>
+                {t("useEnd")} {isMatchBet ? t("endOfMatch") : t("endOfTournament")}
+              </button>
             )}
             {lockAtIsPast && (
               <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
-                ⚠️ Lock time is in the past — pick a later moment.
+                {t("lockTimePast")}
               </p>
             )}
             {countdown && (
               <p className="mt-2 rounded-xl bg-[#EFF6FF] px-3 py-2 text-sm font-bold text-[#1D4ED8]">
-                🔒 Locks in <span className="font-mono">{countdown}</span>
+                {t("locksIn")} <span className="font-mono">{countdown}</span>
               </p>
             )}
           </div>
-          <div>
-            <label className="mb-2 block text-sm font-bold text-[#1E3A8A]">
-              Options
-            </label>
-            <div className="space-y-1.5">
-              {options.map((opt, i) => (
-                <div key={i} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={opt}
-                    onChange={(e) => setOption(i, e.target.value)}
-                    maxLength={50}
-                    className="flex-1 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
-                  />
-                  {options.length > 2 && (
-                    <button
-                      type="button"
-                      onClick={() => removeOption(i)}
-                      className="rounded-2xl border border-[#cdd9ea] px-3 text-slate-500 transition hover:border-[#3B82F6] hover:bg-white"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              ))}
+          {kind === "fixed_options" ? (
+            <div>
+              <label className="mb-2 block text-sm font-bold text-[#1E3A8A]">
+                {t("options")}
+              </label>
+              <div className="space-y-1.5">
+                {options.map((opt, i) => (
+                  <div key={i} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={opt}
+                      onChange={(e) => setOption(i, e.target.value)}
+                      maxLength={50}
+                      dir="auto"
+                      className="flex-1 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
+                    />
+                    {options.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => removeOption(i)}
+                        className="rounded-2xl border border-[#cdd9ea] px-3 text-slate-500 transition hover:border-[#3B82F6] hover:bg-white"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {options.length < 5 && (
+                <button
+                  type="button"
+                  onClick={addOption}
+                  className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 transition hover:text-[#1E3A8A]"
+                >
+                  {t("addOption")}
+                </button>
+              )}
             </div>
-            {options.length < 5 && (
-              <button
-                type="button"
-                onClick={addOption}
-                className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 transition hover:text-[#1E3A8A]"
-              >
-                + Add option
-              </button>
-            )}
-          </div>
+          ) : (
+            <p className="rounded-2xl bg-[#F8FBFF] px-3 py-3 text-xs text-slate-600">
+              {t("openHint")}
+            </p>
+          )}
         </div>
 
         {error && (
@@ -272,12 +352,16 @@ export default function ProposeBetModal({
             title.trim().length < 3 ||
             !lockAtValid ||
             lockAtIsPast ||
-            options.some((o) => !o.trim())
+            (kind === "fixed_options" && options.some((o) => !o.trim()))
           }
           onClick={submit}
           className="mt-5 w-full rounded-[24px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-3 font-bold text-white shadow-[0_18px_36px_rgba(249,115,22,0.28)] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {pending ? "AI is rating this…" : "Propose bet"}
+          {pending
+            ? kind === "open_question"
+              ? t("submitOpen")
+              : t("submitPending")
+            : t("submit")}
         </button>
       </div>
     </div>

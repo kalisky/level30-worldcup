@@ -12,11 +12,16 @@ export default function SettleCustomBet({
   bet,
   roomCode,
   proposerName,
+  wagererCount,
 }: {
   bet: CustomBet;
   roomCode: string;
   proposerName: string;
+  /** Distinct number of users who've wagered. Below 2 the bet is invalid and
+   *  can only be voided. */
+  wagererCount: number;
 }) {
+  const hasEnoughWagerers = wagererCount >= 2;
   const [idx, setIdx] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +93,17 @@ export default function SettleCustomBet({
       {bet.description && (
         <p className="mt-1 text-xs leading-6 text-slate-500">{bet.description}</p>
       )}
+      <div
+        className={
+          "mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.18em] " +
+          (hasEnoughWagerers
+            ? "bg-[#E0F2FE] text-[#0369A1]"
+            : "bg-[#FEF3C7] text-[#92400E]")
+        }
+      >
+        {wagererCount} {wagererCount === 1 ? "wagerer" : "wagerers"}
+        {!hasEnoughWagerers && " · needs 2+ to settle"}
+      </div>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {bet.options.map((o, i) => (
           <button
@@ -110,8 +126,13 @@ export default function SettleCustomBet({
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           type="button"
-          disabled={idx === null || pending}
+          disabled={idx === null || pending || !hasEnoughWagerers}
           onClick={submitSettle}
+          title={
+            hasEnoughWagerers
+              ? undefined
+              : "Need at least 2 different wagerers before this can be settled"
+          }
           className="rounded-full bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-2 text-sm font-bold text-white shadow-[0_14px_26px_rgba(249,115,22,0.24)] disabled:opacity-50"
         >
           {pending ? "…" : "Mark winner"}
@@ -119,7 +140,7 @@ export default function SettleCustomBet({
         <button
           type="button"
           onClick={submitSuggest}
-          disabled={pending}
+          disabled={pending || !hasEnoughWagerers}
           title="Use AI + web search to suggest the winner"
           className="rounded-full border border-[#cdd9ea] px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-[#3B82F6] hover:bg-[#F8FBFF] disabled:opacity-50"
         >
@@ -134,6 +155,15 @@ export default function SettleCustomBet({
           Void & refund
         </button>
       </div>
+
+      {!hasEnoughWagerers && (
+        <p className="mt-2 rounded-2xl bg-[#FEF3C7] px-3 py-2 text-xs font-medium text-[#92400E]">
+          This bet only has {wagererCount} {wagererCount === 1 ? "wagerer" : "wagerers"}.
+          Custom bets need at least 2 different players for a winner to be
+          declared — use <span className="font-bold">Void & refund</span> if no
+          one else is going to wager.
+        </p>
+      )}
 
       {info && (
         <p className="mt-2 rounded-2xl bg-[#EFF6FF] px-3 py-2 text-xs font-medium text-[#1D4ED8]">

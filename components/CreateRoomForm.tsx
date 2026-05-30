@@ -43,6 +43,7 @@ export default function CreateRoomForm({
             id="name"
             name="name"
             type="text"
+            dir="auto"
             required
             maxLength={60}
             placeholder="The Squad"

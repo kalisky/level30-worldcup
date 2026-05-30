@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { requireRoomUser } from "@/lib/auth-context";
 import {
   getCustomWagersFor,
@@ -26,6 +27,7 @@ export default async function DashboardPage(props: {
   const { code } = await props.params;
   const searchParams = await props.searchParams;
   const { room, user, dailyGrantApplied } = await requireRoomUser(code);
+  const t = await getTranslations("dashboard");
   const targetCustomBetId = Array.isArray(searchParams.bet)
     ? searchParams.bet[0]
     : searchParams.bet;
@@ -65,12 +67,11 @@ export default async function DashboardPage(props: {
 
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-          Upcoming &amp; live matches
+          {t("upcomingMatches")}
         </h2>
         {upcoming.length === 0 ? (
           <p className="rounded-xl border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 dark:border-zinc-700">
-            No matches scheduled. Run <code>npm run seed</code> to load
-            fixtures.
+            {t("noMatches")}
           </p>
         ) : (
           <div className="space-y-2">
@@ -93,11 +94,8 @@ export default async function DashboardPage(props: {
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-[0.72rem] font-bold uppercase tracking-[0.28em] text-slate-500">
-            Custom bets
+            {t("customBets")}
           </h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Room-wide lines and match-specific side action.
-          </p>
         </div>
       </div>
 
@@ -107,8 +105,7 @@ export default async function DashboardPage(props: {
 
       {customBets.length === 0 ? (
         <p className="rounded-[22px] border border-dashed border-[#cfdced] bg-[#F8FBFF] p-6 text-center text-sm text-slate-500">
-          No custom bets in the room yet. Add one here for the whole room, or
-          open a match to create a match-specific line.
+          {t("noCustomBets")}
         </p>
       ) : (
         <div className="space-y-3">

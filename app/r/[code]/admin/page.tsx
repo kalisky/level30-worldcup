@@ -1,7 +1,7 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { requireRoomUser } from "@/lib/auth-context";
 import { db } from "@/lib/db";
-import { customBets, matches, users } from "@/lib/db/schema";
+import { customBets, customWagers, matches, users } from "@/lib/db/schema";
 import { listRecentSettlements } from "@/lib/db/queries";
 import RoomHeader from "@/components/RoomHeader";
 import SettleMatchForm from "@/components/SettleMatchForm";
@@ -17,7 +17,15 @@ export default async function AdminPage(props: {
   const [allMatches, openBets, recent] = await Promise.all([
     db.select().from(matches).orderBy(matches.kickoff),
     db
-      .select({ bet: customBets, proposerName: users.name })
+      .select({
+        bet: customBets,
+        proposerName: users.name,
+        wagererCount: sql<number>`(
+          SELECT COUNT(DISTINCT ${customWagers.userId})::int
+          FROM ${customWagers}
+          WHERE ${customWagers.customBetId} = ${customBets.id}
+        )`,
+      })
       .from(customBets)
       .innerJoin(users, eq(users.id, customBets.proposerId))
       .where(
@@ -68,12 +76,13 @@ export default async function AdminPage(props: {
             <p className="text-sm text-zinc-500">No custom bets to resolve.</p>
           ) : (
             <div className="space-y-2">
-              {openBets.map(({ bet, proposerName }) => (
+              {openBets.map(({ bet, proposerName, wagererCount }) => (
                 <SettleCustomBet
                   key={bet.id}
                   bet={bet}
                   roomCode={room.code}
                   proposerName={proposerName}
+                  wagererCount={wagererCount}
                 />
               ))}
             </div>

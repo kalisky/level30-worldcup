@@ -42,6 +42,11 @@ export const customBetStatus = pgEnum("custom_bet_status", [
   "void",
 ]);
 
+export const customBetKind = pgEnum("custom_bet_kind", [
+  "fixed_options",   // proposer specifies 2–5 options up front; odds normalized to sum to 1
+  "open_question",   // free-form answers from any user; each answer cached with its own odds independently
+]);
+
 export const settlementKind = pgEnum("settlement_kind", [
   "match",
   "custom_bet",
@@ -238,6 +243,7 @@ export const customBets = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     description: text("description").notNull().default(""),
+    kind: customBetKind("kind").notNull().default("fixed_options"),
     options: jsonb("options").$type<CustomBetOption[]>().notNull(),
     aiReasoning: text("ai_reasoning").notNull().default(""),
     status: customBetStatus("status").notNull().default("open"),

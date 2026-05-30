@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import AppHeader from "@/components/AppHeader";
 import CreateRoomLauncher from "@/components/CreateRoomLauncher";
 import GoogleLoginButton from "@/components/GoogleLoginButton";
@@ -20,6 +21,7 @@ export default async function Home(props: {
   }
 
   const isSignedIn = !!authUser;
+  const t = await getTranslations("landing");
 
   return (
     <>
@@ -28,47 +30,19 @@ export default async function Home(props: {
         <div className="grid w-full max-w-5xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
           <section className="rounded-[32px] border border-[#dbe5f2] bg-white p-8 shadow-[0_24px_70px_rgba(30,58,138,0.10)]">
             <div className="inline-flex rounded-full bg-[#E0EEFF] px-3 py-1 text-[0.7rem] font-bold uppercase tracking-[0.24em] text-[#1D4ED8]">
-              2026 World Cup
+              {t("title")}
             </div>
             <h1 className="mt-5 text-5xl font-black tracking-tight text-[#1E3A8A]">
-              Friendly stakes.
-              <br />
-              Serious matchday energy.
+              {t("title")}
             </h1>
             <p className="mt-5 max-w-xl text-base leading-7 text-slate-600">
-              A premium private sportsbook for your group chat: pre-match score
-              picks, live side bets, and a leaderboard that actually feels like
-              a tournament table.
+              {t("tagline")}
             </p>
-
-            <div className="mt-10 grid gap-3 sm:grid-cols-3">
-              {[
-                "One score pick per match",
-                "Live custom lines during games",
-                "Chip leaderboard decides the winner",
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="rounded-2xl border border-[#dbe5f2] bg-[#F8FBFF] px-4 py-4 text-sm font-semibold text-[#1E3A8A]"
-                >
-                  {item}
-                </div>
-              ))}
-            </div>
           </section>
 
           <section className="rounded-[32px] border border-[#dbe5f2] bg-white p-6 shadow-[0_24px_70px_rgba(30,58,138,0.10)]">
             {isSignedIn ? (
               <>
-                <div className="mb-5 rounded-[24px] border border-[#dbe5f2] bg-[#F8FBFF] px-5 py-4">
-                  <p className="text-[0.68rem] font-bold uppercase tracking-[0.24em] text-slate-500">
-                    Signed in
-                  </p>
-                  <p className="mt-1 text-lg font-black text-[#1E3A8A]">
-                    {authUser.displayName}
-                  </p>
-                </div>
-
                 <CreateRoomLauncher
                   creatorName={authUser.displayName!}
                   variant="hero"
@@ -77,7 +51,7 @@ export default async function Home(props: {
                 <div className="relative my-6 flex items-center">
                   <div className="flex-grow border-t border-[#dbe5f2]" />
                   <span className="mx-3 text-[0.65rem] font-bold uppercase tracking-[0.28em] text-slate-500">
-                    or
+                    {t("or")}
                   </span>
                   <div className="flex-grow border-t border-[#dbe5f2]" />
                 </div>
@@ -90,7 +64,7 @@ export default async function Home(props: {
                     htmlFor="code"
                     className="block text-sm font-bold text-[#1E3A8A]"
                   >
-                    Join an existing room
+                    {t("joinRoom")}
                   </label>
                   <input
                     id="code"
@@ -100,24 +74,19 @@ export default async function Home(props: {
                     autoCapitalize="characters"
                     autoComplete="off"
                     required
+                    dir="ltr"
                     className="w-full rounded-2xl border border-[#cdd9ea] bg-white px-4 py-3 text-lg font-semibold tracking-[0.35em] uppercase text-[#1E3A8A] placeholder:tracking-normal placeholder:normal-case placeholder:text-slate-400 focus:border-[#3B82F6] focus:outline-none"
                   />
                   <SubmitButton
-                    pendingLabel="Looking up room…"
+                    pendingLabel={t("joinRoomPending")}
                     className="w-full rounded-2xl border border-[#cdd9ea] bg-white px-4 py-3 font-bold text-[#1E3A8A] transition hover:border-[#3B82F6] hover:bg-[#F8FBFF] disabled:cursor-progress"
                   >
-                    Continue
+                    {t("joinRoomCta")}
                   </SubmitButton>
                 </form>
               </>
             ) : (
               <>
-                <div className="rounded-[24px] border border-[#dbe5f2] bg-[#F8FBFF] p-5">
-                  <p className="text-sm leading-7 text-slate-600">
-                    Sign in with Google to create a room or join one from a
-                    shared invite link.
-                  </p>
-                </div>
                 <div className="mt-6">
                   <GoogleLoginButton redirectTo={nextPath || "/"} />
                 </div>
@@ -125,7 +94,7 @@ export default async function Home(props: {
             )}
 
             <footer className="mt-6 text-center text-xs font-medium uppercase tracking-[0.24em] text-slate-500">
-              Tournament kicks off June 11, 2026.
+              {t("kickoff")}
             </footer>
           </section>
         </div>

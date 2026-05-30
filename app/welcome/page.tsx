@@ -51,6 +51,7 @@ export default async function WelcomePage(props: {
                 id="displayName"
                 name="displayName"
                 type="text"
+                dir="auto"
                 defaultValue={authUser.googleName ?? ""}
                 maxLength={40}
                 required

@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import type { CustomBet, CustomWager } from "@/lib/db/schema";
-import { placeCustomWager } from "@/lib/actions/custom-bets";
+import {
+  placeCustomWager,
+  placeOpenWager,
+  previewOpenAnswerOdds,
+} from "@/lib/actions/custom-bets";
 
 function formatLockTime(value: Date | string) {
   return new Date(value).toLocaleString(undefined, {
@@ -46,6 +50,17 @@ export default function CustomBetCard({
   );
   const [now] = useState(() => Date.now());
 
+  // Open-question state
+  const [answer, setAnswer] = useState("");
+  const [preview, setPreview] = useState<{
+    label: string;
+    odds: number;
+    reasoning: string;
+    isExisting: boolean;
+  } | null>(null);
+  const [previewing, startPreview] = useTransition();
+  const isOpenQuestion = bet.kind === "open_question";
+
   const isLocked =
     bet.status !== "open" ||
     (bet.locksAt ? new Date(bet.locksAt).getTime() <= now : false);
@@ -65,6 +80,57 @@ export default function CustomBetCard({
     startTransition(async () => {
       try {
         await placeCustomWager(fd);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to wager.");
+      }
+    });
+  }
+
+  function checkOdds() {
+    if (!answer.trim()) return;
+    setError(null);
+    setPreview(null);
+    startPreview(async () => {
+      try {
+        const r = await previewOpenAnswerOdds({
+          roomCode,
+          customBetId: bet.id,
+          answer: answer.trim(),
+        });
+        setPreview({
+          label: r.label,
+          odds: r.odds,
+          reasoning: r.reasoning,
+          isExisting: r.isExisting,
+        });
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Couldn't compute odds.");
+      }
+    });
+  }
+
+  function selectExistingAnswer(label: string, odds: number) {
+    setAnswer(label);
+    setPreview({
+      label,
+      odds,
+      reasoning: "Cached odds — already submitted by another player.",
+      isExisting: true,
+    });
+  }
+
+  function submitOpen() {
+    if (!answer.trim() || !preview) return;
+    setError(null);
+    const fd = new FormData();
+    fd.set("roomCode", roomCode);
+    if (matchId) fd.set("matchId", matchId);
+    fd.set("customBetId", bet.id);
+    fd.set("answer", answer.trim());
+    fd.set("stake", String(stake));
+    startTransition(async () => {
+      try {
+        await placeOpenWager(fd);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to wager.");
       }
@@ -139,31 +205,130 @@ export default function CustomBetCard({
         </p>
       )}
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        {bet.options.map((o, i) => {
-          const selected = optionIdx === i;
-          const isMyPick = myWager?.optionIdx === i;
-          return (
-            <button
-              key={i}
-              type="button"
-              onClick={() => !myWager && !isLocked && setOptionIdx(i)}
-              disabled={!!myWager || isLocked}
-              className={
-                "rounded-[20px] border-2 px-3 py-2 text-left transition disabled:cursor-default " +
-                (selected
-                  ? "border-[#3B82F6] bg-[#E0EEFF]"
-                  : isMyPick
-                    ? "border-[#F97316] bg-[#FFF1E8]"
-                    : "border-[#dbe5f2] bg-white hover:border-[#3B82F6] hover:bg-[#F8FBFF]")
-              }
-            >
-              <div className="text-sm font-bold text-[#1E3A8A]">{o.label}</div>
-              <div className="font-mono text-xs font-semibold text-slate-500">{o.odds.toFixed(2)}x</div>
-            </button>
-          );
-        })}
-      </div>
+      {isOpenQuestion ? (
+        <div className="mt-3 space-y-3">
+          {bet.options.length > 0 ? (
+            <div>
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Answers so far
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {bet.options.map((o, i) => {
+                  const isMyPick = myWager?.optionIdx === i;
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() =>
+                        !myWager && !isLocked && selectExistingAnswer(o.label, o.odds)
+                      }
+                      disabled={!!myWager || isLocked}
+                      className={
+                        "rounded-[20px] border-2 px-3 py-2 text-left transition disabled:cursor-default " +
+                        (isMyPick
+                          ? "border-[#F97316] bg-[#FFF1E8]"
+                          : answer.trim().toLowerCase() === o.label.toLowerCase()
+                            ? "border-[#3B82F6] bg-[#E0EEFF]"
+                            : "border-[#dbe5f2] bg-white hover:border-[#3B82F6] hover:bg-[#F8FBFF]")
+                      }
+                    >
+                      <div className="text-sm font-bold text-[#1E3A8A]">{o.label}</div>
+                      <div className="font-mono text-xs font-semibold text-slate-500">
+                        {o.odds.toFixed(2)}x
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500">
+              No answers submitted yet — be the first.
+            </p>
+          )}
+
+          {!myWager && !isLocked && (
+            <div>
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Your answer
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  dir="auto"
+                  value={answer}
+                  onChange={(e) => {
+                    setAnswer(e.target.value);
+                    setPreview(null);
+                  }}
+                  maxLength={80}
+                  placeholder="e.g. Argentina"
+                  className="flex-1 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
+                />
+                <button
+                  type="button"
+                  disabled={!answer.trim() || previewing}
+                  onClick={checkOdds}
+                  className="rounded-2xl border-2 border-[#3B82F6] bg-white px-3 py-2 text-sm font-bold text-[#1D4ED8] transition hover:bg-[#EFF6FF] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {previewing ? "Checking…" : "Check odds"}
+                </button>
+              </div>
+
+              {preview && (
+                <div className="mt-2 rounded-2xl bg-[#EFF6FF] px-3 py-3 text-sm">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="font-bold text-[#1E3A8A]">
+                      {preview.label}{" "}
+                      <span className="font-mono text-[#1D4ED8]">
+                        {preview.odds.toFixed(2)}x
+                      </span>
+                    </span>
+                    <span className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      {preview.isExisting ? "cached" : "fresh"}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs italic text-slate-600">
+                    AI: {preview.reasoning}
+                  </p>
+                  <p className="mt-2 text-xs text-slate-500">
+                    Potential payout for {stake} chips:{" "}
+                    <span className="font-mono font-bold text-[#1E3A8A]">
+                      {Math.floor(stake * preview.odds)}
+                    </span>
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {bet.options.map((o, i) => {
+            const selected = optionIdx === i;
+            const isMyPick = myWager?.optionIdx === i;
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => !myWager && !isLocked && setOptionIdx(i)}
+                disabled={!!myWager || isLocked}
+                className={
+                  "rounded-[20px] border-2 px-3 py-2 text-left transition disabled:cursor-default " +
+                  (selected
+                    ? "border-[#3B82F6] bg-[#E0EEFF]"
+                    : isMyPick
+                      ? "border-[#F97316] bg-[#FFF1E8]"
+                      : "border-[#dbe5f2] bg-white hover:border-[#3B82F6] hover:bg-[#F8FBFF]")
+                }
+              >
+                <div className="text-sm font-bold text-[#1E3A8A]">{o.label}</div>
+                <div className="font-mono text-xs font-semibold text-slate-500">{o.odds.toFixed(2)}x</div>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {myWager ? (
         <p className="mt-4 rounded-2xl bg-[#FFF1E8] px-4 py-3 text-sm text-[#C2410C]">
@@ -178,6 +343,30 @@ export default function CustomBetCard({
         <p className="mt-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
           Locked
         </p>
+      ) : isOpenQuestion ? (
+        <div className="mt-3 flex items-center gap-2">
+          <input
+            type="number"
+            min={1}
+            max={myChips}
+            value={stake}
+            onChange={(e) => setStake(Number(e.target.value))}
+            className="w-20 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-right font-mono text-sm font-bold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
+          />
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            / {myChips}
+          </span>
+          <button
+            type="button"
+            disabled={
+              !preview || !answer.trim() || stake < 1 || stake > myChips || pending
+            }
+            onClick={submitOpen}
+            className="ml-auto rounded-[20px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-2 text-sm font-bold text-white shadow-[0_14px_26px_rgba(249,115,22,0.24)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {pending ? "Wagering…" : "Wager"}
+          </button>
+        </div>
       ) : (
         <div className="mt-3 flex items-center gap-2">
           <input

@@ -267,3 +267,86 @@ export async function generateCustomBetOdds(input: {
     reasoning: parsed.reasoning,
   };
 }
+
+// --- Open-question single-answer odds -------------------------------------
+
+/**
+ * Generates odds for a single free-form answer to an open-question custom
+ * bet (e.g. question "Who will win the World Cup?", answer "Argentina").
+ * Probabilities are independent across answers — there's no parimutuel or
+ * sum-to-1 normalization, since the answer space is open.
+ */
+export type OpenAnswerOdds = {
+  probability: number;
+  odds: number;
+  reasoning: string;
+};
+
+export async function generateOpenAnswerOdds(input: {
+  matchContext?: {
+    homeTeam: string;
+    awayTeam: string;
+    groupLabel: string;
+    status: "scheduled" | "live" | "final";
+    homeScore: number | null;
+    awayScore: number | null;
+    kickoff: Date;
+  };
+  title: string;
+  description: string;
+  answer: string;
+  existingAnswers?: string[]; // for the model's awareness, not used for math
+}): Promise<OpenAnswerOdds> {
+  const ai = client();
+  const matchLine = input.matchContext
+    ? `Match: ${input.matchContext.homeTeam} vs ${input.matchContext.awayTeam} (Group ${input.matchContext.groupLabel}, status ${input.matchContext.status}, score ${input.matchContext.homeScore ?? "-"}:${input.matchContext.awayScore ?? "-"}, kickoff ${input.matchContext.kickoff.toISOString()})`
+    : "No specific match — treat as a tournament-wide question.";
+
+  const existingLine =
+    input.existingAnswers && input.existingAnswers.length > 0
+      ? `Other answers already submitted (for awareness, do not adjust math for them): ${input.existingAnswers.join(" | ")}`
+      : "";
+
+  const prompt = [
+    "You are a sports odds engine for a friend-group betting game (no real money, six friends total) during the 2026 FIFA World Cup.",
+    "A user proposed an open question and another user is submitting an answer. Estimate the probability that this specific answer is correct.",
+    "Probabilities are INDEPENDENT across answers — do NOT try to make them sum to 1. Just give a calibrated, honest probability for THIS answer.",
+    "If the answer is nonsense or impossible to evaluate, return a very low probability (~0.01) and say so.",
+    "",
+    matchLine,
+    `Question: ${input.title}`,
+    `Description: ${input.description || "(none)"}`,
+    `Answer being evaluated: ${input.answer}`,
+    existingLine,
+    "",
+    "Return probability (a number between 0 and 1) and a one-sentence reasoning.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          probability: { type: Type.NUMBER },
+          reasoning: { type: Type.STRING },
+        },
+        required: ["probability", "reasoning"],
+      },
+    },
+  });
+
+  const text = response.text;
+  if (!text) throw new Error("Gemini returned an empty response.");
+  const parsed = JSON.parse(text) as { probability: number; reasoning: string };
+  const p = Math.max(0.005, Math.min(0.99, parsed.probability));
+  return {
+    probability: p,
+    odds: probToOdds(p, MAX_ODDS),
+    reasoning: parsed.reasoning,
+  };
+}

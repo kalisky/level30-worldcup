@@ -222,6 +222,7 @@ export default async function MatchPage(props: {
             roomCode={room.code}
             matchId={match.id}
             matchLabel={`${match.homeTeam} vs ${match.awayTeam}`}
+            matchKickoff={new Date(match.kickoff).toISOString()}
           />
         </div>
       )}

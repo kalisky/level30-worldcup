@@ -29,9 +29,14 @@ function formatKickoff(d: Date) {
 
 export default async function MatchPage(props: {
   params: Promise<{ code: string; id: string }>;
+  searchParams: Promise<{ bet?: string | string[] | undefined }>;
 }) {
   const { code, id } = await props.params;
+  const searchParams = await props.searchParams;
   const { room, user } = await requireRoomUser(code);
+  const targetCustomBetId = Array.isArray(searchParams.bet)
+    ? searchParams.bet[0]
+    : searchParams.bet;
 
   const match = await getMatch(id);
   if (!match) notFound();
@@ -229,6 +234,7 @@ export default async function MatchPage(props: {
               proposerName={proposerName}
               roomCode={room.code}
               matchId={match.id}
+              highlighted={targetCustomBetId === bet.id}
               myWager={myWager}
               myChips={user.chips}
               wagers={allWagers}
@@ -247,6 +253,7 @@ export default async function MatchPage(props: {
         <MatchScreenLayout
           matchPane={matchPane}
           customBetsPane={customBetsPane}
+          targetCustomBetId={targetCustomBetId}
         />
       </main>
     </>

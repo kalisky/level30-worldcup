@@ -1,7 +1,8 @@
-import Link from "next/link";
 import { requireRoomUser } from "@/lib/auth-context";
 import {
+  getCustomWagersFor,
   getMyMatchBets,
+  getMyWagerOnCustomBet,
   getRoomUsers,
   listOpenCustomBets,
   listUpcomingMatches,
@@ -10,95 +11,147 @@ import RoomHeader from "@/components/RoomHeader";
 import Leaderboard from "@/components/Leaderboard";
 import MatchCard from "@/components/MatchCard";
 import AutoRefresh from "@/components/AutoRefresh";
+import CustomBetCard from "@/components/CustomBetCard";
+import ProposeBetModal from "@/components/ProposeBetModal";
+import MatchScreenLayout from "@/components/MatchScreenLayout";
 
 export default async function DashboardPage(props: {
   params: Promise<{ code: string }>;
+  searchParams: Promise<{ bet?: string | string[] | undefined }>;
 }) {
   const { code } = await props.params;
+  const searchParams = await props.searchParams;
   const { room, user } = await requireRoomUser(code);
+  const targetCustomBetId = Array.isArray(searchParams.bet)
+    ? searchParams.bet[0]
+    : searchParams.bet;
 
   const [members, upcoming, customBets, myBets] = await Promise.all([
     getRoomUsers(room.id),
     listUpcomingMatches(100),
-    listOpenCustomBets(room.id, 10),
+    listOpenCustomBets(room.id, 100),
     getMyMatchBets(room.id, user.id),
   ]);
 
+  const customBetDetails = await Promise.all(
+    customBets.map(async (row) => {
+      const [myWager, allWagers] = await Promise.all([
+        getMyWagerOnCustomBet(row.bet.id, user.id),
+        getCustomWagersFor(row.bet.id),
+      ]);
+
+      return {
+        ...row,
+        myWager,
+        allWagers,
+      };
+    })
+  );
+
   const myPredictionByMatch = new Map(
     myBets.map((b) => [b.matchId, { home: b.predictedHomeScore, away: b.predictedAwayScore }] as const)
+  );
+
+  const dashboardPane = (
+    <>
+      <Leaderboard users={members} meId={user.id} />
+
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+          Upcoming &amp; live matches
+        </h2>
+        {upcoming.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 dark:border-zinc-700">
+            No matches scheduled. Run <code>npm run seed</code> to load
+            fixtures.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {upcoming.map((m) => (
+              <MatchCard
+                key={m.id}
+                match={m}
+                roomCode={room.code}
+                myPrediction={myPredictionByMatch.get(m.id) ?? null}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+    </>
+  );
+
+  const customBetsPane = (
+    <section className="rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.07)]">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-[0.72rem] font-bold uppercase tracking-[0.28em] text-slate-500">
+            Custom bets
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Room-wide lines and match-specific side action.
+          </p>
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <ProposeBetModal roomCode={room.code} />
+      </div>
+
+      {customBets.length === 0 ? (
+        <p className="rounded-[22px] border border-dashed border-[#cfdced] bg-[#F8FBFF] p-6 text-center text-sm text-slate-500">
+          No custom bets in the room yet. Add one here for the whole room, or
+          open a match to create a match-specific line.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {customBetDetails.map(
+            ({
+              bet,
+              proposerName,
+              matchHomeTeam,
+              matchAwayTeam,
+              myWager,
+              allWagers,
+            }) => (
+              <CustomBetCard
+                key={bet.id}
+                bet={bet}
+                proposerName={proposerName}
+                roomCode={room.code}
+                matchId={bet.matchId ?? undefined}
+                contextLabel={
+                  matchHomeTeam && matchAwayTeam
+                    ? `${matchHomeTeam} vs ${matchAwayTeam}`
+                    : "Room-wide bet"
+                }
+                contextHref={
+                  bet.matchId ? `/r/${room.code}/match/${bet.matchId}` : null
+                }
+                highlighted={targetCustomBetId === bet.id}
+                myWager={myWager}
+                myChips={user.chips}
+                wagers={allWagers}
+              />
+            )
+          )}
+        </div>
+      )}
+    </section>
   );
 
   return (
     <>
       <RoomHeader room={room} user={user} active="dashboard" />
       <AutoRefresh />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 space-y-6">
-        <Leaderboard users={members} meId={user.id} />
-
-        <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Upcoming & live matches
-          </h2>
-          {upcoming.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 dark:border-zinc-700">
-              No matches scheduled. Run <code>npm run seed</code> to load
-              fixtures.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {upcoming.map((m) => (
-                <MatchCard
-                  key={m.id}
-                  match={m}
-                  roomCode={room.code}
-                  myPrediction={myPredictionByMatch.get(m.id) ?? null}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section>
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-              Live custom bets
-            </h2>
-          </div>
-          {customBets.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 dark:border-zinc-700">
-              No open custom bets right now. Propose one from a match page
-              during the game.
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {customBets.map(({ bet, proposerName }) => (
-                <li key={bet.id}>
-                  <Link
-                    href={`/r/${room.code}/match/${bet.matchId ?? ""}`}
-                    className="block rounded-xl border border-zinc-200 bg-white p-4 hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600"
-                  >
-                    <div className="flex items-baseline justify-between gap-3">
-                      <h3 className="font-medium">{bet.title}</h3>
-                      <span className="text-xs text-zinc-500">
-                        by {proposerName}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
-                      {bet.options.map((o, i) => (
-                        <span
-                          key={i}
-                          className="rounded-full bg-zinc-100 px-2 py-1 dark:bg-zinc-800"
-                        >
-                          {o.label} · {o.odds.toFixed(2)}x
-                        </span>
-                      ))}
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
+        <MatchScreenLayout
+          matchPane={dashboardPane}
+          customBetsPane={customBetsPane}
+          matchTabLabel="Dashboard"
+          customBetsTabLabel="Custom Bets"
+          targetCustomBetId={targetCustomBetId}
+        />
       </main>
     </>
   );

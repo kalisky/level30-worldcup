@@ -1,15 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function MatchScreenLayout({
   matchPane,
   customBetsPane,
+  matchTabLabel = "Match & Odds",
+  customBetsTabLabel = "Custom Bets",
+  targetCustomBetId,
 }: {
   matchPane: React.ReactNode;
   customBetsPane: React.ReactNode;
+  matchTabLabel?: string;
+  customBetsTabLabel?: string;
+  targetCustomBetId?: string | null;
 }) {
-  const [activeTab, setActiveTab] = useState<"match" | "custom">("match");
+  const [activeTab, setActiveTab] = useState<"match" | "custom">(() =>
+    targetCustomBetId ? "custom" : "match"
+  );
+
+  useEffect(() => {
+    if (!targetCustomBetId) return;
+
+    const tabTimeout = window.setTimeout(() => {
+      setActiveTab("custom");
+    }, 0);
+
+    const targetElementId = `custom-bet-${targetCustomBetId}`;
+    let cancelled = false;
+    let attempts = 0;
+
+    const scrollToTarget = () => {
+      if (cancelled) return;
+
+      const element = document.getElementById(targetElementId);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+
+      if (attempts < 8) {
+        attempts += 1;
+        window.setTimeout(scrollToTarget, 120);
+      }
+    };
+
+    window.setTimeout(scrollToTarget, 120);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(tabTimeout);
+    };
+  }, [targetCustomBetId]);
 
   return (
     <>
@@ -26,7 +68,7 @@ export default function MatchScreenLayout({
                   : "text-slate-600 hover:bg-white hover:text-[#1E3A8A]")
               }
             >
-              Match &amp; Odds
+              {matchTabLabel}
             </button>
             <button
               type="button"
@@ -38,7 +80,7 @@ export default function MatchScreenLayout({
                   : "text-slate-600 hover:bg-white hover:text-[#1E3A8A]")
               }
             >
-              Custom Bets
+              {customBetsTabLabel}
             </button>
           </div>
         </div>
@@ -59,7 +101,7 @@ export default function MatchScreenLayout({
           className={
             "space-y-4 " +
             (activeTab === "custom" ? "block" : "hidden") +
-            " lg:sticky lg:top-28 lg:block lg:self-start"
+            " lg:sticky lg:top-28 lg:block lg:max-h-[calc(100vh-8rem)] lg:self-start lg:overflow-y-auto lg:pr-1"
           }
         >
           {customBetsPane}

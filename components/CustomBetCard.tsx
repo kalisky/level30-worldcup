@@ -1,14 +1,27 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import type { CustomBet, CustomWager } from "@/lib/db/schema";
 import { placeCustomWager } from "@/lib/actions/custom-bets";
+
+function formatLockTime(value: Date | string) {
+  return new Date(value).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 export default function CustomBetCard({
   bet,
   proposerName,
   roomCode,
   matchId,
+  contextLabel,
+  contextHref,
+  highlighted,
   myWager,
   myChips,
   wagers,
@@ -17,6 +30,9 @@ export default function CustomBetCard({
   proposerName: string;
   roomCode: string;
   matchId?: string;
+  contextLabel?: string | null;
+  contextHref?: string | null;
+  highlighted?: boolean;
   myWager: CustomWager | null;
   myChips: number;
   wagers: { wager: CustomWager; userName: string }[];
@@ -25,11 +41,17 @@ export default function CustomBetCard({
   const [stake, setStake] = useState<number>(25);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [shareState, setShareState] = useState<"idle" | "copied" | "failed">(
+    "idle"
+  );
   const [now] = useState(() => Date.now());
 
   const isLocked =
     bet.status !== "open" ||
     (bet.locksAt ? new Date(bet.locksAt).getTime() <= now : false);
+  const sharePath = matchId
+    ? `/r/${roomCode}/match/${matchId}?bet=${bet.id}#custom-bet-${bet.id}`
+    : `/r/${roomCode}/dashboard?bet=${bet.id}#custom-bet-${bet.id}`;
 
   function submit() {
     if (optionIdx === null) return;
@@ -49,20 +71,71 @@ export default function CustomBetCard({
     });
   }
 
+  async function copyShareLink() {
+    const shareUrl = new URL(sharePath, window.location.origin).toString();
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareState("copied");
+      window.setTimeout(() => setShareState("idle"), 2000);
+    } catch {
+      setShareState("failed");
+      window.setTimeout(() => setShareState("idle"), 2500);
+    }
+  }
+
   return (
-    <article className="rounded-[26px] border border-[#dbe5f2] bg-white p-5 shadow-[0_14px_32px_rgba(30,58,138,0.07)]">
-      <header className="flex items-baseline justify-between gap-3">
+    <article
+      id={`custom-bet-${bet.id}`}
+      className={
+        "scroll-mt-28 rounded-[26px] border bg-white p-5 shadow-[0_14px_32px_rgba(30,58,138,0.07)] transition " +
+        (highlighted
+          ? "border-[#3B82F6] ring-2 ring-[#BFDBFE]"
+          : "border-[#dbe5f2]")
+      }
+    >
+      <header className="flex items-start justify-between gap-3">
         <h3 className="text-lg font-black text-[#1E3A8A]">{bet.title}</h3>
-        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-          by {proposerName}
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={copyShareLink}
+            className="rounded-full border border-[#cdd9ea] px-3 py-1.5 text-[0.7rem] font-bold uppercase tracking-[0.16em] text-slate-600 transition hover:border-[#3B82F6] hover:bg-[#F8FBFF] hover:text-[#1E3A8A]"
+          >
+            {shareState === "copied"
+              ? "Copied"
+              : shareState === "failed"
+                ? "Copy failed"
+                : "Share"}
+          </button>
+          <span className="pt-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+            by {proposerName}
+          </span>
+        </div>
       </header>
+      {contextHref && contextLabel ? (
+        <Link
+          href={contextHref}
+          className="mt-2 inline-flex rounded-full bg-[#EFF6FF] px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-[#1D4ED8] transition hover:bg-[#E0EEFF]"
+        >
+          {contextLabel}
+        </Link>
+      ) : contextLabel ? (
+        <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+          {contextLabel}
+        </p>
+      ) : null}
       {bet.description && (
         <p className="mt-1 text-sm leading-6 text-slate-600">{bet.description}</p>
       )}
       {bet.aiReasoning && (
         <p className="mt-2 rounded-2xl bg-[#F8FBFF] px-3 py-2 text-xs italic text-slate-500 ring-1 ring-[#dbe5f2]">
           AI: {bet.aiReasoning}
+        </p>
+      )}
+      {bet.locksAt && (
+        <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+          {isLocked ? "Locked" : "Locks"} {formatLockTime(bet.locksAt)}
         </p>
       )}
 

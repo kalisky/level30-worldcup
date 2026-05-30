@@ -3,6 +3,26 @@
 import { useState, useTransition } from "react";
 import { proposeCustomBet } from "@/lib/actions/custom-bets";
 
+function formatDateTimeLocal(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function getDefaultLockTimeInput() {
+  return formatDateTimeLocal(new Date(Date.now() + 15 * 60 * 1000));
+}
+
+function toIsoFromLocalDateTime(value: string) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString();
+}
+
 export default function ProposeBetModal({
   roomCode,
   matchId,
@@ -14,6 +34,7 @@ export default function ProposeBetModal({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [options, setOptions] = useState<string[]>(["Yes", "No"]);
+  const [lockAtLocal, setLockAtLocal] = useState(() => getDefaultLockTimeInput());
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -27,21 +48,34 @@ export default function ProposeBetModal({
     if (options.length > 2) setOptions(options.filter((_, i) => i !== idx));
   }
 
+  function resetForm() {
+    setTitle("");
+    setDescription("");
+    setOptions(["Yes", "No"]);
+    setLockAtLocal(getDefaultLockTimeInput());
+    setError(null);
+  }
+
   function submit() {
     setError(null);
+    const lockAtIso = toIsoFromLocalDateTime(lockAtLocal);
+    if (!lockAtIso) {
+      setError("Pick a valid lock time.");
+      return;
+    }
+
     const fd = new FormData();
     fd.set("roomCode", roomCode);
     if (matchId) fd.set("matchId", matchId);
     fd.set("title", title);
     fd.set("description", description);
+    fd.set("locksAt", lockAtIso);
     options.forEach((o) => fd.append("optionLabels", o));
     startTransition(async () => {
       try {
         await proposeCustomBet(fd);
         setOpen(false);
-        setTitle("");
-        setDescription("");
-        setOptions(["Yes", "No"]);
+        resetForm();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to propose bet.");
       }
@@ -52,7 +86,10 @@ export default function ProposeBetModal({
     return (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          resetForm();
+          setOpen(true);
+        }}
         className="w-full rounded-[24px] border-2 border-dashed border-[#cfdced] bg-[#F8FBFF] px-4 py-3 text-sm font-bold text-[#1E3A8A] transition hover:border-[#3B82F6] hover:bg-white"
       >
         + Propose a custom bet
@@ -108,6 +145,21 @@ export default function ProposeBetModal({
           </div>
           <div>
             <label className="mb-2 block text-sm font-bold text-[#1E3A8A]">
+              Lock time
+            </label>
+            <input
+              type="datetime-local"
+              value={lockAtLocal}
+              onChange={(e) => setLockAtLocal(e.target.value)}
+              min={formatDateTimeLocal(new Date())}
+              className="w-full rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-3 text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
+            />
+            <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+              Uses your local time. Betting locks exactly at this moment.
+            </p>
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-bold text-[#1E3A8A]">
               Options
             </label>
             <div className="space-y-1.5">
@@ -152,7 +204,12 @@ export default function ProposeBetModal({
 
         <button
           type="button"
-          disabled={pending || title.trim().length < 3 || options.some((o) => !o.trim())}
+          disabled={
+            pending ||
+            title.trim().length < 3 ||
+            !lockAtLocal ||
+            options.some((o) => !o.trim())
+          }
           onClick={submit}
           className="mt-5 w-full rounded-[24px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-3 font-bold text-white shadow-[0_18px_36px_rgba(249,115,22,0.28)] disabled:cursor-not-allowed disabled:opacity-50"
         >

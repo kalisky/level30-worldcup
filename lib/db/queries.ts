@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "./index";
 import {
   rooms,
@@ -90,9 +90,12 @@ export async function listOpenCustomBets(roomId: string, limit = 30) {
     .select({
       bet: customBets,
       proposerName: users.name,
+      matchHomeTeam: matches.homeTeam,
+      matchAwayTeam: matches.awayTeam,
     })
     .from(customBets)
     .innerJoin(users, eq(users.id, customBets.proposerId))
+    .leftJoin(matches, eq(matches.id, customBets.matchId))
     .where(and(eq(customBets.roomId, roomId), eq(customBets.status, "open")))
     .orderBy(desc(customBets.createdAt))
     .limit(limit);

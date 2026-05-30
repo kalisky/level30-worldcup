@@ -12,6 +12,7 @@ const proposeSchema = z.object({
   matchId: z.string().uuid().optional(),
   title: z.string().trim().min(3).max(120),
   description: z.string().trim().max(500).default(""),
+  locksAtIso: z.string().trim().min(1),
   optionLabels: z
     .array(z.string().trim().min(1).max(50))
     .min(2)
@@ -32,12 +33,21 @@ export async function proposeCustomBet(formData: FormData) {
     matchId,
     title: String(formData.get("title") ?? ""),
     description: String(formData.get("description") ?? ""),
+    locksAtIso: String(formData.get("locksAt") ?? ""),
     optionLabels,
   });
   if (!parsed.success) {
     throw new Error(
       "Invalid bet: " + parsed.error.issues.map((i) => i.message).join(", ")
     );
+  }
+
+  const locksAt = new Date(parsed.data.locksAtIso);
+  if (Number.isNaN(locksAt.getTime())) {
+    throw new Error("Invalid lock time.");
+  }
+  if (locksAt.getTime() <= Date.now()) {
+    throw new Error("Lock time must be in the future.");
   }
 
   let matchContext: Parameters<typeof generateCustomBetOdds>[0]["matchContext"];
@@ -48,6 +58,9 @@ export async function proposeCustomBet(formData: FormData) {
       .where(eq(matches.id, parsed.data.matchId))
       .limit(1);
     if (!m) throw new Error("Match not found.");
+    if (m.status === "final") {
+      throw new Error("Cannot propose a custom bet on a final match.");
+    }
     matchContext = {
       homeTeam: m.homeTeam,
       awayTeam: m.awayTeam,
@@ -77,6 +90,7 @@ export async function proposeCustomBet(formData: FormData) {
       options: aiResult.options,
       aiReasoning: aiResult.reasoning,
       status: "open",
+      locksAt,
     })
     .returning();
 
@@ -84,6 +98,7 @@ export async function proposeCustomBet(formData: FormData) {
     revalidatePath(`/r/${room.code}/match/${parsed.data.matchId}`);
   }
   revalidatePath(`/r/${room.code}/dashboard`);
+  revalidatePath(`/r/${room.code}/admin`);
 
   return { customBetId: created.id };
 }

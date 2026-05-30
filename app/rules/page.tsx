@@ -15,7 +15,7 @@ const rules = [
   "If you get the winner or draw right, you win the direction half at the locked odds.",
   "If you get the exact score right, you also win the score half at the locked odds.",
   "Once kickoff happens, normal match betting closes.",
-  "During live matches, anyone can propose custom bets for extra action.",
+  "You can propose custom bets during a match or create room-wide custom bets at any time before their lock time.",
   "When a match or custom bet is settled, winners are paid in chips.",
   "Highest chip count at the end wins. No real money involved.",
 ];

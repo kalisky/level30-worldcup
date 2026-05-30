@@ -16,6 +16,7 @@ import MatchBetPanel from "@/components/MatchBetPanel";
 import MatchScreenLayout from "@/components/MatchScreenLayout";
 import TeamFlag from "@/components/TeamFlag";
 import { getTeamAbbreviation } from "@/lib/team-flags";
+import DailyGrantBanner from "@/components/DailyGrantBanner";
 
 function formatKickoff(d: Date) {
   return d.toLocaleString(undefined, {
@@ -33,7 +34,7 @@ export default async function MatchPage(props: {
 }) {
   const { code, id } = await props.params;
   const searchParams = await props.searchParams;
-  const { room, user } = await requireRoomUser(code);
+  const { room, user, dailyGrantApplied } = await requireRoomUser(code);
   const targetCustomBetId = Array.isArray(searchParams.bet)
     ? searchParams.bet[0]
     : searchParams.bet;
@@ -217,7 +218,11 @@ export default async function MatchPage(props: {
 
       {match.status !== "final" && (
         <div className="mb-4">
-          <ProposeBetModal roomCode={room.code} matchId={match.id} />
+          <ProposeBetModal
+            roomCode={room.code}
+            matchId={match.id}
+            matchLabel={`${match.homeTeam} vs ${match.awayTeam}`}
+          />
         </div>
       )}
 
@@ -248,6 +253,7 @@ export default async function MatchPage(props: {
   return (
     <>
       <RoomHeader room={room} user={user} />
+      <DailyGrantBanner amount={dailyGrantApplied} />
       <AutoRefresh />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
         <MatchScreenLayout

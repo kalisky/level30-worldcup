@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { customBets, customWagers, matches, users } from "@/lib/db/schema";
 import { requireRoomUser } from "@/lib/auth-context";
 import { generateCustomBetOdds } from "@/lib/ai/odds";
+import { recordLedger } from "@/lib/ledger";
 
 const proposeSchema = z.object({
   matchId: z.string().uuid().optional(),
@@ -159,7 +160,7 @@ export async function placeCustomWager(formData: FormData) {
       .update(users)
       .set({ chips: sql`${users.chips} - ${stake}` })
       .where(and(eq(users.id, user.id), sql`${users.chips} >= ${stake}`))
-      .returning({ id: users.id });
+      .returning({ id: users.id, chips: users.chips });
     if (updated.length === 0) throw new Error("Not enough chips.");
 
     await tx.insert(customWagers).values({
@@ -168,6 +169,16 @@ export async function placeCustomWager(formData: FormData) {
       optionIdx,
       stake,
       oddsLocked: odds.toFixed(2),
+    });
+
+    await recordLedger(tx, {
+      roomId: room.id,
+      userId: user.id,
+      delta: -stake,
+      balanceAfter: updated[0].chips,
+      reason: "custom_wager_placed",
+      refCustomBetId: customBetId,
+      note: `Wagered ${stake} on "${bet.options[optionIdx].label}" — ${bet.title}`,
     });
   });
 

@@ -22,6 +22,20 @@
       "when": 1780132113858,
       "tag": "0002_lowly_infant_terrible",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1780142580645,
+      "tag": "0003_glorious_arclight",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780143464478,
+      "tag": "0004_lush_harry_osborn",
+      "breakpoints": true
     }
   ]
 }

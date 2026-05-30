@@ -6,12 +6,13 @@ import { listRecentSettlements } from "@/lib/db/queries";
 import RoomHeader from "@/components/RoomHeader";
 import SettleMatchForm from "@/components/SettleMatchForm";
 import SettleCustomBet from "@/components/SettleCustomBet";
+import DailyGrantBanner from "@/components/DailyGrantBanner";
 
 export default async function AdminPage(props: {
   params: Promise<{ code: string }>;
 }) {
   const { code } = await props.params;
-  const { room, user } = await requireRoomUser(code);
+  const { room, user, dailyGrantApplied } = await requireRoomUser(code);
 
   const [allMatches, openBets, recent] = await Promise.all([
     db.select().from(matches).orderBy(matches.kickoff),
@@ -42,6 +43,7 @@ export default async function AdminPage(props: {
   return (
     <>
       <RoomHeader room={room} user={user} active="admin" />
+      <DailyGrantBanner amount={dailyGrantApplied} />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 space-y-8">
         <section>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">

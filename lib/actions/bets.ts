@@ -12,6 +12,7 @@ import {
   SCORE_RANGE,
 } from "@/lib/db/schema";
 import { requireRoomUser } from "@/lib/auth-context";
+import { recordLedger } from "@/lib/ledger";
 
 const placeBetSchema = z.object({
   matchId: z.string().uuid(),
@@ -98,7 +99,7 @@ export async function placeMatchBet(formData: FormData) {
       .update(users)
       .set({ chips: sql`${users.chips} - ${totalStake}` })
       .where(and(eq(users.id, user.id), sql`${users.chips} >= ${totalStake}`))
-      .returning({ id: users.id });
+      .returning({ id: users.id, chips: users.chips });
     if (updated.length === 0) {
       throw new Error("Not enough chips.");
     }
@@ -114,6 +115,16 @@ export async function placeMatchBet(formData: FormData) {
       scoreStake: scoreStakeAmount,
       directionOddsLocked: directionOdds.toFixed(2),
       scoreOddsLocked: scoreOddsRaw.toFixed(2),
+    });
+
+    await recordLedger(tx, {
+      roomId: room.id,
+      userId: user.id,
+      delta: -totalStake,
+      balanceAfter: updated[0].chips,
+      reason: "match_bet_placed",
+      refMatchId: matchId,
+      note: `Predicted ${match.homeTeam} ${predictedHomeScore}–${predictedAwayScore} ${match.awayTeam}`,
     });
   });
 

@@ -14,6 +14,7 @@ import AutoRefresh from "@/components/AutoRefresh";
 import CustomBetCard from "@/components/CustomBetCard";
 import ProposeBetModal from "@/components/ProposeBetModal";
 import MatchScreenLayout from "@/components/MatchScreenLayout";
+import DailyGrantBanner from "@/components/DailyGrantBanner";
 
 export default async function DashboardPage(props: {
   params: Promise<{ code: string }>;
@@ -24,7 +25,7 @@ export default async function DashboardPage(props: {
 }) {
   const { code } = await props.params;
   const searchParams = await props.searchParams;
-  const { room, user } = await requireRoomUser(code);
+  const { room, user, dailyGrantApplied } = await requireRoomUser(code);
   const targetCustomBetId = Array.isArray(searchParams.bet)
     ? searchParams.bet[0]
     : searchParams.bet;
@@ -60,7 +61,7 @@ export default async function DashboardPage(props: {
 
   const dashboardPane = (
     <>
-      <Leaderboard users={members} meId={user.id} />
+      <Leaderboard users={members} meId={user.id} roomCode={room.code} />
 
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">
@@ -154,6 +155,7 @@ export default async function DashboardPage(props: {
         active="dashboard"
         initialRoomModalOpen={roomWasCreated}
       />
+      <DailyGrantBanner amount={dailyGrantApplied} />
       <AutoRefresh />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
         <MatchScreenLayout

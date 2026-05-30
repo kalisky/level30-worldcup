@@ -9,6 +9,7 @@ import { authUsers, rooms, users } from "@/lib/db/schema";
 import { requireProfiledUser } from "@/lib/auth";
 import { requireRoomUser } from "@/lib/auth-context";
 import { generateRoomCode, normalizeRoomCode } from "@/lib/code";
+import { recordLedger } from "@/lib/ledger";
 
 const createRoomSchema = z.object({
   name: z.string().trim().min(1).max(60),
@@ -57,12 +58,24 @@ export async function createRoom(formData: FormData) {
       })
       .returning();
 
-    await tx.insert(users).values({
+    const [createdUser] = await tx
+      .insert(users)
+      .values({
+        roomId: room.id,
+        authUserId: authUser.id,
+        name: authUser.displayName!,
+        chips: room.startingChips,
+        isCreator: true,
+      })
+      .returning({ id: users.id });
+
+    await recordLedger(tx, {
       roomId: room.id,
-      authUserId: authUser.id,
-      name: authUser.displayName!,
-      chips: room.startingChips,
-      isCreator: true,
+      userId: createdUser.id,
+      delta: room.startingChips,
+      balanceAfter: room.startingChips,
+      reason: "initial",
+      note: `Opening chips for ${room.name}`,
     });
 
     await tx
@@ -105,12 +118,24 @@ export async function joinRoom(formData: FormData) {
       throw new Error("This room is full.");
     }
 
-    await db.insert(users).values({
+    const [createdUser] = await db
+      .insert(users)
+      .values({
+        roomId: room.id,
+        authUserId: authUser.id,
+        name: authUser.displayName!,
+        chips: room.startingChips,
+        isCreator: false,
+      })
+      .returning({ id: users.id });
+
+    await recordLedger(db, {
       roomId: room.id,
-      authUserId: authUser.id,
-      name: authUser.displayName!,
-      chips: room.startingChips,
-      isCreator: false,
+      userId: createdUser.id,
+      delta: room.startingChips,
+      balanceAfter: room.startingChips,
+      reason: "initial",
+      note: `Opening chips for ${room.name}`,
     });
   }
 

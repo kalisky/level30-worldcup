@@ -16,6 +16,7 @@ import {
 } from "@/lib/db/schema";
 import { requireRoomUser } from "@/lib/auth-context";
 import { generate1X2Odds, generateScoreOdds } from "@/lib/ai/odds";
+import { recordLedger } from "@/lib/ledger";
 import {
   suggestMatchResult as aiSuggestMatchResult,
   suggestCustomBetWinner as aiSuggestCustomBetWinner,
@@ -93,10 +94,20 @@ export async function settleMatch(formData: FormData) {
       totalPaidOut += payout;
 
       if (payout > 0) {
-        await tx
+        const [updatedUser] = await tx
           .update(users)
           .set({ chips: sql`${users.chips} + ${payout}` })
-          .where(eq(users.id, bet.userId));
+          .where(eq(users.id, bet.userId))
+          .returning({ chips: users.chips });
+        await recordLedger(tx, {
+          roomId: room.id,
+          userId: bet.userId,
+          delta: payout,
+          balanceAfter: updatedUser.chips,
+          reason: "match_bet_payout",
+          refMatchId: matchId,
+          note: `${match.homeTeam} ${homeScore}–${awayScore} ${match.awayTeam}: ${directionWon ? "direction" : ""}${directionWon && scoreWon ? " + " : ""}${scoreWon ? "exact" : ""} hit`,
+        });
       }
       await tx
         .update(matchBets)
@@ -183,10 +194,20 @@ export async function settleCustomBet(formData: FormData) {
       const won = w.optionIdx === winningOptionIdx;
       if (won) {
         const payout = Math.floor(w.stake * Number(w.oddsLocked));
-        await tx
+        const [updatedUser] = await tx
           .update(users)
           .set({ chips: sql`${users.chips} + ${payout}` })
-          .where(eq(users.id, w.userId));
+          .where(eq(users.id, w.userId))
+          .returning({ chips: users.chips });
+        await recordLedger(tx, {
+          roomId: room.id,
+          userId: w.userId,
+          delta: payout,
+          balanceAfter: updatedUser.chips,
+          reason: "custom_wager_payout",
+          refCustomBetId: customBetId,
+          note: `Won "${(bet.options as CustomBetOption[])[winningOptionIdx].label}" on "${bet.title}"`,
+        });
       }
       await tx
         .update(customWagers)
@@ -245,10 +266,20 @@ export async function voidCustomBet(formData: FormData) {
       );
 
     for (const w of openWagers) {
-      await tx
+      const [updatedUser] = await tx
         .update(users)
         .set({ chips: sql`${users.chips} + ${w.stake}` })
-        .where(eq(users.id, w.userId));
+        .where(eq(users.id, w.userId))
+        .returning({ chips: users.chips });
+      await recordLedger(tx, {
+        roomId: room.id,
+        userId: w.userId,
+        delta: w.stake,
+        balanceAfter: updatedUser.chips,
+        reason: "custom_wager_refund",
+        refCustomBetId: customBetId,
+        note: `Refund — "${bet.title}" was voided`,
+      });
       await tx
         .update(customWagers)
         .set({ status: "void" })

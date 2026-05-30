@@ -48,6 +48,17 @@ export const settlementKind = pgEnum("settlement_kind", [
   "void_custom_bet",
 ]);
 
+export const ledgerReason = pgEnum("ledger_reason", [
+  "opening_balance",       // one-time backfill row when feature shipped
+  "initial",               // chips granted when user joins/created
+  "daily_grant",           // daily top-up
+  "match_bet_placed",      // -stake when placing a match bet
+  "match_bet_payout",      // +payout when match settles in your favor
+  "custom_wager_placed",   // -stake when wagering on custom bet
+  "custom_wager_payout",   // +payout when custom bet settles in your favor
+  "custom_wager_refund",   // +stake when custom bet is voided
+]);
+
 export const authUsers = pgTable(
   "auth_users",
   {
@@ -113,6 +124,9 @@ export const users = pgTable(
     name: text("name").notNull(),
     chips: integer("chips").notNull(),
     isCreator: boolean("is_creator").notNull().default(false),
+    // Last time the user received their daily top-up. NULL means never; the
+    // grant logic in requireRoomUser uses this to gate one credit per ~day.
+    lastDailyGrantAt: timestamp("last_daily_grant_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -285,6 +299,41 @@ export const settlements = pgTable(
   (t) => [index("settlements_room_idx").on(t.roomId)]
 );
 
+// Append-only audit log of every chip movement. Lets each user see exactly
+// where their balance came from / went to. Written by `recordLedger` after any
+// successful chip mutation (initial grant, daily grant, bet placed, payout,
+// refund). Includes a balance_after snapshot for easy display.
+export const chipLedger = pgTable(
+  "chip_ledger",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    roomId: uuid("room_id")
+      .notNull()
+      .references(() => rooms.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    delta: integer("delta").notNull(), // negative for spend, positive for credit
+    balanceAfter: integer("balance_after").notNull(),
+    reason: ledgerReason("reason").notNull(),
+    refMatchId: uuid("ref_match_id").references(() => matches.id, {
+      onDelete: "set null",
+    }),
+    refCustomBetId: uuid("ref_custom_bet_id").references(() => customBets.id, {
+      onDelete: "set null",
+    }),
+    note: text("note").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("chip_ledger_user_idx").on(t.userId),
+    index("chip_ledger_room_idx").on(t.roomId),
+    index("chip_ledger_created_idx").on(t.createdAt),
+  ]
+);
+
 export type Room = typeof rooms.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type AuthUser = typeof authUsers.$inferSelect;
@@ -294,6 +343,7 @@ export type MatchBet = typeof matchBets.$inferSelect;
 export type CustomBet = typeof customBets.$inferSelect;
 export type CustomWager = typeof customWagers.$inferSelect;
 export type Settlement = typeof settlements.$inferSelect;
+export type ChipLedger = typeof chipLedger.$inferSelect;
 
 export function scoreKey(home: number, away: number): string {
   return `${home}-${away}`;

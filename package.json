@@ -14,7 +14,8 @@
     "seed": "tsx scripts/seed-fixtures.ts",
     "fixtures:fetch-real": "tsx scripts/fetch-real-fixtures.ts",
     "odds:compute": "tsx scripts/compute-odds.ts",
-    "odds:generate": "tsx scripts/generate-odds.ts"
+    "odds:generate": "tsx scripts/generate-odds.ts",
+    "ledger:backfill": "tsx scripts/backfill-ledger.ts"
   },
   "dependencies": {
     "@google/genai": "^2.6.0",

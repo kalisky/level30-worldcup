@@ -48,6 +48,29 @@
       "Highest chip count at the end wins. No real money involved."
     ]
   },
+  "copyBets": {
+    "button": "Copy predictions from another room",
+    "title": "Copy predictions",
+    "subtitle": "Bring your match score picks from one of your other rooms into this one. Custom bets are not copied.",
+    "pickSource": "Choose a source room",
+    "noOtherRooms": "You're not in any other rooms yet.",
+    "loading": "Loading preview…",
+    "copyableCount": "{count} can be copied",
+    "skippedCount": "{count} skipped",
+    "totalStake": "Total chips: {amount}",
+    "currentChips": "Your chips here: {amount}",
+    "notEnoughChips": "⚠️ Total stake exceeds your chips here — copies will stop when you run out.",
+    "confirm": "Copy {count} ({total} chips)",
+    "confirmPending": "Copying…",
+    "statusCopy": "Will copy",
+    "statusAlreadyBet": "Already bet here",
+    "statusKickoffPast": "Kickoff passed",
+    "statusNoOdds": "No odds in target",
+    "statusMatchSettled": "Match settled",
+    "success": "{count} predictions copied",
+    "fetchFailed": "Couldn't load preview.",
+    "copyFailed": "Copy failed."
+  },
   "auth": {
     "continueWithGoogle": "Continue with Google",
     "signingIn": "Signing in…",

@@ -48,6 +48,29 @@
       "בעל מספר האסימונים הגבוה ביותר בסוף מנצח. אין כסף אמיתי במשחק."
     ]
   },
+  "copyBets": {
+    "button": "העתק תחזיות מחדר אחר",
+    "title": "העתקת תחזיות",
+    "subtitle": "העתק את תחזיות המשחקים שלך מאחד החדרים האחרים שלך לחדר הזה. הימורים מותאמים אישית אינם מועתקים.",
+    "pickSource": "בחר חדר מקור",
+    "noOtherRooms": "אינך נמצא בחדרים נוספים.",
+    "loading": "טוען תצוגה מקדימה…",
+    "copyableCount": "{count} ניתנים להעתקה",
+    "skippedCount": "{count} ידולגו",
+    "totalStake": "סך הכל אסימונים: {amount}",
+    "currentChips": "האסימונים שלך כאן: {amount}",
+    "notEnoughChips": "⚠️ סך ההימורים עולה על האסימונים שיש לך כאן — ההעתקה תיעצר כשייגמרו.",
+    "confirm": "העתק {count} ({total} אסימונים)",
+    "confirmPending": "מעתיק…",
+    "statusCopy": "יועתק",
+    "statusAlreadyBet": "כבר הימרת כאן",
+    "statusKickoffPast": "המשחק התחיל",
+    "statusNoOdds": "אין יחסים בחדר היעד",
+    "statusMatchSettled": "המשחק הסתיים",
+    "success": "{count} תחזיות הועתקו",
+    "fetchFailed": "טעינת התצוגה נכשלה.",
+    "copyFailed": "ההעתקה נכשלה."
+  },
   "auth": {
     "continueWithGoogle": "המשך עם Google",
     "signingIn": "מתחבר…",

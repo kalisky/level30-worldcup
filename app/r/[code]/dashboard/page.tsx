@@ -6,6 +6,7 @@ import {
   getMyWagerOnCustomBet,
   getRoomUsers,
   listOpenCustomBets,
+  listRoomsForAuthUser,
   listUpcomingMatches,
 } from "@/lib/db/queries";
 import RoomHeader from "@/components/RoomHeader";
@@ -16,6 +17,7 @@ import CustomBetCard from "@/components/CustomBetCard";
 import ProposeBetModal from "@/components/ProposeBetModal";
 import MatchScreenLayout from "@/components/MatchScreenLayout";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
+import CopyBetsLauncher from "@/components/CopyBetsLauncher";
 
 export default async function DashboardPage(props: {
   params: Promise<{ code: string }>;
@@ -35,12 +37,17 @@ export default async function DashboardPage(props: {
     ? searchParams.created[0] === "1"
     : searchParams.created === "1";
 
-  const [members, upcoming, customBets, myBets] = await Promise.all([
+  const [members, upcoming, customBets, myBets, allRoomMemberships] = await Promise.all([
     getRoomUsers(room.id),
     listUpcomingMatches(100),
     listOpenCustomBets(room.id, 100),
     getMyMatchBets(room.id, user.id),
+    user.authUserId ? listRoomsForAuthUser(user.authUserId) : Promise.resolve([]),
   ]);
+
+  const otherRooms = allRoomMemberships
+    .filter((r) => r.room.id !== room.id)
+    .map((r) => ({ code: r.room.code, name: r.room.name }));
 
   const customBetDetails = await Promise.all(
     customBets.map(async (row) => {
@@ -66,9 +73,12 @@ export default async function DashboardPage(props: {
       <Leaderboard users={members} meId={user.id} roomCode={room.code} />
 
       <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-          {t("upcomingMatches")}
-        </h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            {t("upcomingMatches")}
+          </h2>
+          <CopyBetsLauncher targetRoomCode={room.code} otherRooms={otherRooms} />
+        </div>
         {upcoming.length === 0 ? (
           <p className="rounded-xl border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 dark:border-zinc-700">
             {t("noMatches")}

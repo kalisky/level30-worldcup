@@ -1,18 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { getFirebaseClientAuth } from "@/lib/firebase/client";
 
 export default function GoogleLoginButton({
   redirectTo = "/",
   className,
-  label = "Continue with Google",
+  label,
 }: {
   redirectTo?: string;
   className?: string;
   label?: string;
 }) {
+  const t = useTranslations("auth");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,7 +40,7 @@ export default function GoogleLoginButton({
         const payload = (await response.json().catch(() => null)) as
           | { error?: string }
           | null;
-        throw new Error(payload?.error ?? "Google sign-in failed.");
+        throw new Error(payload?.error ?? t("signInFailed"));
       }
 
       const payload = (await response.json()) as {
@@ -54,7 +56,7 @@ export default function GoogleLoginButton({
 
       window.location.assign(redirectTo);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Google sign-in failed.");
+      setError(e instanceof Error ? e.message : t("signInFailed"));
       setPending(false);
       return;
     }
@@ -73,7 +75,7 @@ export default function GoogleLoginButton({
           "w-full rounded-[24px] bg-[linear-gradient(135deg,#1E3A8A_0%,#2563EB_100%)] px-6 py-4 text-base font-bold text-white shadow-[0_18px_36px_rgba(37,99,235,0.28)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
         }
       >
-        {pending ? "Signing in…" : label}
+        {pending ? t("signingIn") : (label ?? t("continueWithGoogle"))}
       </button>
       {error && (
         <p className="rounded-2xl bg-red-50 px-3 py-3 text-sm font-medium text-red-700">

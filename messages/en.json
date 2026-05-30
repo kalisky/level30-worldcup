@@ -31,6 +31,11 @@
     "profile": "Profile",
     "rooms": "Rooms"
   },
+  "auth": {
+    "continueWithGoogle": "Continue with Google",
+    "signingIn": "Signing in…",
+    "signInFailed": "Google sign-in failed."
+  },
   "landing": {
     "title": "World Cup Bets",
     "tagline": "Bet with your friends on the 2026 World Cup. Pre-match picks + custom lines invented live during games.",
@@ -52,14 +57,20 @@
   "identityPick": {
     "joinAs": "Joining as",
     "joinRoom": "Join room",
-    "joinPending": "Joining…"
+    "joinPending": "Joining…",
+    "invitation": "Invitation",
+    "members": "members",
+    "signInFirst": "Sign in with Google first, then you can join this room as yourself.",
+    "roomFull": "This room is already full."
   },
   "createRoom": {
     "title": "Create a room",
     "subtitle": "Set a name and how many friends can join. You can rename it later.",
+    "creator": "Creator",
     "roomName": "Room name",
     "roomNamePlaceholder": "The Squad",
     "maxMembers": "Max members",
+    "maxMembersHint": "Default 10. You can raise it up to 50.",
     "submit": "Create room",
     "submitPending": "Creating room…"
   },
@@ -194,20 +205,43 @@
     "menu": "Menu",
     "yourProfile": "Your profile",
     "yourRooms": "Your rooms",
-    "joinAnotherRoom": "Join another room",
+    "joinAnotherRoom": "Join a room",
+    "joinRoomLabel": "Room code",
+    "joinInvalid": "Enter a valid room code.",
+    "joinSubmit": "Submit room code",
     "signOut": "Sign out",
-    "signedInAs": "Signed in as"
+    "signingOut": "Signing out…",
+    "signOutFailed": "Failed to sign out.",
+    "signedIn": "Signed in",
+    "noRooms": "You have not joined any rooms yet.",
+    "admin": "Admin",
+    "chipsLabel": "Chips"
   },
   "roomSettings": {
     "title": "Room settings",
+    "properties": "Room properties",
     "roomName": "Room name",
+    "roomCode": "Room code",
     "maxMembers": "Max members",
+    "maxMembersHint": "2 to 50 members.",
+    "inviteLink": "Invite link",
+    "copyLink": "Copy link",
+    "roomCreated": "Room created",
+    "roomCreatedBody": "Invite your friends with this link and let them join the room as themselves.",
     "save": "Save room settings",
     "savePending": "Saving…",
-    "shareLink": "Share invite link",
     "delete": "Delete room",
     "deleteConfirm": "Yes, delete room",
     "deletePending": "Deleting…",
-    "deleteWarn": "This permanently removes the room and all its bets. This can't be undone."
+    "deleteWarn": "This will permanently delete the room and all bets, wagers, and settlement history in it.",
+    "deleteAreYouSure": "Are you sure?",
+    "deleteTitle": "Delete {name}",
+    "deleteTypeName": "Please type {name}",
+    "deleteTypeNameError": "Type the exact room name to confirm deletion.",
+    "onlyCreator": "Only the room creator can edit these settings.",
+    "enterRoomName": "Enter a room name.",
+    "maxMembersError": "Max members must be between 2 and 50.",
+    "updateFailed": "Failed to update room.",
+    "deleteFailed": "Failed to delete room."
   }
 }

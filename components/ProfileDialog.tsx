@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition, type RefObject } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import CreateRoomLauncher from "@/components/CreateRoomLauncher";
 import { signOut } from "@/lib/actions/auth";
 import { normalizeRoomCode } from "@/lib/code";
@@ -38,6 +39,7 @@ export default function ProfileDialog({
   navigationItems?: NavigationItem[];
   triggerRef?: RefObject<HTMLElement | null>;
 }) {
+  const t = useTranslations("profile");
   const router = useRouter();
   const rootRef = useRef<HTMLDivElement>(null);
   const [joinCode, setJoinCode] = useState("");
@@ -85,7 +87,7 @@ export default function ProfileDialog({
   function submitRoomCode() {
     const code = normalizeRoomCode(joinCode);
     if (!code) {
-      setJoinError("Enter a valid room code.");
+      setJoinError(t("joinInvalid"));
       return;
     }
 
@@ -105,7 +107,7 @@ export default function ProfileDialog({
         router.refresh();
       } catch (error) {
         setSignOutError(
-          error instanceof Error ? error.message : "Failed to sign out."
+          error instanceof Error ? error.message : t("signOutFailed")
         );
       }
     });
@@ -126,7 +128,7 @@ export default function ProfileDialog({
         </div>
         <div className="min-w-0">
           <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-slate-500">
-            Signed in
+            {t("signedIn")}
           </p>
           <p className="truncate text-base font-black text-[#1E3A8A]">
             {viewerName}
@@ -166,11 +168,11 @@ export default function ProfileDialog({
 
       <section>
         <p className="px-3 text-[0.68rem] font-bold uppercase tracking-[0.22em] text-slate-500">
-          Your rooms
+          {t("yourRooms")}
         </p>
         {rooms.length === 0 ? (
           <p className="mt-2 rounded-[20px] bg-[#F8FBFF] px-4 py-4 text-sm text-slate-500">
-            You have not joined any rooms yet.
+            {t("noRooms")}
           </p>
         ) : (
           <div className="mt-2 space-y-1">
@@ -194,12 +196,12 @@ export default function ProfileDialog({
                       </p>
                       {room.isCreator && (
                         <span className="rounded-full bg-[#E0EEFF] px-2 py-0.5 text-[0.62rem] font-bold uppercase tracking-[0.14em] text-[#1D4ED8]">
-                          Admin
+                          {t("admin")}
                         </span>
                       )}
                     </div>
                     <p className="mt-1 text-xs text-slate-500">
-                      {room.chips.toLocaleString()} Chips
+                      {room.chips.toLocaleString()} {t("chipsLabel")}
                     </p>
                   </div>
                   {isCurrentRoom && (
@@ -253,12 +255,12 @@ export default function ProfileDialog({
                 <path d="M4 10h9" />
               </svg>
             </span>
-            <span>Join a room</span>
+            <span>{t("joinAnotherRoom")}</span>
           </button>
         ) : (
           <div className="rounded-[20px] bg-[#F8FBFF] px-3 py-3">
             <label className="mb-2 block text-[0.68rem] font-bold uppercase tracking-[0.18em] text-slate-500">
-              Room code
+              {t("joinRoomLabel")}
             </label>
             <div className="flex items-center gap-2">
               <input
@@ -271,13 +273,14 @@ export default function ProfileDialog({
                 placeholder="ABCDE"
                 autoCapitalize="characters"
                 autoComplete="off"
+                dir="ltr"
                 className="min-w-0 flex-1 rounded-2xl border border-[#cdd9ea] bg-white px-3 py-2.5 text-sm font-semibold uppercase tracking-[0.3em] text-[#1E3A8A] placeholder:tracking-normal placeholder:normal-case placeholder:text-slate-400 focus:border-[#3B82F6] focus:outline-none"
               />
               <button
                 type="button"
                 onClick={submitRoomCode}
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-[linear-gradient(135deg,#1E3A8A_0%,#2563EB_100%)] text-white shadow-[0_10px_24px_rgba(37,99,235,0.18)]"
-                aria-label="Submit room code"
+                aria-label={t("joinSubmit")}
               >
                 <svg
                   viewBox="0 0 20 20"
@@ -324,7 +327,7 @@ export default function ProfileDialog({
             <path d="M13 6l4 4-4 4" />
             <path d="M17 10H8" />
           </svg>
-          <span>{signOutPending ? "Signing out…" : "Sign out"}</span>
+          <span>{signOutPending ? t("signingOut") : t("signOut")}</span>
         </button>
         {signOutError && (
           <p className="mt-2 px-3 text-xs font-medium text-red-700">

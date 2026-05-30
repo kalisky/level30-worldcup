@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import type { Room, User } from "@/lib/db/schema";
 import { deleteRoom, updateRoomSettings } from "@/lib/actions/rooms";
 import { getAbsoluteAppUrl } from "@/lib/public-url";
@@ -19,6 +20,8 @@ export default function RoomSettingsDialog({
   onClose: () => void;
   emphasizeInvite?: boolean;
 }) {
+  const t = useTranslations("roomSettings");
+  const tc = useTranslations("common");
   const router = useRouter();
   const canEdit = user.isCreator;
   const invitePath = `/r/${room.code}`;
@@ -67,12 +70,12 @@ export default function RoomSettingsDialog({
     const parsedMaxMembers = Number(formData.get("maxMembers") ?? room.maxMembers);
 
     if (!trimmedName) {
-      setError("Enter a room name.");
+      setError(t("enterRoomName"));
       return;
     }
 
     if (!Number.isInteger(parsedMaxMembers) || parsedMaxMembers < 2 || parsedMaxMembers > 50) {
-      setError("Max members must be between 2 and 50.");
+      setError(t("maxMembersError"));
       return;
     }
 
@@ -89,7 +92,7 @@ export default function RoomSettingsDialog({
         onClose();
         router.refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to update room.");
+        setError(err instanceof Error ? err.message : t("updateFailed"));
       }
     });
   }
@@ -98,7 +101,7 @@ export default function RoomSettingsDialog({
     const confirmationName = deleteConfirmationName.trim();
 
     if (confirmationName !== room.name) {
-      setDeleteError("Type the exact room name to confirm deletion.");
+      setDeleteError(t("deleteTypeNameError"));
       return;
     }
 
@@ -114,7 +117,7 @@ export default function RoomSettingsDialog({
         router.push("/");
         router.refresh();
       } catch (err) {
-        setDeleteError(err instanceof Error ? err.message : "Failed to delete room.");
+        setDeleteError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     });
   }
@@ -125,7 +128,7 @@ export default function RoomSettingsDialog({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[0.68rem] font-bold uppercase tracking-[0.24em] text-slate-500">
-              Room properties
+              {t("properties")}
             </p>
             <h2 className="mt-1 text-2xl font-black text-[#1E3A8A]">
               {room.name}
@@ -136,18 +139,17 @@ export default function RoomSettingsDialog({
             onClick={onClose}
             className="rounded-2xl border border-[#dbe5f2] px-3 py-2 text-sm font-semibold text-slate-500 transition hover:bg-[#F8FBFF] hover:text-[#1E3A8A]"
           >
-            Close
+            {tc("close")}
           </button>
         </div>
 
         {emphasizeInvite && (
           <div className="mt-4 rounded-[24px] border border-[#FED7AA] bg-[#FFF7ED] px-4 py-4 text-[#C2410C]">
             <p className="text-[0.68rem] font-bold uppercase tracking-[0.22em]">
-              Room created
+              {t("roomCreated")}
             </p>
             <p className="mt-1 text-sm font-medium leading-6">
-              Invite your friends with this link and let them join the room as
-              themselves.
+              {t("roomCreatedBody")}
             </p>
           </div>
         )}
@@ -155,25 +157,27 @@ export default function RoomSettingsDialog({
         <div className="mt-5 space-y-4">
           <div>
             <label className="mb-2 block text-sm font-bold text-[#1E3A8A]">
-              Room code
+              {t("roomCode")}
             </label>
             <input
               type="text"
               readOnly
               value={room.code}
+              dir="ltr"
               className="w-full rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-4 py-3 font-mono text-sm font-bold uppercase tracking-[0.22em] text-[#1E3A8A] focus:outline-none"
             />
           </div>
 
           <div>
             <label className="mb-2 block text-sm font-bold text-[#1E3A8A]">
-              Invite link
+              {t("inviteLink")}
             </label>
             <div className="flex flex-col gap-2 sm:flex-row">
               <input
                 type="text"
                 readOnly
                 value={inviteUrl}
+                dir="ltr"
                 className="min-w-0 flex-1 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-4 py-3 text-sm text-slate-600 focus:outline-none"
               />
               <button
@@ -182,10 +186,10 @@ export default function RoomSettingsDialog({
                 className="rounded-[20px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-3 text-sm font-bold text-white shadow-[0_14px_26px_rgba(249,115,22,0.24)]"
               >
                 {copyState === "copied"
-                  ? "Copied"
+                  ? tc("copied")
                   : copyState === "failed"
-                    ? "Copy failed"
-                    : "Copy link"}
+                    ? tc("copyFailed")
+                    : t("copyLink")}
               </button>
             </div>
           </div>
@@ -193,7 +197,7 @@ export default function RoomSettingsDialog({
           <form ref={formRef} className="space-y-4">
             <div>
               <label className="mb-2 block text-sm font-bold text-[#1E3A8A]">
-                Room name
+                {t("roomName")}
               </label>
               <input
                 type="text"
@@ -210,7 +214,7 @@ export default function RoomSettingsDialog({
 
             <div>
               <label className="mb-2 block text-sm font-bold text-[#1E3A8A]">
-                Max members
+                {t("maxMembers")}
               </label>
               <input
                 type="number"
@@ -225,7 +229,7 @@ export default function RoomSettingsDialog({
                 }
               />
               <p className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-                2 to 50 members.
+                {t("maxMembersHint")}
               </p>
             </div>
           </form>
@@ -233,7 +237,7 @@ export default function RoomSettingsDialog({
 
         {!canEdit && (
           <p className="mt-4 rounded-2xl border border-[#dbe5f2] bg-[#F8FBFF] px-4 py-3 text-sm text-slate-600">
-            Only the room creator can edit these settings.
+            {t("onlyCreator")}
           </p>
         )}
 
@@ -251,7 +255,7 @@ export default function RoomSettingsDialog({
               onClick={submit}
               className="mt-5 w-full rounded-[24px] bg-[linear-gradient(135deg,#1E3A8A_0%,#2563EB_100%)] px-4 py-3 font-bold text-white shadow-[0_18px_36px_rgba(37,99,235,0.24)] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {pending ? "Saving…" : "Save room settings"}
+              {pending ? t("savePending") : t("save")}
             </button>
 
             <button
@@ -259,7 +263,7 @@ export default function RoomSettingsDialog({
               onClick={openDeleteConfirm}
               className="mt-4 w-full rounded-[24px] border border-red-200 bg-red-50 px-4 py-3 font-bold text-red-700 transition hover:bg-red-100"
             >
-              Delete room
+              {t("delete")}
             </button>
           </>
         )}
@@ -271,10 +275,10 @@ export default function RoomSettingsDialog({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[0.68rem] font-bold uppercase tracking-[0.24em] text-red-600">
-                  Are you sure?
+                  {t("deleteAreYouSure")}
                 </p>
                 <h3 className="mt-1 text-2xl font-black text-[#1E3A8A]">
-                  Delete {room.name}
+                  {t("deleteTitle", { name: room.name })}
                 </h3>
               </div>
               <button
@@ -282,18 +286,19 @@ export default function RoomSettingsDialog({
                 onClick={closeDeleteConfirm}
                 className="rounded-2xl border border-[#dbe5f2] px-3 py-2 text-sm font-semibold text-slate-500 transition hover:bg-[#F8FBFF] hover:text-[#1E3A8A]"
               >
-                Close
+                {tc("close")}
               </button>
             </div>
 
             <p className="mt-4 text-sm leading-6 text-slate-600">
-              This will permanently delete the room and all bets, wagers, and
-              settlement history in it.
+              {t("deleteWarn")}
             </p>
 
             <div className="mt-4">
               <label className="mb-2 block text-sm font-bold text-red-700">
-                Please type <span className="font-mono">{room.name}</span>
+                {t.rich("deleteTypeName", {
+                  name: () => <span className="font-mono">{room.name}</span>,
+                })}
               </label>
               <input
                 type="text"
@@ -318,7 +323,7 @@ export default function RoomSettingsDialog({
                 onClick={closeDeleteConfirm}
                 className="flex-1 rounded-[24px] border border-[#dbe5f2] px-4 py-3 font-bold text-slate-600 transition hover:bg-[#F8FBFF] hover:text-[#1E3A8A]"
               >
-                Cancel
+                {tc("cancel")}
               </button>
               <button
                 type="button"
@@ -328,7 +333,7 @@ export default function RoomSettingsDialog({
                 onClick={submitDelete}
                 className="flex-1 rounded-[24px] bg-[linear-gradient(135deg,#DC2626_0%,#EF4444_100%)] px-4 py-3 font-bold text-white shadow-[0_18px_36px_rgba(220,38,38,0.24)] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {deletePending ? "Deleting…" : "Yes, delete room"}
+                {deletePending ? t("deletePending") : t("deleteConfirm")}
               </button>
             </div>
           </div>

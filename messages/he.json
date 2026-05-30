@@ -31,6 +31,11 @@
     "profile": "פרופיל",
     "rooms": "חדרים"
   },
+  "auth": {
+    "continueWithGoogle": "המשך עם Google",
+    "signingIn": "מתחבר…",
+    "signInFailed": "ההתחברות עם Google נכשלה."
+  },
   "landing": {
     "title": "הימורי מונדיאל",
     "tagline": "הימרו עם החברים על מונדיאל 2026. תחזיות לפני המשחק + הימורים מותאמים אישית במהלך המשחק.",
@@ -52,14 +57,20 @@
   "identityPick": {
     "joinAs": "מצטרף בתור",
     "joinRoom": "הצטרף לחדר",
-    "joinPending": "מצטרף…"
+    "joinPending": "מצטרף…",
+    "invitation": "הזמנה",
+    "members": "חברים",
+    "signInFirst": "התחבר תחילה עם Google, ואז תוכל להצטרף לחדר בשמך.",
+    "roomFull": "החדר כבר מלא."
   },
   "createRoom": {
     "title": "יצירת חדר",
     "subtitle": "תן שם וקבע כמה חברים יכולים להצטרף. ניתן לשנות בהמשך.",
+    "creator": "יוצר",
     "roomName": "שם החדר",
     "roomNamePlaceholder": "החבורה",
     "maxMembers": "מספר חברים מקסימלי",
+    "maxMembersHint": "ברירת מחדל 10. ניתן להעלות עד 50.",
     "submit": "צור חדר",
     "submitPending": "יוצר חדר…"
   },
@@ -194,20 +205,43 @@
     "menu": "תפריט",
     "yourProfile": "הפרופיל שלך",
     "yourRooms": "החדרים שלך",
-    "joinAnotherRoom": "הצטרף לחדר אחר",
+    "joinAnotherRoom": "הצטרף לחדר",
+    "joinRoomLabel": "קוד חדר",
+    "joinInvalid": "הזן קוד חדר תקין.",
+    "joinSubmit": "שלח קוד חדר",
     "signOut": "התנתק",
-    "signedInAs": "מחובר בתור"
+    "signingOut": "מתנתק…",
+    "signOutFailed": "ההתנתקות נכשלה.",
+    "signedIn": "מחובר",
+    "noRooms": "עדיין לא הצטרפת לאף חדר.",
+    "admin": "מנהל",
+    "chipsLabel": "אסימונים"
   },
   "roomSettings": {
     "title": "הגדרות חדר",
+    "properties": "פרטי החדר",
     "roomName": "שם החדר",
+    "roomCode": "קוד החדר",
     "maxMembers": "מספר חברים מקסימלי",
+    "maxMembersHint": "בין 2 ל-50 חברים.",
+    "inviteLink": "קישור הזמנה",
+    "copyLink": "העתק קישור",
+    "roomCreated": "החדר נוצר",
+    "roomCreatedBody": "הזמן את החברים עם הקישור הזה כדי שיצטרפו לחדר.",
     "save": "שמור הגדרות",
     "savePending": "שומר…",
-    "shareLink": "שתף קישור הזמנה",
     "delete": "מחק חדר",
     "deleteConfirm": "כן, מחק את החדר",
     "deletePending": "מוחק…",
-    "deleteWarn": "פעולה זו מוחקת את החדר וכל ההימורים בו לצמיתות. לא ניתן לבטל."
+    "deleteWarn": "פעולה זו תמחק לצמיתות את החדר וכל ההימורים, ההגרלות והיסטוריית הסגירות שבו.",
+    "deleteAreYouSure": "אתה בטוח?",
+    "deleteTitle": "מחק את {name}",
+    "deleteTypeName": "אנא הקלד {name}",
+    "deleteTypeNameError": "הקלד את שם החדר המדויק כדי לאשר את המחיקה.",
+    "onlyCreator": "רק יוצר החדר יכול לערוך הגדרות אלה.",
+    "enterRoomName": "הזן שם חדר.",
+    "maxMembersError": "מספר החברים המקסימלי חייב להיות בין 2 ל-50.",
+    "updateFailed": "עדכון החדר נכשל.",
+    "deleteFailed": "מחיקת החדר נכשלה."
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 import CreateRoomForm from "@/components/CreateRoomForm";
 
 export default function CreateRoomDialog({
@@ -12,6 +13,8 @@ export default function CreateRoomDialog({
   onClose: () => void;
   creatorName: string;
 }) {
+  const t = useTranslations("createRoom");
+  const tc = useTranslations("common");
   const portalTarget =
     typeof document === "undefined" ? null : document.body;
 
@@ -23,11 +26,10 @@ export default function CreateRoomDialog({
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-4xl font-black tracking-tight text-[#1E3A8A]">
-              Create a room
+              {t("title")}
             </h2>
             <p className="mt-2 max-w-xl text-slate-600">
-              Set up a private room, share the code, and let your friends join
-              as themselves with Google login.
+              {t("subtitle")}
             </p>
           </div>
           <button
@@ -35,7 +37,7 @@ export default function CreateRoomDialog({
             onClick={onClose}
             className="rounded-2xl border border-[#dbe5f2] px-3 py-2 text-sm font-semibold text-slate-500 transition hover:bg-[#F8FBFF] hover:text-[#1E3A8A]"
           >
-            Close
+            {tc("close")}
           </button>
         </div>
 

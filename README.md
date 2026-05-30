@@ -1,6 +1,6 @@
 # World Cup Bets
 
-A friend-group betting app for the 2026 FIFA World Cup. Six friends, virtual chips, no real money.
+A friend-group betting app for the 2026 FIFA World Cup. Private rooms, virtual chips, no real money.
 
 ## What it does
 
@@ -14,6 +14,8 @@ A friend-group betting app for the 2026 FIFA World Cup. Six friends, virtual chi
 - Node 20.9 or newer
 - A free **Neon** Postgres database — sign up at [neon.tech](https://neon.tech)
 - A **Google Gemini** API key — get one at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) (free tier available)
+- A **Firebase** project with **Google sign-in** enabled
+- A Firebase Admin service account key for server-side token verification
 
 ## Local setup
 
@@ -22,10 +24,14 @@ git clone <this repo>
 cd world-cup
 npm install
 
-# Copy env template and fill in your two secrets:
+# Copy env template and fill in your secrets:
 cp .env.example .env.local
 #   DATABASE_URL=postgresql://...   (from Neon)
 #   GEMINI_API_KEY=...              (from Google AI Studio)
+#   NEXT_PUBLIC_FIREBASE_...        (from Firebase web app settings)
+#   FIREBASE_PROJECT_ID=...
+#   FIREBASE_CLIENT_EMAIL=...
+#   FIREBASE_PRIVATE_KEY=...
 
 # Push the schema to your Neon database (first time only):
 npm run db:push
@@ -40,21 +46,22 @@ npm run odds:generate
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000), create a room, share the URL.
+Open [http://localhost:3000](http://localhost:3000), sign in with Google, create a room, and share the room code or invite URL.
 
 ## Tournament-day workflow
 
-1. **Before group stage starts**: room creator goes to `/r/<code>/admin` and renames the placeholder team names to the actual qualified teams. Saving names auto-clears the odds for that match; click "Generate odds" to refresh them.
-2. **Before each kickoff**: friends visit the match page and place their score prediction (locks at kickoff).
-3. **During the match**: anyone can propose a custom bet from the match page. Claude scores it and others can wager until the match ends.
-4. **At the final whistle**: anyone with admin access goes to `/r/<code>/admin` → "Needs settlement" → click "Suggest with AI" (which web-searches the real result) → confirm → "Settle". All bets pay out automatically.
-5. **Custom bets**: same flow — "Suggest with AI" for any open custom bet, confirm, settle.
+1. **Before group stage starts**: room creator makes a room, shares the invite link or room code, and everyone joins with Google sign-in.
+2. **Before group stage starts**: any room member goes to `/r/<code>/admin` and renames the placeholder team names to the actual qualified teams. Saving names auto-clears the odds for that match; click "Generate odds" to refresh them.
+3. **Before each kickoff**: friends visit the match page and place their score prediction (locks at kickoff).
+4. **During the match**: anyone can propose a custom bet from the match page. Claude scores it and others can wager until the lock time.
+5. **At the final whistle**: anyone with admin access goes to `/r/<code>/admin` → "Needs settlement" → click "Suggest with AI" (which web-searches the real result) → confirm → "Settle". All bets pay out automatically.
+6. **Custom bets**: same flow — "Suggest with AI" for any open custom bet, confirm, settle.
 
 ## Deploy to Vercel
 
 1. Push the repo to GitHub.
 2. Import it on Vercel.
-3. Add the two env vars (`DATABASE_URL`, `GEMINI_API_KEY`) in Project Settings.
+3. Add the env vars from `.env.example` in Project Settings.
 4. Deploy. That's it — no other config.
 
 ## Scripts
@@ -75,7 +82,8 @@ Open [http://localhost:3000](http://localhost:3000), create a room, share the UR
 - **Next.js 16** App Router with TypeScript and Tailwind v4
 - **Postgres** via [Drizzle ORM](https://orm.drizzle.team)
 - **Gemini** (`gemini-2.5-flash`) via `@google/genai` for odds + AI-suggested settlements (with Google Search grounding)
-- **No auth** — just a room code in the URL and a `wc_user_<code>` cookie that says which friend you are
+- **Firebase Auth** with Google login on the client, plus an app-managed server session cookie
+- **Room memberships** stored in Postgres so invite links and room codes are enough to join
 - **Real-time** — clients poll for fresh server-rendered data every 5 seconds
 
 Key folders:

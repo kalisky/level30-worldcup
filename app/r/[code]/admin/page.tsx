@@ -30,12 +30,12 @@ export default async function AdminPage(props: {
   ]);
 
   // Split matches into 'needs attention' (past kickoff, not final) and rest.
-  const now = Date.now();
+  const now = new Date();
   const needsAttention = allMatches.filter(
-    (m) => m.status !== "final" && new Date(m.kickoff).getTime() <= now
+    (m) => m.status !== "final" && new Date(m.kickoff) <= now
   );
   const upcoming = allMatches.filter(
-    (m) => m.status !== "final" && new Date(m.kickoff).getTime() > now
+    (m) => m.status !== "final" && new Date(m.kickoff) > now
   );
   const completed = allMatches.filter((m) => m.status === "final");
 

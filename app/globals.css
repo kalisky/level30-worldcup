@@ -37,3 +37,20 @@ body {
 ::selection {
   background: rgba(59, 130, 246, 0.18);
 }
+
+:where(
+    a[href],
+    button:not(:disabled),
+    input[type="button"]:not(:disabled),
+    input[type="submit"]:not(:disabled),
+    input[type="reset"]:not(:disabled),
+    summary,
+    [role="button"],
+    label[for]
+  ) {
+  cursor: pointer;
+}
+
+:where(button:disabled, input:disabled) {
+  cursor: not-allowed;
+}

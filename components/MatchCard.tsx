@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Match } from "@/lib/db/schema";
 import TeamFlag from "@/components/TeamFlag";
+import { getTeamAbbreviation } from "@/lib/team-flags";
 
 function formatKickoff(d: Date) {
   return d.toLocaleString(undefined, {
@@ -24,6 +25,8 @@ export default function MatchCard({
   const kickoff = new Date(match.kickoff);
   const isFinal = match.status === "final";
   const isLive = match.status === "live";
+  const homeTeamAbbreviation = getTeamAbbreviation(match.homeTeam);
+  const awayTeamAbbreviation = getTeamAbbreviation(match.awayTeam);
   const centerLabel =
     match.homeScore != null && match.awayScore != null
       ? `${match.homeScore} : ${match.awayScore}`
@@ -60,8 +63,11 @@ export default function MatchCard({
       <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
         <div className="flex min-w-0 items-center justify-end gap-2 text-right sm:gap-3">
           <div className="min-w-0 max-w-[6.5rem] sm:max-w-[11rem]">
-            <div className="break-words text-base font-black leading-tight text-[#1E3A8A] sm:text-lg">
-              {match.homeTeam}
+            <div className="text-base font-black leading-tight text-[#1E3A8A] sm:text-lg">
+              <span className="sm:hidden">{homeTeamAbbreviation}</span>
+              <span className="hidden break-words sm:inline">
+                {match.homeTeam}
+              </span>
             </div>
             <div className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
               Home
@@ -84,8 +90,11 @@ export default function MatchCard({
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <TeamFlag teamName={match.awayTeam} size={34} />
           <div className="min-w-0 max-w-[6.5rem] sm:max-w-[11rem]">
-            <div className="break-words text-base font-black leading-tight text-[#1E3A8A] sm:text-lg">
-              {match.awayTeam}
+            <div className="text-base font-black leading-tight text-[#1E3A8A] sm:text-lg">
+              <span className="sm:hidden">{awayTeamAbbreviation}</span>
+              <span className="hidden break-words sm:inline">
+                {match.awayTeam}
+              </span>
             </div>
             <div className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
               Away

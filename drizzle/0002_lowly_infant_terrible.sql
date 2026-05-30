@@ -1,0 +1,2 @@
+ALTER TABLE "auth_users" ADD COLUMN "default_room_id" uuid;--> statement-breakpoint
+ALTER TABLE "auth_users" ADD CONSTRAINT "auth_users_default_room_id_rooms_id_fk" FOREIGN KEY ("default_room_id") REFERENCES "public"."rooms"("id") ON DELETE set null ON UPDATE no action;

@@ -10,6 +10,7 @@ import {
   numeric,
   index,
   uniqueIndex,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -47,11 +48,53 @@ export const settlementKind = pgEnum("settlement_kind", [
   "void_custom_bet",
 ]);
 
+export const authUsers = pgTable(
+  "auth_users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    firebaseUid: text("firebase_uid").notNull().unique(),
+    email: text("email"),
+    googleName: text("google_name"),
+    displayName: text("display_name"),
+    avatarUrl: text("avatar_url"),
+    defaultRoomId: uuid("default_room_id").references((): AnyPgColumn => rooms.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("auth_users_display_name_idx").on(t.displayName)]
+);
+
+export const authSessions = pgTable(
+  "auth_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    authUserId: uuid("auth_user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("auth_sessions_user_idx").on(t.authUserId),
+    index("auth_sessions_expires_idx").on(t.expiresAt),
+  ]
+);
+
 export const rooms = pgTable("rooms", {
   id: uuid("id").primaryKey().defaultRandom(),
   code: text("code").notNull().unique(),
   name: text("name").notNull(),
+  creatorAuthUserId: uuid("creator_auth_user_id").references(() => authUsers.id, {
+    onDelete: "restrict",
+  }),
   startingChips: integer("starting_chips").notNull().default(1000),
+  maxMembers: integer("max_members").notNull().default(10),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -64,6 +107,9 @@ export const users = pgTable(
     roomId: uuid("room_id")
       .notNull()
       .references(() => rooms.id, { onDelete: "cascade" }),
+    authUserId: uuid("auth_user_id").references(() => authUsers.id, {
+      onDelete: "cascade",
+    }),
     name: text("name").notNull(),
     chips: integer("chips").notNull(),
     isCreator: boolean("is_creator").notNull().default(false),
@@ -73,7 +119,8 @@ export const users = pgTable(
   },
   (t) => [
     index("users_room_idx").on(t.roomId),
-    uniqueIndex("users_room_name_idx").on(t.roomId, t.name),
+    index("users_auth_user_idx").on(t.authUserId),
+    uniqueIndex("users_room_auth_user_idx").on(t.roomId, t.authUserId),
   ]
 );
 
@@ -240,6 +287,8 @@ export const settlements = pgTable(
 
 export type Room = typeof rooms.$inferSelect;
 export type User = typeof users.$inferSelect;
+export type AuthUser = typeof authUsers.$inferSelect;
+export type AuthSession = typeof authSessions.$inferSelect;
 export type Match = typeof matches.$inferSelect;
 export type MatchBet = typeof matchBets.$inferSelect;
 export type CustomBet = typeof customBets.$inferSelect;

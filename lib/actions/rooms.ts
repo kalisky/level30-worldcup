@@ -1,36 +1,34 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { rooms, users } from "@/lib/db/schema";
+import { authUsers, rooms, users } from "@/lib/db/schema";
+import { requireProfiledUser } from "@/lib/auth";
+import { requireRoomUser } from "@/lib/auth-context";
 import { generateRoomCode, normalizeRoomCode } from "@/lib/code";
-import { setUserIdForRoom } from "@/lib/identity";
 
 const createRoomSchema = z.object({
   name: z.string().trim().min(1).max(60),
-  startingChips: z.number().int().positive().max(1_000_000),
-  members: z.array(z.string().trim().min(1).max(40)).min(1).max(12),
+  maxMembers: z.number().int().min(2).max(50),
 });
 
 export async function createRoom(formData: FormData) {
-  const raw = {
-    name: String(formData.get("name") ?? ""),
-    startingChips: Number(formData.get("startingChips") ?? 1000),
-    members: (formData.getAll("members") as string[])
-      .map((m) => m.trim())
-      .filter((m) => m.length > 0),
-  };
+  const authUser = await requireProfiledUser("/room/new");
 
-  const parsed = createRoomSchema.safeParse(raw);
+  const parsed = createRoomSchema.safeParse({
+    name: String(formData.get("name") ?? ""),
+    maxMembers: Number(formData.get("maxMembers") ?? 10),
+  });
+
   if (!parsed.success) {
     throw new Error(
       "Invalid input: " + parsed.error.issues.map((i) => i.message).join(", ")
     );
   }
 
-  // Find an unused code (retry a few times).
   let code = "";
   for (let i = 0; i < 8; i++) {
     const candidate = generateRoomCode(5);
@@ -44,12 +42,8 @@ export async function createRoom(formData: FormData) {
       break;
     }
   }
-  if (!code) throw new Error("Could not allocate a room code; try again.");
 
-  const memberNames = Array.from(new Set(parsed.data.members));
-  if (memberNames.length !== parsed.data.members.length) {
-    throw new Error("Friend names must be unique.");
-  }
+  if (!code) throw new Error("Could not allocate a room code; try again.");
 
   const created = await db.transaction(async (tx) => {
     const [room] = await tx
@@ -57,48 +51,74 @@ export async function createRoom(formData: FormData) {
       .values({
         code,
         name: parsed.data.name,
-        startingChips: parsed.data.startingChips,
+        creatorAuthUserId: authUser.id,
+        startingChips: 1000,
+        maxMembers: parsed.data.maxMembers,
       })
       .returning();
 
-    const createdUsers = await tx
-      .insert(users)
-      .values(
-        memberNames.map((name, idx) => ({
-          roomId: room.id,
-          name,
-          chips: parsed.data.startingChips,
-          isCreator: idx === 0,
-        }))
-      )
-      .returning();
+    await tx.insert(users).values({
+      roomId: room.id,
+      authUserId: authUser.id,
+      name: authUser.displayName!,
+      chips: room.startingChips,
+      isCreator: true,
+    });
 
-    return { room, users: createdUsers };
+    await tx
+      .update(authUsers)
+      .set({ defaultRoomId: room.id })
+      .where(eq(authUsers.id, authUser.id));
+
+    return room;
   });
 
-  // Set the cookie for the creator (first member) so they go straight to dashboard.
-  await setUserIdForRoom(created.room.code, created.users[0].id);
-
-  redirect(`/r/${created.room.code}/dashboard`);
+  redirect(`/r/${created.code}/dashboard?created=1`);
 }
 
-export async function selectIdentity(formData: FormData) {
+export async function joinRoom(formData: FormData) {
   const roomCode = normalizeRoomCode(String(formData.get("roomCode") ?? ""));
-  const userId = String(formData.get("userId") ?? "");
-  if (!roomCode || !userId) throw new Error("Missing room code or user id.");
+  if (!roomCode) throw new Error("Missing room code.");
 
-  // Verify user is in this room.
-  const found = await db
+  const authUser = await requireProfiledUser(`/r/${roomCode}`);
+
+  const [room] = await db
+    .select()
+    .from(rooms)
+    .where(eq(rooms.code, roomCode))
+    .limit(1);
+  if (!room) throw new Error("Room not found.");
+
+  const [existingMembership] = await db
     .select({ id: users.id })
     .from(users)
-    .innerJoin(rooms, eq(rooms.id, users.roomId))
-    .where(eq(rooms.code, roomCode))
-    .limit(50);
-  if (!found.some((u) => u.id === userId)) {
-    throw new Error("That user is not in this room.");
+    .where(and(eq(users.roomId, room.id), eq(users.authUserId, authUser.id)))
+    .limit(1);
+
+  if (!existingMembership) {
+    const [occupancy] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(eq(users.roomId, room.id));
+
+    if ((occupancy?.count ?? 0) >= room.maxMembers) {
+      throw new Error("This room is full.");
+    }
+
+    await db.insert(users).values({
+      roomId: room.id,
+      authUserId: authUser.id,
+      name: authUser.displayName!,
+      chips: room.startingChips,
+      isCreator: false,
+    });
   }
 
-  await setUserIdForRoom(roomCode, userId);
+  await db
+    .update(authUsers)
+    .set({ defaultRoomId: room.id })
+    .where(eq(authUsers.id, authUser.id));
+
   redirect(`/r/${roomCode}/dashboard`);
 }
 
@@ -106,4 +126,75 @@ export async function joinRoomByCode(formData: FormData) {
   const code = normalizeRoomCode(String(formData.get("code") ?? ""));
   if (!code) throw new Error("Enter a room code.");
   redirect(`/r/${code}`);
+}
+
+const updateRoomSettingsSchema = z.object({
+  roomCode: z.string().trim().min(1),
+  name: z.string().trim().min(1).max(60),
+  maxMembers: z.number().int().min(2).max(50),
+});
+
+export async function updateRoomSettings(formData: FormData) {
+  const roomCode = normalizeRoomCode(String(formData.get("roomCode") ?? ""));
+  if (!roomCode) throw new Error("Missing room code.");
+
+  const { room, user } = await requireRoomUser(roomCode);
+  if (!user.isCreator) {
+    throw new Error("Only the room creator can update the room.");
+  }
+
+  const parsed = updateRoomSettingsSchema.safeParse({
+    roomCode,
+    name: String(formData.get("name") ?? ""),
+    maxMembers: Number(formData.get("maxMembers") ?? room.maxMembers),
+  });
+
+  if (!parsed.success) {
+    throw new Error(
+      "Invalid input: " + parsed.error.issues.map((i) => i.message).join(", ")
+    );
+  }
+
+  const [occupancy] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(users)
+    .where(eq(users.roomId, room.id));
+
+  if ((occupancy?.count ?? 0) > parsed.data.maxMembers) {
+    throw new Error(
+      `Max members cannot be below the current member count (${occupancy?.count ?? 0}).`
+    );
+  }
+
+  await db
+    .update(rooms)
+    .set({
+      name: parsed.data.name,
+      maxMembers: parsed.data.maxMembers,
+    })
+    .where(eq(rooms.id, room.id));
+
+  revalidatePath(`/r/${room.code}`);
+  revalidatePath(`/r/${room.code}/dashboard`);
+  revalidatePath(`/r/${room.code}/admin`);
+}
+
+export async function deleteRoom(formData: FormData) {
+  const roomCode = normalizeRoomCode(String(formData.get("roomCode") ?? ""));
+  const confirmationName = String(formData.get("confirmationName") ?? "").trim();
+
+  if (!roomCode) throw new Error("Missing room code.");
+
+  const { room, user } = await requireRoomUser(roomCode);
+  if (!user.isCreator) {
+    throw new Error("Only the room creator can delete the room.");
+  }
+
+  if (confirmationName !== room.name) {
+    throw new Error("Type the exact room name to confirm deletion.");
+  }
+
+  await db.delete(rooms).where(eq(rooms.id, room.id));
+
+  revalidatePath("/");
 }

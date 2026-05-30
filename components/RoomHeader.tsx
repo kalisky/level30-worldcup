@@ -5,10 +5,19 @@ export default function RoomHeader({
   room,
   user,
   active = "dashboard",
+  initialRoomModalOpen = false,
 }: {
   room: Room;
   user: User;
   active?: "dashboard" | "admin";
+  initialRoomModalOpen?: boolean;
 }) {
-  return <AppHeader room={room} user={user} active={active} />;
+  return (
+    <AppHeader
+      room={room}
+      user={user}
+      active={active}
+      initialRoomModalOpen={initialRoomModalOpen}
+    />
+  );
 }

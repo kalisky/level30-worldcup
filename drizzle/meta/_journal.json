@@ -8,6 +8,20 @@
       "when": 1779978896775,
       "tag": "0000_lush_maximus",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1780128968755,
+      "tag": "0001_wonderful_mastermind",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780132113858,
+      "tag": "0002_lowly_infant_terrible",
+      "breakpoints": true
     }
   ]
 }

@@ -17,7 +17,10 @@ import MatchScreenLayout from "@/components/MatchScreenLayout";
 
 export default async function DashboardPage(props: {
   params: Promise<{ code: string }>;
-  searchParams: Promise<{ bet?: string | string[] | undefined }>;
+  searchParams: Promise<{
+    bet?: string | string[] | undefined;
+    created?: string | string[] | undefined;
+  }>;
 }) {
   const { code } = await props.params;
   const searchParams = await props.searchParams;
@@ -25,6 +28,9 @@ export default async function DashboardPage(props: {
   const targetCustomBetId = Array.isArray(searchParams.bet)
     ? searchParams.bet[0]
     : searchParams.bet;
+  const roomWasCreated = Array.isArray(searchParams.created)
+    ? searchParams.created[0] === "1"
+    : searchParams.created === "1";
 
   const [members, upcoming, customBets, myBets] = await Promise.all([
     getRoomUsers(room.id),
@@ -142,7 +148,12 @@ export default async function DashboardPage(props: {
 
   return (
     <>
-      <RoomHeader room={room} user={user} active="dashboard" />
+      <RoomHeader
+        room={room}
+        user={user}
+        active="dashboard"
+        initialRoomModalOpen={roomWasCreated}
+      />
       <AutoRefresh />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
         <MatchScreenLayout

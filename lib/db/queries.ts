@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "./index";
 import {
   rooms,
@@ -13,6 +13,18 @@ import {
 export async function getRoomByCode(code: string) {
   const [room] = await db.select().from(rooms).where(eq(rooms.code, code)).limit(1);
   return room ?? null;
+}
+
+export async function listRoomsForAuthUser(authUserId: string) {
+  return db
+    .select({
+      room: rooms,
+      membership: users,
+    })
+    .from(users)
+    .innerJoin(rooms, eq(rooms.id, users.roomId))
+    .where(eq(users.authUserId, authUserId))
+    .orderBy(asc(rooms.name));
 }
 
 export async function getRoomUsers(roomId: string) {

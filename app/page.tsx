@@ -1,8 +1,25 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
+import CreateRoomLauncher from "@/components/CreateRoomLauncher";
+import GoogleLoginButton from "@/components/GoogleLoginButton";
 import { joinRoomByCode } from "@/lib/actions/rooms";
+import { getAuthenticatedUser, profileRedirectPath } from "@/lib/auth";
 
-export default function Home() {
+export default async function Home(props: {
+  searchParams: Promise<{ next?: string | string[] | undefined }>;
+}) {
+  const searchParams = await props.searchParams;
+  const nextPath = Array.isArray(searchParams.next)
+    ? searchParams.next[0]
+    : searchParams.next;
+  const authUser = await getAuthenticatedUser();
+
+  if (authUser && !authUser.displayName) {
+    redirect(profileRedirectPath(nextPath || "/"));
+  }
+
+  const isSignedIn = !!authUser;
+
   return (
     <>
       <AppHeader />
@@ -40,48 +57,71 @@ export default function Home() {
           </section>
 
           <section className="rounded-[32px] border border-[#dbe5f2] bg-white p-6 shadow-[0_24px_70px_rgba(30,58,138,0.10)]">
-            <Link
-              href="/room/new"
-              className="block rounded-[24px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-6 py-5 text-center text-lg font-bold text-white shadow-[0_18px_36px_rgba(249,115,22,0.32)] transition hover:-translate-y-0.5"
-            >
-              Create a room
-            </Link>
+            {isSignedIn ? (
+              <>
+                <div className="mb-5 rounded-[24px] border border-[#dbe5f2] bg-[#F8FBFF] px-5 py-4">
+                  <p className="text-[0.68rem] font-bold uppercase tracking-[0.24em] text-slate-500">
+                    Signed in
+                  </p>
+                  <p className="mt-1 text-lg font-black text-[#1E3A8A]">
+                    {authUser.displayName}
+                  </p>
+                </div>
 
-            <div className="relative my-6 flex items-center">
-              <div className="flex-grow border-t border-[#dbe5f2]" />
-              <span className="mx-3 text-[0.65rem] font-bold uppercase tracking-[0.28em] text-slate-500">
-                or
-              </span>
-              <div className="flex-grow border-t border-[#dbe5f2]" />
-            </div>
+                <CreateRoomLauncher
+                  creatorName={authUser.displayName!}
+                  variant="hero"
+                />
 
-            <form
-              action={joinRoomByCode}
-              className="space-y-3 rounded-[24px] border border-[#dbe5f2] bg-[#F8FBFF] p-5"
-            >
-              <label
-                htmlFor="code"
-                className="block text-sm font-bold text-[#1E3A8A]"
-              >
-                Join an existing room
-              </label>
-              <input
-                id="code"
-                name="code"
-                type="text"
-                placeholder="ABCDE"
-                autoCapitalize="characters"
-                autoComplete="off"
-                required
-                className="w-full rounded-2xl border border-[#cdd9ea] bg-white px-4 py-3 text-lg font-semibold tracking-[0.35em] uppercase text-[#1E3A8A] placeholder:tracking-normal placeholder:normal-case placeholder:text-slate-400 focus:border-[#3B82F6] focus:outline-none"
-              />
-              <button
-                type="submit"
-                className="w-full rounded-2xl border border-[#cdd9ea] bg-white px-4 py-3 font-bold text-[#1E3A8A] transition hover:border-[#3B82F6] hover:bg-[#F8FBFF]"
-              >
-                Continue
-              </button>
-            </form>
+                <div className="relative my-6 flex items-center">
+                  <div className="flex-grow border-t border-[#dbe5f2]" />
+                  <span className="mx-3 text-[0.65rem] font-bold uppercase tracking-[0.28em] text-slate-500">
+                    or
+                  </span>
+                  <div className="flex-grow border-t border-[#dbe5f2]" />
+                </div>
+
+                <form
+                  action={joinRoomByCode}
+                  className="space-y-3 rounded-[24px] border border-[#dbe5f2] bg-[#F8FBFF] p-5"
+                >
+                  <label
+                    htmlFor="code"
+                    className="block text-sm font-bold text-[#1E3A8A]"
+                  >
+                    Join an existing room
+                  </label>
+                  <input
+                    id="code"
+                    name="code"
+                    type="text"
+                    placeholder="ABCDE"
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    required
+                    className="w-full rounded-2xl border border-[#cdd9ea] bg-white px-4 py-3 text-lg font-semibold tracking-[0.35em] uppercase text-[#1E3A8A] placeholder:tracking-normal placeholder:normal-case placeholder:text-slate-400 focus:border-[#3B82F6] focus:outline-none"
+                  />
+                  <button
+                    type="submit"
+                    className="w-full rounded-2xl border border-[#cdd9ea] bg-white px-4 py-3 font-bold text-[#1E3A8A] transition hover:border-[#3B82F6] hover:bg-[#F8FBFF]"
+                  >
+                    Continue
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                <div className="rounded-[24px] border border-[#dbe5f2] bg-[#F8FBFF] p-5">
+                  <p className="text-sm leading-7 text-slate-600">
+                    Sign in with Google to create a room or join one from a
+                    shared invite link.
+                  </p>
+                </div>
+                <div className="mt-6">
+                  <GoogleLoginButton redirectTo={nextPath || "/"} />
+                </div>
+              </>
+            )}
 
             <footer className="mt-6 text-center text-xs font-medium uppercase tracking-[0.24em] text-slate-500">
               Tournament kicks off June 11, 2026.

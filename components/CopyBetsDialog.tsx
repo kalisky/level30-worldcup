@@ -43,7 +43,11 @@ export default function CopyBetsDialog({
   const [result, setResult] = useState<CopyBetsResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // When user picks a source, fetch preview.
+  // Preview only re-fetches when the user picks a different source room.
+  // `targetRoomCode` is stable for the dialog's lifetime, and `t` is a
+  // translations function whose reference can change on every re-render —
+  // including it here was causing the dashboard's 5s AutoRefresh to retrigger
+  // the preview fetch and flash the loading state.
   useEffect(() => {
     if (!sourceCode) {
       setPreview(null);
@@ -63,7 +67,8 @@ export default function CopyBetsDialog({
         setPreview(null);
       }
     });
-  }, [sourceCode, targetRoomCode, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceCode]);
 
   // Reset state when dialog closes.
   useEffect(() => {

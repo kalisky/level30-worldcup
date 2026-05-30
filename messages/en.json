@@ -31,6 +31,23 @@
     "profile": "Profile",
     "rooms": "Rooms"
   },
+  "rules": {
+    "quickRules": "Quick rules",
+    "title": "Rules",
+    "intro": "Short version: predict matches better than your friends, manage your chips well, and finish the tournament at the top of the board.",
+    "list": [
+      "Everyone starts with the same number of chips in a room.",
+      "Before kickoff, you can place one prediction per match.",
+      "A match prediction is one exact score, like 2-1 or 1-1.",
+      "Your stake is split in two: half on the result direction, half on the exact score.",
+      "If you get the winner or draw right, you win the direction half at the locked odds.",
+      "If you get the exact score right, you also win the score half at the locked odds.",
+      "Once kickoff happens, normal match betting closes.",
+      "You can propose custom bets during a match or create room-wide custom bets at any time before their lock time.",
+      "When a match or custom bet is settled, winners are paid in chips.",
+      "Highest chip count at the end wins. No real money involved."
+    ]
+  },
   "auth": {
     "continueWithGoogle": "Continue with Google",
     "signingIn": "Signing in…",

@@ -80,6 +80,14 @@ export default function CopyBetsDialog({
     }
   }, [open]);
 
+  // After a successful copy, auto-close after ~1.8s so the user sees the
+  // success line and the dashboard re-renders with the new bets visible.
+  useEffect(() => {
+    if (!result || !open) return;
+    const id = setTimeout(() => onClose(), 1800);
+    return () => clearTimeout(id);
+  }, [result, open, onClose]);
+
   if (!open) return null;
 
   function submit() {

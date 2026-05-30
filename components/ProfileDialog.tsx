@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type RefObject } from "react";
 import { useRouter } from "next/navigation";
 import CreateRoomLauncher from "@/components/CreateRoomLauncher";
 import { signOut } from "@/lib/actions/auth";
@@ -28,8 +28,7 @@ export default function ProfileDialog({
   rooms,
   currentRoomCode,
   navigationItems = [],
-  roomDetailsLabel,
-  onOpenRoomDetails,
+  triggerRef,
 }: {
   open: boolean;
   onClose: () => void;
@@ -37,8 +36,7 @@ export default function ProfileDialog({
   rooms: ProfileRoomSummary[];
   currentRoomCode?: string | null;
   navigationItems?: NavigationItem[];
-  roomDetailsLabel?: string | null;
-  onOpenRoomDetails?: (() => void) | null;
+  triggerRef?: RefObject<HTMLElement | null>;
 }) {
   const router = useRouter();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -52,7 +50,13 @@ export default function ProfileDialog({
     if (!open) return;
 
     function handlePointerDown(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+
+      if (triggerRef?.current?.contains(target)) {
+        return;
+      }
+
+      if (!rootRef.current?.contains(target)) {
         onClose();
       }
     }
@@ -69,7 +73,7 @@ export default function ProfileDialog({
       document.removeEventListener("mousedown", handlePointerDown);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [onClose, open]);
+  }, [onClose, open, triggerRef]);
 
   if (!open) return null;
 
@@ -132,7 +136,7 @@ export default function ProfileDialog({
 
       <div className="my-3 h-px bg-[#e4edf8]" />
 
-      {(navigationItems.length > 0 || roomDetailsLabel) && (
+      {navigationItems.length > 0 && (
         <>
           <section className="space-y-1">
             {navigationItems.map((item) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Room, User } from "@/lib/db/schema";
 import ProfileDialog from "@/components/ProfileDialog";
 import type { ProfileRoomSummary } from "@/components/ProfileDialog";
@@ -161,6 +161,7 @@ export default function AppHeaderClient({
   >(null);
   const [showCreatedInvite, setShowCreatedInvite] =
     useState(initialRoomModalOpen);
+  const mobileProfileTriggerRef = useRef<HTMLButtonElement>(null);
 
   function clearCreatedFlag() {
     if (!showCreatedInvite) return;
@@ -295,6 +296,7 @@ export default function AppHeaderClient({
             <div className="flex items-center gap-2 sm:hidden">
               {showProfilePill && (
                 <button
+                  ref={mobileProfileTriggerRef}
                   type="button"
                   onClick={() => toggleProfileModal("mobile")}
                   aria-expanded={profileMenuOpen}
@@ -428,15 +430,8 @@ export default function AppHeaderClient({
               navigationItems={
                 profileMenuMode === "mobile" ? mobileNavigationItems : []
               }
-              roomDetailsLabel={
-                profileMenuMode === "mobile" && room && user
-                  ? `Room details · ${room.code}`
-                  : null
-              }
-              onOpenRoomDetails={
-                profileMenuMode === "mobile" && room && user
-                  ? openRoomModal
-                  : null
+              triggerRef={
+                profileMenuMode === "mobile" ? mobileProfileTriggerRef : undefined
               }
             />
           )}

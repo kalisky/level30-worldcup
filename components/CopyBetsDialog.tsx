@@ -42,6 +42,9 @@ export default function CopyBetsDialog({
   const [copying, startCopy] = useTransition();
   const [result, setResult] = useState<CopyBetsResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Selected match IDs to actually copy. Default: every copyable item is
+  // checked once a preview arrives. User can deselect individual rows.
+  const [selectedMatchIds, setSelectedMatchIds] = useState<Set<string>>(new Set());
 
   // Preview only re-fetches when the user picks a different source room.
   // `targetRoomCode` is stable for the dialog's lifetime, and `t` is a
@@ -62,6 +65,10 @@ export default function CopyBetsDialog({
           sourceRoomCode: sourceCode,
         });
         setPreview(p);
+        // Default to all copyable items selected.
+        setSelectedMatchIds(
+          new Set(p.items.filter((i) => i.status === "copy").map((i) => i.matchId))
+        );
       } catch (e) {
         setError(e instanceof Error ? e.message : t("fetchFailed"));
         setPreview(null);
@@ -77,6 +84,7 @@ export default function CopyBetsDialog({
       setPreview(null);
       setResult(null);
       setError(null);
+      setSelectedMatchIds(new Set());
     }
   }, [open]);
 
@@ -90,6 +98,15 @@ export default function CopyBetsDialog({
 
   if (!open) return null;
 
+  function toggleSelected(matchId: string) {
+    setSelectedMatchIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(matchId)) next.delete(matchId);
+      else next.add(matchId);
+      return next;
+    });
+  }
+
   function submit() {
     if (!sourceCode || !preview) return;
     setError(null);
@@ -97,6 +114,7 @@ export default function CopyBetsDialog({
     const fd = new FormData();
     fd.set("targetRoomCode", targetRoomCode);
     fd.set("sourceRoomCode", sourceCode);
+    for (const id of selectedMatchIds) fd.append("matchIds", id);
     startCopy(async () => {
       try {
         const r = await copyMatchBets(fd);
@@ -107,10 +125,16 @@ export default function CopyBetsDialog({
     });
   }
 
+  // Totals reflect only what's actually selected.
+  const selectedItems = preview
+    ? preview.items.filter(
+        (i) => i.status === "copy" && selectedMatchIds.has(i.matchId)
+      )
+    : [];
+  const selectedCount = selectedItems.length;
+  const selectedStakeTotal = selectedItems.reduce((sum, i) => sum + i.totalStake, 0);
   const notEnoughChips =
-    preview &&
-    preview.copyableCount > 0 &&
-    preview.totalCopyableStake > preview.targetChips;
+    preview && selectedCount > 0 && selectedStakeTotal > preview.targetChips;
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-2 sm:items-center sm:p-4">
@@ -193,40 +217,54 @@ export default function CopyBetsDialog({
                       </p>
                     )}
                     <ul className="max-h-[40vh] space-y-1 overflow-y-auto">
-                      {preview.items.map((item) => (
-                        <li
-                          key={item.matchId}
-                          className={
-                            "flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm " +
-                            (item.status === "copy"
-                              ? "bg-white"
-                              : "bg-white/60 text-slate-500")
-                          }
-                        >
-                          <span className="flex-1 min-w-0 truncate">
-                            <span className="font-semibold text-[#1E3A8A]">
-                              {teamName(item.homeTeam)}{" "}
-                              <span className="font-mono">
-                                {item.predictedHomeScore}–{item.predictedAwayScore}
-                              </span>{" "}
-                              {teamName(item.awayTeam)}
-                            </span>
-                          </span>
-                          <span className="shrink-0 font-mono text-xs text-slate-500">
-                            {item.totalStake}
-                          </span>
-                          <span
+                      {preview.items.map((item) => {
+                        const copyable = item.status === "copy";
+                        const checked = copyable && selectedMatchIds.has(item.matchId);
+                        return (
+                          <li
+                            key={item.matchId}
                             className={
-                              "shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-[0.14em] " +
-                              (item.status === "copy"
-                                ? "bg-[#E0F2FE] text-[#0369A1]"
-                                : "bg-slate-200 text-slate-600")
+                              "flex items-center gap-3 rounded-xl px-3 py-2 text-sm " +
+                              (copyable
+                                ? checked
+                                  ? "bg-white"
+                                  : "bg-white opacity-60"
+                                : "bg-white/60 text-slate-500")
                             }
                           >
-                            {t(STATUS_KEY[item.status])}
-                          </span>
-                        </li>
-                      ))}
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleSelected(item.matchId)}
+                              disabled={!copyable || copying}
+                              aria-label={`${item.homeTeam} ${item.predictedHomeScore}-${item.predictedAwayScore} ${item.awayTeam}`}
+                              className="h-4 w-4 shrink-0 rounded border-[#cdd9ea] accent-[#1E3A8A] disabled:opacity-40"
+                            />
+                            <span className="flex-1 min-w-0 truncate">
+                              <span className="font-semibold text-[#1E3A8A]">
+                                {teamName(item.homeTeam)}{" "}
+                                <span className="font-mono">
+                                  {item.predictedHomeScore}–{item.predictedAwayScore}
+                                </span>{" "}
+                                {teamName(item.awayTeam)}
+                              </span>
+                            </span>
+                            <span className="shrink-0 font-mono text-xs text-slate-500">
+                              {item.totalStake}
+                            </span>
+                            <span
+                              className={
+                                "shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-[0.14em] " +
+                                (copyable
+                                  ? "bg-[#E0F2FE] text-[#0369A1]"
+                                  : "bg-slate-200 text-slate-600")
+                              }
+                            >
+                              {t(STATUS_KEY[item.status])}
+                            </span>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </>
                 ) : result ? (
@@ -258,15 +296,15 @@ export default function CopyBetsDialog({
             {preview && !result && preview.copyableCount > 0 && (
               <button
                 type="button"
-                disabled={copying}
+                disabled={copying || selectedCount === 0}
                 onClick={submit}
                 className="mt-5 w-full rounded-[24px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-3 font-bold text-white shadow-[0_18px_36px_rgba(249,115,22,0.28)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {copying
                   ? t("confirmPending")
                   : t("confirm", {
-                      count: preview.copyableCount,
-                      total: preview.totalCopyableStake,
+                      count: selectedCount,
+                      total: selectedStakeTotal,
                     })}
               </button>
             )}

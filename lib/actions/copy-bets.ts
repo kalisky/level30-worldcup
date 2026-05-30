@@ -174,6 +174,13 @@ export async function copyMatchBets(formData: FormData): Promise<CopyBetsResult>
     throw new Error("Missing room codes.");
   }
 
+  // The dialog passes `matchIds` for the subset the user actually selected.
+  // If absent, fall back to "copy every copyable item" (back-compat).
+  const selectedMatchIds = (formData.getAll("matchIds") as string[]).filter(
+    (s) => s.length > 0
+  );
+  const selectedFilter = selectedMatchIds.length > 0 ? new Set(selectedMatchIds) : null;
+
   const preview = await buildPreview(targetRoomCode, sourceRoomCode);
   const { room: targetRoom, user: targetUser } = await requireRoomUser(targetRoomCode);
 
@@ -188,6 +195,8 @@ export async function copyMatchBets(formData: FormData): Promise<CopyBetsResult>
 
   for (const item of preview.items) {
     if (item.status !== "copy") {
+      // Don't count un-copyable items the user implicitly de-selected by
+      // having an explicit selection — they were already non-copyable.
       switch (item.status) {
         case "skip_already_bet":
           result.skippedAlreadyBet++;
@@ -202,6 +211,11 @@ export async function copyMatchBets(formData: FormData): Promise<CopyBetsResult>
           result.skippedMatchSettled++;
           break;
       }
+      continue;
+    }
+
+    // Honor the user's explicit selection.
+    if (selectedFilter && !selectedFilter.has(item.matchId)) {
       continue;
     }
 

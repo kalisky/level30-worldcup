@@ -131,3 +131,134 @@ export async function placeMatchBet(formData: FormData) {
   revalidatePath(`/r/${room.code}/match/${matchId}`);
   revalidatePath(`/r/${room.code}/dashboard`);
 }
+
+export async function updateMatchBet(formData: FormData) {
+  const code = String(formData.get("roomCode") ?? "");
+  const { room, user } = await requireRoomUser(code);
+
+  const parsed = placeBetSchema.safeParse({
+    matchId: String(formData.get("matchId") ?? ""),
+    predictedHomeScore: Number(formData.get("predictedHomeScore") ?? -1),
+    predictedAwayScore: Number(formData.get("predictedAwayScore") ?? -1),
+    totalStake: Number(formData.get("totalStake") ?? 0),
+  });
+  if (!parsed.success) {
+    throw new Error(
+      "Invalid bet: " + parsed.error.issues.map((i) => i.message).join(", ")
+    );
+  }
+  const { matchId, predictedHomeScore, predictedAwayScore, totalStake } = parsed.data;
+
+  await db.transaction(async (tx) => {
+    const [match] = await tx
+      .select()
+      .from(matches)
+      .where(eq(matches.id, matchId))
+      .limit(1);
+    if (!match) throw new Error("Match not found.");
+    if (new Date(match.kickoff).getTime() <= Date.now()) {
+      throw new Error("Betting closed — kickoff has already happened.");
+    }
+    if (match.status !== "scheduled") {
+      throw new Error("This match is no longer open for changes.");
+    }
+    if (!match.oddsHome || !match.oddsDraw || !match.oddsAway) {
+      throw new Error("Direction odds aren't ready for this match yet.");
+    }
+    if (!match.scoreOdds) {
+      throw new Error("Score odds aren't ready for this match yet.");
+    }
+
+    const [existing] = await tx
+      .select()
+      .from(matchBets)
+      .where(
+        and(
+          eq(matchBets.roomId, room.id),
+          eq(matchBets.userId, user.id),
+          eq(matchBets.matchId, matchId)
+        )
+      )
+      .limit(1);
+    if (!existing) {
+      throw new Error("No existing bet to update.");
+    }
+    if (existing.status !== "open") {
+      throw new Error("This bet is already settled.");
+    }
+
+    const directionPick: "HOME" | "DRAW" | "AWAY" =
+      predictedHomeScore > predictedAwayScore
+        ? "HOME"
+        : predictedAwayScore > predictedHomeScore
+          ? "AWAY"
+          : "DRAW";
+    const directionOdds = Number(
+      directionPick === "HOME"
+        ? match.oddsHome
+        : directionPick === "DRAW"
+          ? match.oddsDraw
+          : match.oddsAway
+    );
+    const sKey = scoreKey(predictedHomeScore, predictedAwayScore);
+    const scoreOddsRaw = match.scoreOdds[sKey];
+    if (!scoreOddsRaw) {
+      throw new Error(`No odds cached for score ${sKey}.`);
+    }
+
+    const directionStake = Math.floor(totalStake / 2);
+    const scoreStakeAmount = totalStake - directionStake;
+
+    // Net chip movement = newStake - oldStake. If positive we deduct (and
+    // verify funds); if negative we credit back; if zero nothing moves.
+    const delta = totalStake - existing.totalStake;
+    let newBalance = user.chips;
+    if (delta > 0) {
+      const updated = await tx
+        .update(users)
+        .set({ chips: sql`${users.chips} - ${delta}` })
+        .where(and(eq(users.id, user.id), sql`${users.chips} >= ${delta}`))
+        .returning({ chips: users.chips });
+      if (updated.length === 0) {
+        throw new Error("Not enough chips for the larger stake.");
+      }
+      newBalance = updated[0].chips;
+    } else if (delta < 0) {
+      const refund = -delta;
+      const [updated] = await tx
+        .update(users)
+        .set({ chips: sql`${users.chips} + ${refund}` })
+        .where(eq(users.id, user.id))
+        .returning({ chips: users.chips });
+      newBalance = updated.chips;
+    }
+
+    await tx
+      .update(matchBets)
+      .set({
+        predictedHomeScore,
+        predictedAwayScore,
+        totalStake,
+        directionStake,
+        scoreStake: scoreStakeAmount,
+        directionOddsLocked: directionOdds.toFixed(2),
+        scoreOddsLocked: scoreOddsRaw.toFixed(2),
+      })
+      .where(eq(matchBets.id, existing.id));
+
+    if (delta !== 0) {
+      await recordLedger(tx, {
+        roomId: room.id,
+        userId: user.id,
+        delta: -delta,
+        balanceAfter: newBalance,
+        reason: "match_bet_placed",
+        refMatchId: matchId,
+        note: `Updated prediction: ${match.homeTeam} ${predictedHomeScore}–${predictedAwayScore} ${match.awayTeam}`,
+      });
+    }
+  });
+
+  revalidatePath(`/r/${room.code}/match/${matchId}`);
+  revalidatePath(`/r/${room.code}/dashboard`);
+}

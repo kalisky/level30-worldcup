@@ -34,6 +34,7 @@ export default function MatchBetPanel({
   maxStake: number;
 }) {
   const [now] = useState(() => Date.now());
+  const [isEditing, setIsEditing] = useState(false);
   const t = useTranslations("match");
   const tb = useTranslations("bet");
   const tc = useTranslations("common");
@@ -46,13 +47,50 @@ export default function MatchBetPanel({
   const hasDirectionOdds = oddsHome != null && oddsDraw != null && oddsAway != null;
   const hasScoreOdds = !!scoreOdds;
   const hasOdds = hasDirectionOdds && hasScoreOdds;
+  const canEditBet = myBet && myBet.status === "open" && !isLocked && hasOdds;
+
+  // Edit mode renders the bet form prefilled with the existing prediction.
+  // The stake cap includes the existing stake since it'll be refunded when
+  // the update commits.
+  if (myBet && isEditing && canEditBet) {
+    return (
+      <BetForm
+        roomCode={roomCode}
+        matchId={matchId}
+        homeTeam={homeTeam}
+        awayTeam={awayTeam}
+        oddsHome={oddsHome!}
+        oddsDraw={oddsDraw!}
+        oddsAway={oddsAway!}
+        scoreOdds={scoreOdds!}
+        maxStake={maxStake + myBet.totalStake}
+        existingBet={{
+          predictedHomeScore: myBet.predictedHomeScore,
+          predictedAwayScore: myBet.predictedAwayScore,
+          totalStake: myBet.totalStake,
+        }}
+        onCancel={() => setIsEditing(false)}
+      />
+    );
+  }
 
   if (myBet) {
     return (
       <section className="rounded-[28px] border border-[#BFDBFE] bg-[#EFF6FF] p-5 shadow-[0_16px_38px_rgba(59,130,246,0.10)]">
-        <h3 className="text-[0.72rem] font-bold uppercase tracking-[0.28em] text-[#1D4ED8]">
-          {t("yourBet")}
-        </h3>
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="text-[0.72rem] font-bold uppercase tracking-[0.28em] text-[#1D4ED8]">
+            {t("yourBet")}
+          </h3>
+          {canEditBet && (
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              className="rounded-full border border-[#BFDBFE] bg-white px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[#1D4ED8] transition hover:bg-[#E0EEFF]"
+            >
+              {tb("edit")}
+            </button>
+          )}
+        </div>
         <p className="mt-2 text-xl font-black text-[#1E3A8A]">
           {localizedHome} {myBet.predictedHomeScore} – {myBet.predictedAwayScore}{" "}
           {localizedAway}

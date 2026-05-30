@@ -4,8 +4,14 @@ import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import TeamFlag from "@/components/TeamFlag";
 import { useTeamName } from "@/hooks/useTeamName";
-import { placeMatchBet } from "@/lib/actions/bets";
+import { placeMatchBet, updateMatchBet } from "@/lib/actions/bets";
 import { scoreKey, SCORE_RANGE, type ScoreOddsCache } from "@/lib/db/schema";
+
+export type BetFormExisting = {
+  predictedHomeScore: number;
+  predictedAwayScore: number;
+  totalStake: number;
+};
 
 export default function BetForm({
   roomCode,
@@ -17,6 +23,8 @@ export default function BetForm({
   oddsAway,
   scoreOdds,
   maxStake,
+  existingBet,
+  onCancel,
 }: {
   roomCode: string;
   matchId: string;
@@ -26,7 +34,15 @@ export default function BetForm({
   oddsDraw: number;
   oddsAway: number;
   scoreOdds: ScoreOddsCache;
+  /** When editing an existing bet, this is the user's remaining headroom for a
+   *  larger stake (i.e. chips + existingBet.totalStake, since the existing
+   *  stake is refunded as part of the update). */
   maxStake: number;
+  /** Present when the form is editing an existing bet. Pre-fills inputs and
+   *  switches the server call to `updateMatchBet`. */
+  existingBet?: BetFormExisting;
+  /** Shown as a "Cancel" button alongside the submit when present. */
+  onCancel?: () => void;
 }) {
   const tb = useTranslations("bet");
   const tm = useTranslations("match");
@@ -34,9 +50,14 @@ export default function BetForm({
   const teamName = useTeamName();
   const localizedHome = teamName(homeTeam);
   const localizedAway = teamName(awayTeam);
-  const [home, setHome] = useState<number | null>(null);
-  const [away, setAway] = useState<number | null>(null);
-  const [stake, setStake] = useState<number>(50);
+  const isEdit = !!existingBet;
+  const [home, setHome] = useState<number | null>(
+    existingBet?.predictedHomeScore ?? null
+  );
+  const [away, setAway] = useState<number | null>(
+    existingBet?.predictedAwayScore ?? null
+  );
+  const [stake, setStake] = useState<number>(existingBet?.totalStake ?? 50);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -80,7 +101,12 @@ export default function BetForm({
     fd.set("totalStake", String(stake));
     startTransition(async () => {
       try {
-        await placeMatchBet(fd);
+        if (isEdit) {
+          await updateMatchBet(fd);
+          onCancel?.(); // closes edit mode after successful update
+        } else {
+          await placeMatchBet(fd);
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to place bet.");
       }
@@ -174,14 +200,32 @@ export default function BetForm({
         </p>
       )}
 
-      <button
-        type="button"
-        disabled={!canSubmit || pending}
-        onClick={submit}
-        className="mt-4 w-full rounded-[24px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-3 font-bold text-white shadow-[0_14px_30px_rgba(249,115,22,0.28)] disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {pending ? tb("placePending") : tb("place")}
-      </button>
+      <div className="mt-4 flex gap-2">
+        {onCancel && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={onCancel}
+            className="rounded-[24px] border border-[#cdd9ea] bg-white px-4 py-3 font-bold text-slate-600 transition hover:bg-[#F8FBFF] hover:text-[#1E3A8A] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {tc("cancel")}
+          </button>
+        )}
+        <button
+          type="button"
+          disabled={!canSubmit || pending}
+          onClick={submit}
+          className="flex-1 rounded-[24px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-3 font-bold text-white shadow-[0_14px_30px_rgba(249,115,22,0.28)] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {pending
+            ? isEdit
+              ? tb("updatePending")
+              : tb("placePending")
+            : isEdit
+              ? tb("update")
+              : tb("place")}
+        </button>
+      </div>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import CreateRoomLauncher from "@/components/CreateRoomLauncher";
 import GoogleLoginButton from "@/components/GoogleLoginButton";
+import SubmitButton from "@/components/SubmitButton";
 import { joinRoomByCode } from "@/lib/actions/rooms";
 import { getAuthenticatedUser, profileRedirectPath } from "@/lib/auth";
 
@@ -101,12 +102,12 @@ export default async function Home(props: {
                     required
                     className="w-full rounded-2xl border border-[#cdd9ea] bg-white px-4 py-3 text-lg font-semibold tracking-[0.35em] uppercase text-[#1E3A8A] placeholder:tracking-normal placeholder:normal-case placeholder:text-slate-400 focus:border-[#3B82F6] focus:outline-none"
                   />
-                  <button
-                    type="submit"
-                    className="w-full rounded-2xl border border-[#cdd9ea] bg-white px-4 py-3 font-bold text-[#1E3A8A] transition hover:border-[#3B82F6] hover:bg-[#F8FBFF]"
+                  <SubmitButton
+                    pendingLabel="Looking up room…"
+                    className="w-full rounded-2xl border border-[#cdd9ea] bg-white px-4 py-3 font-bold text-[#1E3A8A] transition hover:border-[#3B82F6] hover:bg-[#F8FBFF] disabled:cursor-progress"
                   >
                     Continue
-                  </button>
+                  </SubmitButton>
                 </form>
               </>
             ) : (

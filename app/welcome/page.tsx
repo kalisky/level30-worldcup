@@ -1,4 +1,5 @@
 import AppHeader from "@/components/AppHeader";
+import SubmitButton from "@/components/SubmitButton";
 import { saveDisplayName } from "@/lib/actions/profile";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -57,12 +58,12 @@ export default async function WelcomePage(props: {
               />
             </div>
 
-            <button
-              type="submit"
-              className="w-full rounded-[24px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-6 py-4 text-base font-bold text-white shadow-[0_18px_36px_rgba(249,115,22,0.32)] transition hover:-translate-y-0.5"
+            <SubmitButton
+              pendingLabel="Saving…"
+              className="w-full rounded-[24px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-6 py-4 text-base font-bold text-white shadow-[0_18px_36px_rgba(249,115,22,0.32)] transition hover:-translate-y-0.5 disabled:cursor-progress disabled:hover:translate-y-0"
             >
               Save and continue
-            </button>
+            </SubmitButton>
           </form>
         </div>
       </main>

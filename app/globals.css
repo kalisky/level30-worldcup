@@ -54,3 +54,21 @@ body {
 :where(button:disabled, input:disabled) {
   cursor: not-allowed;
 }
+
+/* Tap / click feedback — instant press cue on every interactive element so
+   users (especially on mobile) can tell their tap landed even before the
+   server responds. Opacity composes safely with existing hover transforms. */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+:where(
+    button:not(:disabled),
+    [type="submit"]:not(:disabled),
+    [type="button"]:not(:disabled),
+    [role="button"]:not([aria-disabled="true"]),
+    a[href],
+    summary,
+    label[for]
+  ):active {
+  opacity: 0.6;
+}

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { rooms, users } from "@/lib/db/schema";
 import { joinRoom } from "@/lib/actions/rooms";
+import SubmitButton from "@/components/SubmitButton";
 import { getAuthenticatedUser, profileRedirectPath } from "@/lib/auth";
 import { normalizeRoomCode } from "@/lib/code";
 import AppHeader from "@/components/AppHeader";
@@ -88,12 +89,12 @@ export default async function JoinRoomPage(props: {
               </div>
               <form action={joinRoom}>
                 <input type="hidden" name="roomCode" value={code} />
-                <button
-                  type="submit"
-                  className="w-full rounded-[24px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-6 py-4 text-base font-bold text-white shadow-[0_18px_36px_rgba(249,115,22,0.32)] transition hover:-translate-y-0.5"
+                <SubmitButton
+                  pendingLabel="Joining…"
+                  className="w-full rounded-[24px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-6 py-4 text-base font-bold text-white shadow-[0_18px_36px_rgba(249,115,22,0.32)] transition hover:-translate-y-0.5 disabled:cursor-progress disabled:hover:translate-y-0"
                 >
                   Join room
-                </button>
+                </SubmitButton>
               </form>
             </>
           )}

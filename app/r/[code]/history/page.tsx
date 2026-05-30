@@ -1,22 +1,13 @@
 import Link from "next/link";
 import { and, desc, eq } from "drizzle-orm";
+import { getLocale, getTranslations } from "next-intl/server";
 import { requireRoomUser } from "@/lib/auth-context";
 import { db } from "@/lib/db";
 import { chipLedger, matches, customBets } from "@/lib/db/schema";
 import { getRoomUsers } from "@/lib/db/queries";
+import { translateTeam } from "@/lib/team-i18n";
 import RoomHeader from "@/components/RoomHeader";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
-
-const REASON_LABELS: Record<string, string> = {
-  opening_balance: "Opening balance",
-  initial: "Joined room",
-  daily_grant: "Daily grant",
-  match_bet_placed: "Match bet placed",
-  match_bet_payout: "Match payout",
-  custom_wager_placed: "Custom wager placed",
-  custom_wager_payout: "Custom wager payout",
-  custom_wager_refund: "Wager refund (void)",
-};
 
 const REASON_ICONS: Record<string, string> = {
   opening_balance: "📜",
@@ -29,8 +20,8 @@ const REASON_ICONS: Record<string, string> = {
   custom_wager_refund: "↩️",
 };
 
-function formatTime(d: Date) {
-  return d.toLocaleString(undefined, {
+function formatTime(d: Date, locale: string) {
+  return d.toLocaleString(locale, {
     month: "short",
     day: "numeric",
     hour: "numeric",
@@ -38,16 +29,23 @@ function formatTime(d: Date) {
   });
 }
 
-function relativeTime(d: Date) {
+type RelativeStrings = {
+  justNow: string;
+  minutesAgo: (n: number) => string;
+  hoursAgo: (n: number) => string;
+  daysAgo: (n: number) => string;
+};
+
+function relativeTime(d: Date, locale: string, s: RelativeStrings) {
   const diff = Date.now() - d.getTime();
   const m = Math.floor(diff / 60_000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
+  if (m < 1) return s.justNow;
+  if (m < 60) return s.minutesAgo(m);
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
+  if (h < 24) return s.hoursAgo(h);
   const days = Math.floor(h / 24);
-  if (days < 7) return `${days}d ago`;
-  return formatTime(d);
+  if (days < 7) return s.daysAgo(days);
+  return formatTime(d, locale);
 }
 
 export default async function HistoryPage(props: {
@@ -61,6 +59,18 @@ export default async function HistoryPage(props: {
   const targetUserId = (Array.isArray(query) ? query[0] : query) ?? user.id;
   const members = await getRoomUsers(room.id);
   const target = members.find((m) => m.id === targetUserId) ?? user;
+
+  const locale = await getLocale();
+  const t = await getTranslations("history");
+  const tc = await getTranslations("common");
+  const tr = await getTranslations("history.reason");
+
+  const relativeStrings: RelativeStrings = {
+    justNow: tc("justNow"),
+    minutesAgo: (n) => `${n}m ${tc("ago")}`,
+    hoursAgo: (n) => `${n}h ${tc("ago")}`,
+    daysAgo: (n) => `${n}d ${tc("ago")}`,
+  };
 
   const entries = await db
     .select({
@@ -87,25 +97,25 @@ export default async function HistoryPage(props: {
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 space-y-6">
         <header className="rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.08)]">
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">
-            Chip history
+            {t("title")}
           </p>
           <h1 className="mt-1 text-2xl font-black text-[#1E3A8A]">
             {target.name}
             {target.id === user.id && (
               <span className="ml-2 rounded-full bg-[#FFF1E8] px-2.5 py-1 align-middle text-xs font-bold text-[#EA580C]">
-                you
+                {tc("you")}
               </span>
             )}
           </h1>
           <p className="mt-2 text-3xl font-black text-[#1E3A8A]">
             <span className="font-mono">{target.chips}</span>{" "}
-            <span className="text-sm font-bold uppercase tracking-[0.18em] text-slate-500">chips</span>
+            <span className="text-sm font-bold uppercase tracking-[0.18em] text-slate-500">{t("chips")}</span>
           </p>
         </header>
 
         <nav>
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
-            View someone else's history
+            {t("viewSomeoneElse")}
           </p>
           <div className="flex flex-wrap gap-2">
             {members.map((m) => {
@@ -122,7 +132,7 @@ export default async function HistoryPage(props: {
                   }
                 >
                   {m.name}
-                  {m.id === user.id && " (you)"}
+                  {m.id === user.id && ` (${tc("you")})`}
                 </Link>
               );
             })}
@@ -131,17 +141,21 @@ export default async function HistoryPage(props: {
 
         {entries.length === 0 ? (
           <p className="rounded-[22px] border border-dashed border-[#cfdced] bg-[#F8FBFF] p-6 text-center text-sm text-slate-500">
-            No chip history yet.
+            {t("noHistory")}
           </p>
         ) : (
           <ul className="space-y-2">
             {entries.map(({ entry, matchHome, matchAway, customBetTitle }) => {
               const positive = entry.delta >= 0;
-              const reasonLabel = REASON_LABELS[entry.reason] ?? entry.reason;
+              const reasonLabel = tr(entry.reason);
               const icon = REASON_ICONS[entry.reason] ?? "•";
+              const matchLabel =
+                matchHome && matchAway
+                  ? `${translateTeam(matchHome, locale)} vs ${translateTeam(matchAway, locale)}`
+                  : null;
               const subtitle =
                 entry.note ||
-                (matchHome && matchAway ? `${matchHome} vs ${matchAway}` : null) ||
+                matchLabel ||
                 (customBetTitle ? customBetTitle : null);
               const ts = new Date(entry.createdAt);
               return (
@@ -171,9 +185,11 @@ export default async function HistoryPage(props: {
                       </p>
                     )}
                     <div className="mt-1 flex items-baseline justify-between gap-2 text-xs text-slate-500">
-                      <span title={ts.toLocaleString()}>{relativeTime(ts)}</span>
+                      <span title={ts.toLocaleString(locale)}>
+                        {relativeTime(ts, locale, relativeStrings)}
+                      </span>
                       <span>
-                        balance{" "}
+                        {t("balance")}{" "}
                         <span className="font-mono font-semibold text-[#1E3A8A]">
                           {entry.balanceAfter}
                         </span>

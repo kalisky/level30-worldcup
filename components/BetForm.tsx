@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import TeamFlag from "@/components/TeamFlag";
+import { useTeamName } from "@/hooks/useTeamName";
 import { placeMatchBet } from "@/lib/actions/bets";
 import { scoreKey, SCORE_RANGE, type ScoreOddsCache } from "@/lib/db/schema";
 
@@ -26,6 +28,12 @@ export default function BetForm({
   scoreOdds: ScoreOddsCache;
   maxStake: number;
 }) {
+  const tb = useTranslations("bet");
+  const tm = useTranslations("match");
+  const tc = useTranslations("common");
+  const teamName = useTeamName();
+  const localizedHome = teamName(homeTeam);
+  const localizedAway = teamName(awayTeam);
   const [home, setHome] = useState<number | null>(null);
   const [away, setAway] = useState<number | null>(null);
   const [stake, setStake] = useState<number>(50);
@@ -82,24 +90,21 @@ export default function BetForm({
   return (
     <div className="rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.08)]">
       <h3 className="mb-1 text-[0.72rem] font-bold uppercase tracking-[0.28em] text-slate-500">
-        Predict the score
+        {tb("predictScore")}
       </h3>
       <p className="mb-4 text-sm leading-6 text-slate-600">
-        Your stake is split 50/50: half on the direction (
-        <span className="font-mono font-bold text-[#1E3A8A]">
-          {oddsHome.toFixed(2)}x / {oddsDraw.toFixed(2)}x /{" "}
-          {oddsAway.toFixed(2)}x
-        </span>
-        ), half on the exact score.
+        {tb("splitHint")}
       </p>
 
       <ScoreRow
-        label={homeTeam}
+        flagSource={homeTeam}
+        label={localizedHome}
         selected={home}
         onPick={setHome}
       />
       <ScoreRow
-        label={awayTeam}
+        flagSource={awayTeam}
+        label={localizedAway}
         selected={away}
         onPick={setAway}
       />
@@ -107,28 +112,28 @@ export default function BetForm({
       {home !== null && away !== null && (
         <div className="mt-4 rounded-[24px] border border-[#dbe5f2] bg-[#F8FBFF] p-4 text-sm">
           <div className="flex items-center justify-between">
-            <span className="font-semibold text-slate-600">Your prediction</span>
+            <span className="font-semibold text-slate-600">{tm("yourBet")}</span>
             <span className="font-mono text-base font-black text-[#1E3A8A]">
-              {homeTeam} {home} – {away} {awayTeam}
+              {localizedHome} {home} – {away} {localizedAway}
             </span>
           </div>
           <div className="mt-2 flex items-center justify-between text-slate-600">
             <span>
-              Direction:{" "}
+              {tb("direction")}:{" "}
               <span className="font-bold text-[#1E3A8A]">
-                {directionPick === "HOME" ? homeTeam : directionPick === "AWAY" ? awayTeam : "Draw"}
+                {directionPick === "HOME" ? localizedHome : directionPick === "AWAY" ? localizedAway : tm("draw")}
               </span>{" "}
               @ <span className="font-mono">{directionOdds.toFixed(2)}x</span>
             </span>
             <span className="text-slate-500">
-              Exact <span className="font-mono">{scoreOdd.toFixed(2)}x</span>
+              {tb("exact")} <span className="font-mono">{scoreOdd.toFixed(2)}x</span>
             </span>
           </div>
         </div>
       )}
 
       <div className="mt-4 flex items-center gap-3">
-        <label className="text-sm font-semibold text-slate-600">Total stake</label>
+        <label className="text-sm font-semibold text-slate-600">{tb("totalStake")}</label>
         <input
           type="number"
           min={2}
@@ -138,7 +143,7 @@ export default function BetForm({
           className="w-24 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-right font-mono font-bold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
         />
         <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-          / {maxStake} chips
+          / {maxStake} {tc("chips")}
         </span>
       </div>
 
@@ -146,18 +151,18 @@ export default function BetForm({
         <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
           <div className="rounded-[22px] border border-[#dbe5f2] bg-[#F8FBFF] px-3 py-3">
             <div className="font-semibold uppercase tracking-[0.18em] text-slate-500">
-              If direction is right
+              {tb("ifDirectionRight")}
             </div>
             <div className="mt-1 font-mono text-base font-black text-[#1E3A8A]">
-              {directionPayout} chips
+              {directionPayout} {tc("chips")}
             </div>
           </div>
           <div className="rounded-[22px] border border-[#dbe5f2] bg-[#F8FBFF] px-3 py-3">
             <div className="font-semibold uppercase tracking-[0.18em] text-slate-500">
-              If exact score too
+              {tb("ifExactScoreToo")}
             </div>
             <div className="mt-1 font-mono text-base font-black text-[#1E3A8A]">
-              {bestCase} chips
+              {bestCase} {tc("chips")}
             </div>
           </div>
         </div>
@@ -175,17 +180,21 @@ export default function BetForm({
         onClick={submit}
         className="mt-4 w-full rounded-[24px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-3 font-bold text-white shadow-[0_14px_30px_rgba(249,115,22,0.28)] disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {pending ? "Placing…" : "Place bet"}
+        {pending ? tb("placePending") : tb("place")}
       </button>
     </div>
   );
 }
 
 function ScoreRow({
+  flagSource,
   label,
   selected,
   onPick,
 }: {
+  /** Canonical English team name used for the flag lookup. */
+  flagSource: string;
+  /** Display label (already localized). */
   label: string;
   selected: number | null;
   onPick: (n: number) => void;
@@ -193,7 +202,7 @@ function ScoreRow({
   return (
     <div className="mb-2">
       <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-        <TeamFlag teamName={label} size={28} />
+        <TeamFlag teamName={flagSource} size={28} />
         <span>{label}</span>
       </div>
       <div className="flex flex-wrap gap-1">

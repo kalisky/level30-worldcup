@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { Match } from "@/lib/db/schema";
 import TeamFlag from "@/components/TeamFlag";
 import { getTeamAbbreviation } from "@/lib/team-flags";
+import { useTeamName } from "@/hooks/useTeamName";
 
 function formatKickoff(d: Date) {
   return d.toLocaleString(undefined, {
@@ -22,6 +24,9 @@ export default function MatchCard({
   roomCode: string;
   myPrediction?: { home: number; away: number } | null;
 }) {
+  const tm = useTranslations("match");
+  const td = useTranslations("dashboard");
+  const teamName = useTeamName();
   const kickoff = new Date(match.kickoff);
   const isFinal = match.status === "final";
   const isLive = match.status === "live";
@@ -30,8 +35,8 @@ export default function MatchCard({
   const centerLabel =
     match.homeScore != null && match.awayScore != null
       ? `${match.homeScore} : ${match.awayScore}`
-      : "VS";
-  const stateLabel = isLive ? "LIVE" : isFinal ? "FINAL" : "UP NEXT";
+      : tm("vs");
+  const stateLabel = isLive ? tm("live") : isFinal ? tm("final") : tm("upNext");
   const stateClass = isLive
     ? "bg-[#FFF1E8] text-[#EA580C]"
     : isFinal
@@ -44,7 +49,7 @@ export default function MatchCard({
       className="group block rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.08)] transition hover:-translate-y-0.5 hover:border-[#c4d6ec] hover:shadow-[0_24px_50px_rgba(30,58,138,0.14)]"
     >
       <div className="flex items-center justify-between gap-3 text-[0.7rem] uppercase tracking-[0.24em] text-slate-500">
-        <span className="font-semibold">Group {match.groupLabel}</span>
+        <span className="font-semibold">{tm("group")} {match.groupLabel}</span>
         <div className="flex items-center gap-2">
           <span
             className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold ${stateClass}`}
@@ -66,11 +71,11 @@ export default function MatchCard({
             <div className="text-base font-black leading-tight text-[#1E3A8A] sm:text-lg">
               <span className="sm:hidden">{homeTeamAbbreviation}</span>
               <span className="hidden break-words sm:inline">
-                {match.homeTeam}
+                {teamName(match.homeTeam)}
               </span>
             </div>
             <div className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-              Home
+              {tm("home")}
             </div>
           </div>
           <TeamFlag teamName={match.homeTeam} size={34} />
@@ -93,11 +98,11 @@ export default function MatchCard({
             <div className="text-base font-black leading-tight text-[#1E3A8A] sm:text-lg">
               <span className="sm:hidden">{awayTeamAbbreviation}</span>
               <span className="hidden break-words sm:inline">
-                {match.awayTeam}
+                {teamName(match.awayTeam)}
               </span>
             </div>
             <div className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-              Away
+              {tm("away")}
             </div>
           </div>
         </div>
@@ -105,7 +110,7 @@ export default function MatchCard({
 
       {myPrediction && (
         <div className="mt-4 inline-flex rounded-full bg-[#FFF1E8] px-3 py-1 text-xs font-bold text-[#EA580C]">
-          Your prediction: {myPrediction.home} – {myPrediction.away}
+          {td("yourPrediction")}: {myPrediction.home} – {myPrediction.away}
         </div>
       )}
     </Link>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import type { CustomBet, CustomWager } from "@/lib/db/schema";
 import {
   placeCustomWager,
@@ -49,6 +50,9 @@ export default function CustomBetCard({
     "idle"
   );
   const [now] = useState(() => Date.now());
+
+  const t = useTranslations("customBet");
+  const tc = useTranslations("common");
 
   // Open-question state
   const [answer, setAnswer] = useState("");
@@ -169,13 +173,13 @@ export default function CustomBetCard({
             className="rounded-full border border-[#cdd9ea] px-3 py-1.5 text-[0.7rem] font-bold uppercase tracking-[0.16em] text-slate-600 transition hover:border-[#3B82F6] hover:bg-[#F8FBFF] hover:text-[#1E3A8A]"
           >
             {shareState === "copied"
-              ? "Copied"
+              ? tc("copied")
               : shareState === "failed"
-                ? "Copy failed"
-                : "Share"}
+                ? tc("copyFailed")
+                : tc("share")}
           </button>
           <span className="pt-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            by {proposerName}
+            {proposerName}
           </span>
         </div>
       </header>
@@ -201,7 +205,7 @@ export default function CustomBetCard({
       )}
       {bet.locksAt && (
         <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-          {isLocked ? "Locked" : "Locks"} {formatLockTime(bet.locksAt)}
+          {isLocked ? t("locked") : t("lockTime")} {formatLockTime(bet.locksAt)}
         </p>
       )}
 
@@ -210,7 +214,7 @@ export default function CustomBetCard({
           {bet.options.length > 0 ? (
             <div>
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Answers so far
+                {t("answersSoFar")}
               </p>
               <div className="flex flex-wrap gap-2">
                 {bet.options.map((o, i) => {
@@ -243,14 +247,14 @@ export default function CustomBetCard({
             </div>
           ) : (
             <p className="text-xs text-slate-500">
-              No answers submitted yet — be the first.
+              {t("noAnswers")}
             </p>
           )}
 
           {!myWager && !isLocked && (
             <div>
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Your answer
+                {t("yourAnswer")}
               </p>
               <div className="flex gap-2">
                 <input
@@ -262,7 +266,7 @@ export default function CustomBetCard({
                     setPreview(null);
                   }}
                   maxLength={80}
-                  placeholder="e.g. Argentina"
+                  placeholder={t("answerPlaceholder")}
                   className="flex-1 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
                 />
                 <button
@@ -271,7 +275,7 @@ export default function CustomBetCard({
                   onClick={checkOdds}
                   className="rounded-2xl border-2 border-[#3B82F6] bg-white px-3 py-2 text-sm font-bold text-[#1D4ED8] transition hover:bg-[#EFF6FF] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {previewing ? "Checking…" : "Check odds"}
+                  {previewing ? t("checking") : t("checkOdds")}
                 </button>
               </div>
 
@@ -285,14 +289,14 @@ export default function CustomBetCard({
                       </span>
                     </span>
                     <span className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      {preview.isExisting ? "cached" : "fresh"}
+                      {preview.isExisting ? t("cached") : t("fresh")}
                     </span>
                   </div>
                   <p className="mt-1 text-xs italic text-slate-600">
                     AI: {preview.reasoning}
                   </p>
                   <p className="mt-2 text-xs text-slate-500">
-                    Potential payout for {stake} chips:{" "}
+                    {t("potentialPayout", { stake })}{" "}
                     <span className="font-mono font-bold text-[#1E3A8A]">
                       {Math.floor(stake * preview.odds)}
                     </span>
@@ -332,16 +336,16 @@ export default function CustomBetCard({
 
       {myWager ? (
         <p className="mt-4 rounded-2xl bg-[#FFF1E8] px-4 py-3 text-sm text-[#C2410C]">
-          You wagered {myWager.stake} chips on{" "}
+          {t("youWagered", { stake: myWager.stake })}{" "}
           <span className="font-bold">{bet.options[myWager.optionIdx]?.label}</span>{" "}
           @ {Number(myWager.oddsLocked).toFixed(2)}x.{" "}
           <span className="text-slate-500">
-            (payout {Math.floor(myWager.stake * Number(myWager.oddsLocked))})
+            {t("payout", { payout: Math.floor(myWager.stake * Number(myWager.oddsLocked)) })}
           </span>
         </p>
       ) : isLocked ? (
         <p className="mt-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
-          Locked
+          {t("locked")}
         </p>
       ) : isOpenQuestion ? (
         <div className="mt-3 flex items-center gap-2">
@@ -364,7 +368,7 @@ export default function CustomBetCard({
             onClick={submitOpen}
             className="ml-auto rounded-[20px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-2 text-sm font-bold text-white shadow-[0_14px_26px_rgba(249,115,22,0.24)] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {pending ? "Wagering…" : "Wager"}
+            {pending ? t("wagering") : t("wager")}
           </button>
         </div>
       ) : (
@@ -386,7 +390,7 @@ export default function CustomBetCard({
             onClick={submit}
             className="ml-auto rounded-[20px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-2 text-sm font-bold text-white shadow-[0_14px_26px_rgba(249,115,22,0.24)] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {pending ? "Wagering…" : "Wager"}
+            {pending ? t("wagering") : t("wager")}
           </button>
         </div>
       )}

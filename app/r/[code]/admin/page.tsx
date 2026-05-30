@@ -1,8 +1,10 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { getLocale, getTranslations } from "next-intl/server";
 import { requireRoomUser } from "@/lib/auth-context";
 import { db } from "@/lib/db";
 import { customBets, customWagers, matches, users } from "@/lib/db/schema";
 import { listRecentSettlements } from "@/lib/db/queries";
+import { translateTeam } from "@/lib/team-i18n";
 import RoomHeader from "@/components/RoomHeader";
 import SettleMatchForm from "@/components/SettleMatchForm";
 import SettleCustomBet from "@/components/SettleCustomBet";
@@ -13,6 +15,9 @@ export default async function AdminPage(props: {
 }) {
   const { code } = await props.params;
   const { room, user, dailyGrantApplied } = await requireRoomUser(code);
+  const locale = await getLocale();
+  const t = await getTranslations("admin");
+  const tm = await getTranslations("match");
 
   const [allMatches, openBets, recent] = await Promise.all([
     db.select().from(matches).orderBy(matches.kickoff),
@@ -55,10 +60,10 @@ export default async function AdminPage(props: {
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 space-y-8">
         <section>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Needs settlement ({needsAttention.length})
+            {t("needsSettlement", { count: needsAttention.length })}
           </h2>
           {needsAttention.length === 0 ? (
-            <p className="text-sm text-zinc-500">Nothing pending.</p>
+            <p className="text-sm text-zinc-500">{t("nothingPending")}</p>
           ) : (
             <div className="space-y-2">
               {needsAttention.map((m) => (
@@ -70,10 +75,10 @@ export default async function AdminPage(props: {
 
         <section>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Open custom bets ({openBets.length})
+            {t("openCustomBets", { count: openBets.length })}
           </h2>
           {openBets.length === 0 ? (
-            <p className="text-sm text-zinc-500">No custom bets to resolve.</p>
+            <p className="text-sm text-zinc-500">{t("noCustomBets")}</p>
           ) : (
             <div className="space-y-2">
               {openBets.map(({ bet, proposerName, wagererCount }) => (
@@ -92,7 +97,7 @@ export default async function AdminPage(props: {
         <section>
           <details>
             <summary className="cursor-pointer text-sm font-semibold uppercase tracking-wide text-zinc-500">
-              Upcoming matches ({upcoming.length})
+              {t("upcomingMatches", { count: upcoming.length })}
             </summary>
             <div className="mt-3 space-y-2">
               {upcoming.map((m) => (
@@ -105,7 +110,7 @@ export default async function AdminPage(props: {
         <section>
           <details>
             <summary className="cursor-pointer text-sm font-semibold uppercase tracking-wide text-zinc-500">
-              Completed ({completed.length})
+              {t("completed", { count: completed.length })}
             </summary>
             <ul className="mt-3 space-y-1.5 text-sm">
               {completed.map((m) => (
@@ -114,9 +119,9 @@ export default async function AdminPage(props: {
                   className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900"
                 >
                   <span>
-                    {m.homeTeam} {m.homeScore} – {m.awayScore} {m.awayTeam}
+                    {translateTeam(m.homeTeam, locale)} {m.homeScore} – {m.awayScore} {translateTeam(m.awayTeam, locale)}
                   </span>
-                  <span className="text-xs text-zinc-500">Group {m.groupLabel}</span>
+                  <span className="text-xs text-zinc-500">{tm("group")} {m.groupLabel}</span>
                 </li>
               ))}
             </ul>
@@ -125,10 +130,10 @@ export default async function AdminPage(props: {
 
         <section>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Recent settlements
+            {t("recentSettlements")}
           </h2>
           {recent.length === 0 ? (
-            <p className="text-sm text-zinc-500">Nothing yet.</p>
+            <p className="text-sm text-zinc-500">{t("nothingYet")}</p>
           ) : (
             <ul className="space-y-1.5 text-sm">
               {recent.map(({ settlement, actorName }) => (
@@ -139,14 +144,14 @@ export default async function AdminPage(props: {
                   <div className="flex items-center justify-between">
                     <span className="font-medium">
                       {settlement.kind === "match"
-                        ? "Match settled"
+                        ? t("matchSettled")
                         : settlement.kind === "custom_bet"
-                          ? "Custom bet settled"
-                          : "Custom bet voided"}
+                          ? t("customBetSettled")
+                          : t("customBetVoided")}
                     </span>
                     <span className="text-xs text-zinc-500">
-                      by {actorName} ·{" "}
-                      {new Date(settlement.createdAt).toLocaleString()}
+                      {t("by")} {actorName} ·{" "}
+                      {new Date(settlement.createdAt).toLocaleString(locale)}
                     </span>
                   </div>
                   <pre className="mt-1 overflow-x-auto text-xs text-zinc-500">

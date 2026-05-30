@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import BetForm from "@/components/BetForm";
+import { useTeamName } from "@/hooks/useTeamName";
 import type { MatchBet, ScoreOddsCache } from "@/lib/db/schema";
 
 export default function MatchBetPanel({
@@ -32,6 +34,12 @@ export default function MatchBetPanel({
   maxStake: number;
 }) {
   const [now] = useState(() => Date.now());
+  const t = useTranslations("match");
+  const tb = useTranslations("bet");
+  const tc = useTranslations("common");
+  const teamName = useTeamName();
+  const localizedHome = teamName(homeTeam);
+  const localizedAway = teamName(awayTeam);
 
   const isLocked =
     new Date(kickoff).getTime() <= now || matchStatus !== "scheduled";
@@ -43,49 +51,49 @@ export default function MatchBetPanel({
     return (
       <section className="rounded-[28px] border border-[#BFDBFE] bg-[#EFF6FF] p-5 shadow-[0_16px_38px_rgba(59,130,246,0.10)]">
         <h3 className="text-[0.72rem] font-bold uppercase tracking-[0.28em] text-[#1D4ED8]">
-          Your prediction
+          {t("yourBet")}
         </h3>
         <p className="mt-2 text-xl font-black text-[#1E3A8A]">
-          {homeTeam} {myBet.predictedHomeScore} – {myBet.predictedAwayScore}{" "}
-          {awayTeam}
+          {localizedHome} {myBet.predictedHomeScore} – {myBet.predictedAwayScore}{" "}
+          {localizedAway}
         </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <div className="rounded-[22px] border border-white/80 bg-white/80 px-4 py-3">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Direction
+              {tb("directionOutcome")}
             </div>
             <div className="mt-1 text-sm text-[#1E3A8A]">
-              <span className="font-bold">{myBet.directionStake} chips</span> @{" "}
+              <span className="font-bold">{myBet.directionStake} {tc("chips")}</span> @{" "}
               <span className="font-mono font-bold">
                 {Number(myBet.directionOddsLocked).toFixed(2)}x
               </span>{" "}
               <span className="text-slate-500">
-                ({myBet.directionOutcome === "pending" ? "open" : myBet.directionOutcome})
+                ({myBet.directionOutcome === "pending" ? t("openOutcome") : myBet.directionOutcome})
               </span>
             </div>
           </div>
           <div className="rounded-[22px] border border-white/80 bg-white/80 px-4 py-3">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Exact score
+              {tb("scoreOutcome")}
             </div>
             <div className="mt-1 text-sm text-[#1E3A8A]">
-              <span className="font-bold">{myBet.scoreStake} chips</span> @{" "}
+              <span className="font-bold">{myBet.scoreStake} {tc("chips")}</span> @{" "}
               <span className="font-mono font-bold">
                 {Number(myBet.scoreOddsLocked).toFixed(2)}x
               </span>{" "}
               <span className="text-slate-500">
-                ({myBet.scoreOutcome === "pending" ? "open" : myBet.scoreOutcome})
+                ({myBet.scoreOutcome === "pending" ? t("openOutcome") : myBet.scoreOutcome})
               </span>
             </div>
           </div>
         </div>
         {myBet.status === "settled" && (
           <p className="mt-3 text-sm font-medium text-slate-600">
-            Settled. Payout:{" "}
+            {t("settled")}{" "}
             <span className="font-mono font-black text-[#1E3A8A]">
               {myBet.payout ?? 0}
             </span>{" "}
-            chips.
+            {tc("chips")}.
           </p>
         )}
       </section>
@@ -95,7 +103,7 @@ export default function MatchBetPanel({
   if (isLocked) {
     return (
       <section className="rounded-[28px] border border-[#dbe5f2] bg-[#F8FBFF] p-5 text-sm font-medium text-slate-600">
-        Betting closed. Kickoff has already passed.
+        {t("kickoffPast")}
       </section>
     );
   }
@@ -103,11 +111,7 @@ export default function MatchBetPanel({
   if (!hasOdds) {
     return (
       <section className="rounded-[28px] border border-dashed border-[#cfdced] bg-white p-5 text-sm text-slate-600">
-        Odds haven&apos;t been generated yet. Ask any room member to run{" "}
-        <code className="rounded bg-[#F8FBFF] px-1.5 py-0.5 font-mono text-xs text-[#1E3A8A] ring-1 ring-[#dbe5f2]">
-          npm run odds:generate
-        </code>{" "}
-        or hit &quot;Generate odds&quot; on the admin page.
+        {t("oddsNotReady")}
       </section>
     );
   }

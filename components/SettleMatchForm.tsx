@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import type { Match } from "@/lib/db/schema";
 import {
   settleMatch,
@@ -16,6 +17,9 @@ export default function SettleMatchForm({
   match: Match;
   roomCode: string;
 }) {
+  const t = useTranslations("admin");
+  const tm = useTranslations("match");
+  const locale = useLocale();
   const [homeScore, setHomeScore] = useState<number>(match.homeScore ?? 0);
   const [awayScore, setAwayScore] = useState<number>(match.awayScore ?? 0);
   const [homeTeam, setHomeTeam] = useState(match.homeTeam);
@@ -89,8 +93,8 @@ export default function SettleMatchForm({
   return (
     <div className="rounded-[26px] border border-[#dbe5f2] bg-white p-4 shadow-[0_14px_32px_rgba(30,58,138,0.07)]">
       <div className="flex items-center justify-between text-[0.72rem] font-semibold uppercase tracking-[0.22em] text-slate-500">
-        <span>Group {match.groupLabel}</span>
-        <span>{new Date(match.kickoff).toLocaleString()}</span>
+        <span>{tm("group")} {match.groupLabel}</span>
+        <span>{new Date(match.kickoff).toLocaleString(locale)}</span>
       </div>
 
       <div className="mt-2 flex items-center gap-2">
@@ -101,7 +105,7 @@ export default function SettleMatchForm({
           onChange={(e) => setHomeTeam(e.target.value)}
           className="w-full rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-sm font-semibold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
         />
-        <span className="font-bold text-slate-400">vs</span>
+        <span className="font-bold text-slate-400">{tm("vs")}</span>
         <input
           type="text"
           dir="auto"
@@ -118,7 +122,7 @@ export default function SettleMatchForm({
           disabled={pending || (homeTeam === match.homeTeam && awayTeam === match.awayTeam)}
           className="rounded-full border border-[#cdd9ea] px-3 py-1.5 font-semibold text-slate-600 transition hover:border-[#3B82F6] hover:bg-[#F8FBFF] disabled:opacity-50"
         >
-          Save names
+          {t("saveNames")}
         </button>
         <button
           type="button"
@@ -126,7 +130,7 @@ export default function SettleMatchForm({
           disabled={pending || isFinal}
           className="rounded-full border border-[#cdd9ea] px-3 py-1.5 font-semibold text-slate-600 transition hover:border-[#3B82F6] hover:bg-[#F8FBFF] disabled:opacity-50"
         >
-          {match.oddsHome ? "Regenerate odds" : "Generate odds"}
+          {match.oddsHome ? t("regenerateOdds") : t("generateOdds")}
         </button>
         {match.oddsHome && (
           <span className="font-mono font-semibold text-slate-500">
@@ -137,7 +141,7 @@ export default function SettleMatchForm({
       </div>
 
       <div className="mt-3 flex items-center gap-2">
-        <span className="text-sm font-semibold text-slate-600">Final score:</span>
+        <span className="text-sm font-semibold text-slate-600">{t("finalScore")}</span>
         <input
           type="number"
           min={0}
@@ -159,7 +163,7 @@ export default function SettleMatchForm({
         />
         {isFinal ? (
           <span className="ml-auto rounded-full bg-slate-200 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-700">
-            FINAL
+            {tm("final")}
           </span>
         ) : (
           <div className="ml-auto flex gap-2">
@@ -170,7 +174,7 @@ export default function SettleMatchForm({
               title="Use AI + web search to look up the score"
               className="rounded-full border border-[#cdd9ea] px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-[#3B82F6] hover:bg-[#F8FBFF] disabled:opacity-50"
             >
-              Suggest with AI
+              {t("suggestWithAi")}
             </button>
             <button
               type="button"
@@ -178,7 +182,7 @@ export default function SettleMatchForm({
               disabled={pending}
               className="rounded-full bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-2 text-sm font-bold text-white shadow-[0_14px_26px_rgba(249,115,22,0.24)] disabled:opacity-50"
             >
-              Settle
+              {t("settle")}
             </button>
           </div>
         )}

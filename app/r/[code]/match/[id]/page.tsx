@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { requireRoomUser } from "@/lib/auth-context";
 import {
   getCustomWagersFor,
@@ -16,6 +17,7 @@ import MatchBetPanel from "@/components/MatchBetPanel";
 import MatchScreenLayout from "@/components/MatchScreenLayout";
 import TeamFlag from "@/components/TeamFlag";
 import { getTeamAbbreviation } from "@/lib/team-flags";
+import { translateTeam } from "@/lib/team-i18n";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
 
 function formatKickoff(d: Date) {
@@ -58,18 +60,24 @@ export default async function MatchPage(props: {
     })
   );
 
+  const locale = await getLocale();
+  const tm = await getTranslations("match");
+  const tc = await getTranslations("customBet");
+  const tcomm = await getTranslations("common");
   const kickoff = new Date(match.kickoff);
   const oddsHome = Number(match.oddsHome ?? 0);
   const oddsDraw = Number(match.oddsDraw ?? 0);
   const oddsAway = Number(match.oddsAway ?? 0);
   const homeTeamAbbreviation = getTeamAbbreviation(match.homeTeam);
   const awayTeamAbbreviation = getTeamAbbreviation(match.awayTeam);
+  const homeTeamLocalized = translateTeam(match.homeTeam, locale);
+  const awayTeamLocalized = translateTeam(match.awayTeam, locale);
 
   const matchPane = (
     <>
       <section className="rounded-[30px] border border-[#dbe5f2] bg-white p-6 shadow-[0_18px_42px_rgba(30,58,138,0.08)]">
         <div className="flex items-center justify-between gap-3 text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">
-          <span>Group {match.groupLabel}</span>
+          <span>{tm("group")} {match.groupLabel}</span>
           <span>{formatKickoff(kickoff)}</span>
         </div>
 
@@ -79,11 +87,11 @@ export default async function MatchPage(props: {
               <div className="text-xl font-black leading-tight text-[#1E3A8A] sm:text-2xl">
                 <span className="sm:hidden">{homeTeamAbbreviation}</span>
                 <span className="hidden break-words sm:inline">
-                  {match.homeTeam}
+                  {homeTeamLocalized}
                 </span>
               </div>
               <div className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-                Home
+                {tm("home")}
               </div>
             </div>
             <TeamFlag teamName={match.homeTeam} size={40} />
@@ -93,20 +101,20 @@ export default async function MatchPage(props: {
             <span className="rounded-full bg-[#F8FBFF] px-4 py-1.5 font-mono text-base font-black tracking-[0.22em] text-[#1E3A8A] ring-1 ring-[#dbe5f2]">
               {match.homeScore != null && match.awayScore != null
                 ? `${match.homeScore} : ${match.awayScore}`
-                : "VS"}
+                : tm("vs")}
             </span>
             {match.status === "final" ? (
               <span className="rounded-full bg-slate-200 px-3 py-1 text-[0.7rem] font-bold uppercase tracking-[0.2em] text-slate-700">
-                Final
+                {tm("final")}
               </span>
             ) : match.status === "live" ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF1E8] px-3 py-1 text-[0.7rem] font-bold uppercase tracking-[0.2em] text-[#EA580C]">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
-                Live
+                {tm("live")}
               </span>
             ) : (
               <span className="rounded-full bg-[#E0EEFF] px-3 py-1 text-[0.7rem] font-bold uppercase tracking-[0.2em] text-[#1D4ED8]">
-                Scheduled
+                {tm("upNext")}
               </span>
             )}
           </div>
@@ -117,11 +125,11 @@ export default async function MatchPage(props: {
               <div className="text-xl font-black leading-tight text-[#1E3A8A] sm:text-2xl">
                 <span className="sm:hidden">{awayTeamAbbreviation}</span>
                 <span className="hidden break-words sm:inline">
-                  {match.awayTeam}
+                  {awayTeamLocalized}
                 </span>
               </div>
               <div className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-                Away
+                {tm("away")}
               </div>
             </div>
           </div>
@@ -131,7 +139,7 @@ export default async function MatchPage(props: {
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <div className="rounded-[22px] border border-[#dbe5f2] bg-[#F8FBFF] px-4 py-4 text-center">
               <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                {match.homeTeam}
+                {homeTeamLocalized}
               </div>
               <div className="mt-1 font-mono text-xl font-black text-[#1E3A8A]">
                 {oddsHome.toFixed(2)}x
@@ -139,7 +147,7 @@ export default async function MatchPage(props: {
             </div>
             <div className="rounded-[22px] border border-[#dbe5f2] bg-[#F8FBFF] px-4 py-4 text-center">
               <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Draw
+                {tm("draw")}
               </div>
               <div className="mt-1 font-mono text-xl font-black text-[#1E3A8A]">
                 {oddsDraw.toFixed(2)}x
@@ -147,7 +155,7 @@ export default async function MatchPage(props: {
             </div>
             <div className="rounded-[22px] border border-[#dbe5f2] bg-[#F8FBFF] px-4 py-4 text-center">
               <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                {match.awayTeam}
+                {awayTeamLocalized}
               </div>
               <div className="mt-1 font-mono text-xl font-black text-[#1E3A8A]">
                 {oddsAway.toFixed(2)}x
@@ -175,7 +183,7 @@ export default async function MatchPage(props: {
       {allBets.length > 0 && (
         <section className="rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.07)]">
           <h2 className="mb-3 text-[0.72rem] font-bold uppercase tracking-[0.28em] text-slate-500">
-            Predictions on this match
+            {tm("yourBets")}
           </h2>
           <ul className="divide-y divide-[#e7eef8] overflow-hidden rounded-[22px] border border-[#dbe5f2] bg-[#F8FBFF]">
             {allBets.map(({ bet, userName }) => (
@@ -190,7 +198,7 @@ export default async function MatchPage(props: {
                   </span>
                 </span>
                 <span className="font-mono font-semibold text-slate-500">
-                  {bet.totalStake} chips
+                  {bet.totalStake} {tcomm("chips")}
                 </span>
               </li>
             ))}
@@ -205,14 +213,11 @@ export default async function MatchPage(props: {
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-[0.72rem] font-bold uppercase tracking-[0.28em] text-slate-500">
-            Custom bets
+            {tc("matchBet")}
           </h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Side quests, chaos, and live prop bets from the room.
-          </p>
         </div>
         <span className="rounded-full bg-[#F8FBFF] px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 ring-1 ring-[#dbe5f2]">
-          {customBetDetails.length} active
+          {customBetDetails.length}
         </span>
       </div>
 
@@ -221,7 +226,7 @@ export default async function MatchPage(props: {
           <ProposeBetModal
             roomCode={room.code}
             matchId={match.id}
-            matchLabel={`${match.homeTeam} vs ${match.awayTeam}`}
+            matchLabel={`${homeTeamLocalized} ${tm("vs")} ${awayTeamLocalized}`}
             matchKickoff={new Date(match.kickoff).toISOString()}
           />
         </div>
@@ -229,7 +234,7 @@ export default async function MatchPage(props: {
 
       {customBetDetails.length === 0 ? (
         <p className="rounded-[22px] border border-dashed border-[#cfdced] bg-[#F8FBFF] p-6 text-center text-sm text-slate-500">
-          No custom bets on this match yet.
+          {tc("noAnswers")}
         </p>
       ) : (
         <div className="space-y-3">

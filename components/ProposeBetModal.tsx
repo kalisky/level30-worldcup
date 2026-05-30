@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { proposeCustomBet } from "@/lib/actions/custom-bets";
 
 function formatDateTimeLocal(date: Date) {
@@ -12,10 +12,6 @@ function formatDateTimeLocal(date: Date) {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
-function getDefaultLockTimeInput() {
-  return formatDateTimeLocal(new Date(Date.now() + 15 * 60 * 1000));
-}
-
 function toIsoFromLocalDateTime(value: string) {
   if (!value) return null;
   const parsed = new Date(value);
@@ -23,20 +19,51 @@ function toIsoFromLocalDateTime(value: string) {
   return parsed.toISOString();
 }
 
+function formatCountdown(targetMs: number, nowMs: number) {
+  const diff = targetMs - nowMs;
+  if (diff <= 0) return null;
+  const days = Math.floor(diff / 86_400_000);
+  const hours = Math.floor((diff % 86_400_000) / 3_600_000);
+  const minutes = Math.floor((diff % 3_600_000) / 60_000);
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  parts.push(`${minutes}m`);
+  return parts.join(" ");
+}
+
 export default function ProposeBetModal({
   roomCode,
   matchId,
+  matchLabel,
 }: {
   roomCode: string;
   matchId?: string;
+  /** When `matchId` is set, the human-readable match label (e.g. "Mexico vs South Africa"). Shown in the modal so the user knows the bet is scoped to this match, not the whole room. */
+  matchLabel?: string;
 }) {
+  const isMatchBet = Boolean(matchId);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [options, setOptions] = useState<string[]>(["Yes", "No"]);
-  const [lockAtLocal, setLockAtLocal] = useState(() => getDefaultLockTimeInput());
+  const [lockAtLocal, setLockAtLocal] = useState("");
+  const [now, setNow] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  // Tick once a minute while the modal is open so the countdown stays live.
+  useEffect(() => {
+    if (!open) return;
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, [open]);
+
+  const lockAtMs = lockAtLocal ? new Date(lockAtLocal).getTime() : NaN;
+  const lockAtValid = Number.isFinite(lockAtMs);
+  const lockAtIsPast = lockAtValid && lockAtMs <= now;
+  const countdown = lockAtValid && !lockAtIsPast ? formatCountdown(lockAtMs, now) : null;
 
   function setOption(idx: number, value: string) {
     setOptions((o) => o.map((v, i) => (i === idx ? value : v)));
@@ -52,7 +79,7 @@ export default function ProposeBetModal({
     setTitle("");
     setDescription("");
     setOptions(["Yes", "No"]);
-    setLockAtLocal(getDefaultLockTimeInput());
+    setLockAtLocal("");
     setError(null);
   }
 
@@ -92,7 +119,9 @@ export default function ProposeBetModal({
         }}
         className="w-full rounded-[24px] border-2 border-dashed border-[#cfdced] bg-[#F8FBFF] px-4 py-3 text-sm font-bold text-[#1E3A8A] transition hover:border-[#3B82F6] hover:bg-white"
       >
-        + Propose a custom bet
+        {isMatchBet
+          ? `+ Propose a bet on this match${matchLabel ? ` (${matchLabel})` : ""}`
+          : "+ Propose a room-wide bet"}
       </button>
     );
   }
@@ -112,8 +141,29 @@ export default function ProposeBetModal({
             ✕
           </button>
         </div>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
-          AI will generate odds when you submit. Takes a few seconds.
+
+        <div
+          className={
+            "mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] " +
+            (isMatchBet
+              ? "bg-[#FFF1E8] text-[#EA580C]"
+              : "bg-[#E0EEFF] text-[#1D4ED8]")
+          }
+        >
+          <span aria-hidden>{isMatchBet ? "⚽" : "🌐"}</span>
+          {isMatchBet ? (
+            <span>
+              Match bet{matchLabel ? <span className="normal-case tracking-normal"> — {matchLabel}</span> : null}
+            </span>
+          ) : (
+            <span>Room-wide bet</span>
+          )}
+        </div>
+
+        <p className="mt-3 text-sm leading-6 text-slate-600">
+          {isMatchBet
+            ? "Wagering on this bet only counts for this specific match. AI will generate odds when you submit."
+            : "This bet applies to the whole room, not a specific match (e.g., \"Brazil wins the World Cup\"). AI will generate odds when you submit."}
         </p>
 
         <div className="mt-4 space-y-3">
@@ -145,18 +195,31 @@ export default function ProposeBetModal({
           </div>
           <div>
             <label className="mb-2 block text-sm font-bold text-[#1E3A8A]">
-              Lock time
+              Lock time <span className="text-[#EA580C]">*</span>
             </label>
             <input
               type="datetime-local"
               value={lockAtLocal}
               onChange={(e) => setLockAtLocal(e.target.value)}
               min={formatDateTimeLocal(new Date())}
+              required
               className="w-full rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-3 text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
             />
-            <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-              Uses your local time. Betting locks exactly at this moment.
-            </p>
+            {!lockAtLocal && (
+              <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+                Pick when wagering should close — must set explicitly.
+              </p>
+            )}
+            {lockAtIsPast && (
+              <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+                ⚠️ Lock time is in the past — pick a later moment.
+              </p>
+            )}
+            {countdown && (
+              <p className="mt-2 rounded-xl bg-[#EFF6FF] px-3 py-2 text-sm font-bold text-[#1D4ED8]">
+                🔒 Locks in <span className="font-mono">{countdown}</span>
+              </p>
+            )}
           </div>
           <div>
             <label className="mb-2 block text-sm font-bold text-[#1E3A8A]">
@@ -207,7 +270,8 @@ export default function ProposeBetModal({
           disabled={
             pending ||
             title.trim().length < 3 ||
-            !lockAtLocal ||
+            !lockAtValid ||
+            lockAtIsPast ||
             options.some((o) => !o.trim())
           }
           onClick={submit}

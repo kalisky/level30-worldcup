@@ -211,7 +211,7 @@ export default function ProposeBetModal({
                 type="button"
                 onClick={() => setKind("fixed_options")}
                 className={
-                  "rounded-2xl border-2 px-3 py-2.5 text-left text-sm transition " +
+                  "rounded-xl border-2 px-3 py-2.5 text-left text-sm transition " +
                   (kind === "fixed_options"
                     ? "border-[#1E3A8A] bg-[#EFF6FF]"
                     : "border-[#cdd9ea] bg-white hover:border-[#3B82F6]")
@@ -224,7 +224,7 @@ export default function ProposeBetModal({
                 type="button"
                 onClick={() => setKind("open_question")}
                 className={
-                  "rounded-2xl border-2 px-3 py-2.5 text-left text-sm transition " +
+                  "rounded-xl border-2 px-3 py-2.5 text-left text-sm transition " +
                   (kind === "open_question"
                     ? "border-[#1E3A8A] bg-[#EFF6FF]"
                     : "border-[#cdd9ea] bg-white hover:border-[#3B82F6]")
@@ -246,7 +246,7 @@ export default function ProposeBetModal({
               onChange={(e) => setTitle(e.target.value)}
               maxLength={120}
               dir="auto"
-              className="w-full rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-3 text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
+              className="w-full rounded-xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-3 text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
             />
           </div>
           <div>
@@ -259,7 +259,7 @@ export default function ProposeBetModal({
               maxLength={500}
               rows={2}
               dir="auto"
-              className="w-full rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-3 text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
+              className="w-full rounded-xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-3 text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
             />
           </div>
           <div>
@@ -272,7 +272,7 @@ export default function ProposeBetModal({
               onChange={(e) => setLockAtLocal(e.target.value)}
               min={formatDateTimeLocal(new Date())}
               required
-              className="w-full rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-3 text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
+              className="w-full rounded-xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-3 text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
             />
             {!lockAtLocal && (
               <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
@@ -314,13 +314,13 @@ export default function ProposeBetModal({
                       onChange={(e) => setOption(i, e.target.value)}
                       maxLength={50}
                       dir="auto"
-                      className="flex-1 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
+                      className="flex-1 rounded-xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
                     />
                     {options.length > 2 && (
                       <button
                         type="button"
                         onClick={() => removeOption(i)}
-                        className="rounded-2xl border border-[#cdd9ea] px-3 text-slate-500 transition hover:border-[#3B82F6] hover:bg-white"
+                        className="rounded-xl border border-[#cdd9ea] px-3 text-slate-500 transition hover:border-[#3B82F6] hover:bg-white"
                       >
                         ✕
                       </button>
@@ -339,14 +339,14 @@ export default function ProposeBetModal({
               )}
             </div>
           ) : (
-            <p className="rounded-2xl bg-[#F8FBFF] px-3 py-3 text-xs text-slate-600">
+            <p className="rounded-xl bg-[#F8FBFF] px-3 py-3 text-xs text-slate-600">
               {t("openHint")}
             </p>
           )}
         </div>
 
         {error && (
-          <p className="mt-3 rounded-2xl bg-red-50 px-3 py-3 text-sm font-medium text-red-700">
+          <p className="mt-3 rounded-xl bg-red-50 px-3 py-3 text-sm font-medium text-red-700">
             {error}
           </p>
         )}

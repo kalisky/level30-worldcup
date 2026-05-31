@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { requireRoomUser } from "@/lib/auth-context";
 import {
@@ -9,6 +10,7 @@ import {
   listRoomsForAuthUser,
   listUpcomingMatches,
 } from "@/lib/db/queries";
+import { getCustomBetShareMetadata } from "@/lib/share-metadata";
 import RoomHeader from "@/components/RoomHeader";
 import Leaderboard from "@/components/Leaderboard";
 import MatchCard from "@/components/MatchCard";
@@ -18,6 +20,21 @@ import ProposeBetModal from "@/components/ProposeBetModal";
 import MatchScreenLayout from "@/components/MatchScreenLayout";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
 import CopyBetsLauncher from "@/components/CopyBetsLauncher";
+
+export async function generateMetadata(props: {
+  params: Promise<{ code: string }>;
+  searchParams: Promise<{ bet?: string | string[] | undefined }>;
+}): Promise<Metadata> {
+  const { code } = await props.params;
+  const searchParams = await props.searchParams;
+  const betId = Array.isArray(searchParams.bet)
+    ? searchParams.bet[0]
+    : searchParams.bet;
+
+  if (!betId) return {};
+
+  return (await getCustomBetShareMetadata(code, betId)) ?? {};
+}
 
 export default async function DashboardPage(props: {
   params: Promise<{ code: string }>;

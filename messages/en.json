@@ -34,9 +34,10 @@
   "rules": {
     "quickRules": "Quick rules",
     "title": "Rules",
-    "intro": "Short version: predict matches better than your friends, manage your chips well, and finish the tournament at the top of the board.",
+    "intro": "Short version: predict matches better than your friends, manage your chips well, and finish with the most chips in the room.",
     "list": [
-      "Everyone starts with the same number of chips in a room.",
+      "Everyone starts with 1,000 chips in a room.",
+      "You get 100 fresh chips each day when you come back.",
       "Before kickoff, you can place one prediction per match.",
       "A match prediction is one exact score, like 2-1 or 1-1.",
       "Your stake is split in two: half on the result direction, half on the exact score.",
@@ -77,8 +78,10 @@
     "signInFailed": "Google sign-in failed."
   },
   "landing": {
-    "title": "World Cup Bets",
-    "tagline": "Bet with your friends on the 2026 World Cup. Pre-match picks + custom lines invented live during games.",
+    "title": "Buckeclub",
+    "tagline": "Social sports predictions",
+    "loginTitle": "Predict the tournament. Compete with friends.",
+    "loginSubtitle": "Create a room, set the stakes, and track the live leaderboard.",
     "createRoom": "Create a room",
     "joinRoom": "Join an existing room",
     "or": "or",

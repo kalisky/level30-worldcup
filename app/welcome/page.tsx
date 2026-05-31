@@ -1,7 +1,7 @@
 import AppHeader from "@/components/AppHeader";
 import SubmitButton from "@/components/SubmitButton";
 import { saveDisplayName } from "@/lib/actions/profile";
-import { getAuthenticatedUser } from "@/lib/auth";
+import { getAuthenticatedUser, getDefaultRoomDashboardPath } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
@@ -19,7 +19,9 @@ export default async function WelcomePage(props: {
   }
 
   if (authUser.displayName) {
-    redirect(nextPath || "/");
+    const defaultRoomPath =
+      !nextPath ? await getDefaultRoomDashboardPath(authUser) : null;
+    redirect(nextPath || defaultRoomPath || "/");
   }
 
   const t = await getTranslations("welcome");

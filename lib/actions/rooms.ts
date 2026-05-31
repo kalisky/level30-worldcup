@@ -10,6 +10,7 @@ import { requireProfiledUser } from "@/lib/auth";
 import { requireRoomUser } from "@/lib/auth-context";
 import { generateRoomCode, normalizeRoomCode } from "@/lib/code";
 import { recordLedger } from "@/lib/ledger";
+import { getCustomBetTargetPath } from "@/lib/share-links";
 
 const createRoomSchema = z.object({
   name: z.string().trim().min(1).max(60),
@@ -91,6 +92,8 @@ export async function createRoom(formData: FormData) {
 
 export async function joinRoom(formData: FormData) {
   const roomCode = normalizeRoomCode(String(formData.get("roomCode") ?? ""));
+  const customBetId = String(formData.get("bet") ?? "").trim();
+  const matchId = String(formData.get("match") ?? "").trim();
   if (!roomCode) throw new Error("Missing room code.");
 
   const authUser = await requireProfiledUser(`/r/${roomCode}`);
@@ -143,6 +146,16 @@ export async function joinRoom(formData: FormData) {
     .update(authUsers)
     .set({ defaultRoomId: room.id })
     .where(eq(authUsers.id, authUser.id));
+
+  if (customBetId) {
+    redirect(
+      getCustomBetTargetPath({
+        roomCode,
+        betId: customBetId,
+        matchId: matchId || null,
+      })
+    );
+  }
 
   redirect(`/r/${roomCode}/dashboard`);
 }

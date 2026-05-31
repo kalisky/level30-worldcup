@@ -21,7 +21,10 @@ export default function CreateRoomDialog({
   if (!open || !portalTarget) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-3 sm:p-4">
+    <div
+      data-create-room-dialog
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-3 sm:p-4"
+    >
       <div className="w-full max-w-2xl rounded-[32px] border border-[#dbe5f2] bg-white p-8 shadow-[0_24px_70px_rgba(30,58,138,0.10)]">
         <div className="flex items-start justify-between gap-4">
           <div>

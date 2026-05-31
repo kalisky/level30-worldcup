@@ -4,8 +4,8 @@ import { getTranslations } from "next-intl/server";
 import AppHeader from "@/components/AppHeader";
 
 export const metadata: Metadata = {
-  title: "Rules | World Cup Bets",
-  description: "Simple rules for the World Cup Bets game.",
+  title: "Rules | Buckeclub",
+  description: "Simple rules for Buckeclub.",
 };
 
 export default async function RulesPage() {

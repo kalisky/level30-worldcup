@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "World Cup Bets",
-  description: "Friend-group betting for the 2026 World Cup.",
+  title: "Buckeclub",
+  description: "Social sports predictions for your friend group.",
 };
 
 export default async function RootLayout({

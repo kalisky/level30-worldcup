@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { and, eq, gt } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { authSessions, authUsers, type AuthUser } from "@/lib/db/schema";
+import { authSessions, authUsers, rooms, type AuthUser } from "@/lib/db/schema";
 
 const SESSION_COOKIE_NAME = "wc_session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
@@ -49,6 +49,18 @@ export async function requireProfiledUser(nextPath?: string) {
   const authUser = await requireAuthenticatedUser(nextPath);
   if (!authUser.displayName) redirect(profileRedirectPath(nextPath));
   return authUser;
+}
+
+export async function getDefaultRoomDashboardPath(authUser: AuthUser) {
+  if (!authUser.defaultRoomId) return null;
+
+  const [room] = await db
+    .select({ code: rooms.code })
+    .from(rooms)
+    .where(eq(rooms.id, authUser.defaultRoomId))
+    .limit(1);
+
+  return room ? `/r/${room.code}/dashboard` : null;
 }
 
 export async function createAppSession(authUserId: string) {

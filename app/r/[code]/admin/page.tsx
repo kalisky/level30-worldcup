@@ -6,6 +6,7 @@ import { customBets, customWagers, matches, users } from "@/lib/db/schema";
 import { listRecentSettlements } from "@/lib/db/queries";
 import { translateTeam } from "@/lib/team-i18n";
 import RoomHeader from "@/components/RoomHeader";
+import RoomBreadcrumb from "@/components/RoomBreadcrumb";
 import SettleMatchForm from "@/components/SettleMatchForm";
 import SettleCustomBet from "@/components/SettleCustomBet";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
@@ -18,6 +19,7 @@ export default async function AdminPage(props: {
   const locale = await getLocale();
   const t = await getTranslations("admin");
   const tm = await getTranslations("match");
+  const tnav = await getTranslations("nav");
 
   const [allMatches, openBets, recent] = await Promise.all([
     db.select().from(matches).orderBy(matches.kickoff),
@@ -58,6 +60,11 @@ export default async function AdminPage(props: {
       <RoomHeader room={room} user={user} active="admin" />
       <DailyGrantBanner amount={dailyGrantApplied} />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 space-y-8">
+        <RoomBreadcrumb
+          roomCode={room.code}
+          dashboardLabel={tnav("dashboard")}
+          currentLabel={tnav("settle")}
+        />
         <section>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">
             {t("needsSettlement", { count: needsAttention.length })}

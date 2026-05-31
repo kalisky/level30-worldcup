@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { requireRoomUser } from "@/lib/auth-context";
@@ -9,6 +10,7 @@ import {
   getMyWagerOnCustomBet,
   listCustomBetsForMatch,
 } from "@/lib/db/queries";
+import { getCustomBetShareMetadata } from "@/lib/share-metadata";
 import RoomHeader from "@/components/RoomHeader";
 import AutoRefresh from "@/components/AutoRefresh";
 import CustomBetCard from "@/components/CustomBetCard";
@@ -16,6 +18,7 @@ import ProposeBetModal from "@/components/ProposeBetModal";
 import MatchBetPanel from "@/components/MatchBetPanel";
 import MatchScreenLayout from "@/components/MatchScreenLayout";
 import TeamFlag from "@/components/TeamFlag";
+import RoomBreadcrumb from "@/components/RoomBreadcrumb";
 import { getTeamAbbreviation } from "@/lib/team-flags";
 import { translateTeam } from "@/lib/team-i18n";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
@@ -28,6 +31,21 @@ function formatKickoff(d: Date) {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+export async function generateMetadata(props: {
+  params: Promise<{ code: string; id: string }>;
+  searchParams: Promise<{ bet?: string | string[] | undefined }>;
+}): Promise<Metadata> {
+  const { code, id } = await props.params;
+  const searchParams = await props.searchParams;
+  const betId = Array.isArray(searchParams.bet)
+    ? searchParams.bet[0]
+    : searchParams.bet;
+
+  if (!betId) return {};
+
+  return (await getCustomBetShareMetadata(code, betId, id)) ?? {};
 }
 
 export default async function MatchPage(props: {
@@ -64,6 +82,7 @@ export default async function MatchPage(props: {
   const tm = await getTranslations("match");
   const tc = await getTranslations("customBet");
   const tcomm = await getTranslations("common");
+  const tnav = await getTranslations("nav");
   const kickoff = new Date(match.kickoff);
   const oddsHome = Number(match.oddsHome ?? 0);
   const oddsDraw = Number(match.oddsDraw ?? 0);
@@ -262,6 +281,11 @@ export default async function MatchPage(props: {
       <DailyGrantBanner amount={dailyGrantApplied} />
       <AutoRefresh />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
+        <RoomBreadcrumb
+          roomCode={room.code}
+          dashboardLabel={tnav("dashboard")}
+          currentLabel={`${homeTeamLocalized} ${tm("vs")} ${awayTeamLocalized}`}
+        />
         <MatchScreenLayout
           matchPane={matchPane}
           customBetsPane={customBetsPane}

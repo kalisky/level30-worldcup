@@ -65,48 +65,61 @@ export default function MatchCard({
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
-        <div className="flex min-w-0 items-center justify-end gap-2 text-right sm:gap-3">
-          <div className="min-w-0 max-w-[6.5rem] sm:max-w-[11rem]">
-            <div className="text-base font-black leading-tight text-[#1E3A8A] sm:text-lg">
-              <span className="sm:hidden">{homeTeamAbbreviation}</span>
-              <span className="hidden break-words sm:inline">
-                {teamName(match.homeTeam)}
-              </span>
-            </div>
-            <div className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-              {tm("home")}
-            </div>
+      <div className="mt-5 grid grid-cols-[minmax(0,35%)_minmax(0,30%)_minmax(0,35%)] items-center gap-0 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-3">
+        <div className="min-w-0">
+          <div className="flex w-full items-center justify-end gap-2 whitespace-nowrap text-right sm:hidden">
+            <span className="shrink-0 text-[0.95rem] font-black leading-tight text-[#1E3A8A]">
+              {homeTeamAbbreviation}
+            </span>
+            <TeamFlag teamName={match.homeTeam} size={30} />
           </div>
-          <TeamFlag teamName={match.homeTeam} size={34} />
+
+          <div className="hidden min-w-0 items-center justify-end gap-3 text-right sm:flex">
+            <div className="min-w-0 max-w-[11rem]">
+              <div className="break-words text-lg font-black leading-tight text-[#1E3A8A]">
+                {teamName(match.homeTeam)}
+              </div>
+              <div className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+                {tm("home")}
+              </div>
+            </div>
+            <TeamFlag teamName={match.homeTeam} size={34} />
+          </div>
         </div>
 
-        <div className="flex flex-col items-center gap-2">
-          <span className="rounded-full bg-[#F8FBFF] px-4 py-1.5 font-mono text-sm font-black tracking-[0.22em] text-[#1E3A8A] ring-1 ring-[#dbe5f2]">
+        <div className="flex items-center justify-center sm:flex-col sm:gap-2">
+          <span className="rounded-full bg-[#F8FBFF] px-3.5 py-1.5 font-mono text-sm font-black tracking-[0.22em] text-[#1E3A8A] ring-1 ring-[#dbe5f2]">
             {centerLabel}
           </span>
-          {!isLive && !isFinal && (
-            <span className="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-slate-500 sm:hidden">
-              {formatKickoff(kickoff)}
-            </span>
-          )}
         </div>
 
-        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          <TeamFlag teamName={match.awayTeam} size={34} />
-          <div className="min-w-0 max-w-[6.5rem] sm:max-w-[11rem]">
-            <div className="text-base font-black leading-tight text-[#1E3A8A] sm:text-lg">
-              <span className="sm:hidden">{awayTeamAbbreviation}</span>
-              <span className="hidden break-words sm:inline">
+        <div className="min-w-0">
+          <div className="flex w-full items-center justify-start gap-2 whitespace-nowrap sm:hidden">
+            <TeamFlag teamName={match.awayTeam} size={30} />
+            <span className="shrink-0 text-[0.95rem] font-black leading-tight text-[#1E3A8A]">
+              {awayTeamAbbreviation}
+            </span>
+          </div>
+
+          <div className="hidden min-w-0 items-center gap-3 sm:flex">
+            <TeamFlag teamName={match.awayTeam} size={34} />
+            <div className="min-w-0 max-w-[11rem]">
+              <div className="break-words text-lg font-black leading-tight text-[#1E3A8A]">
                 {teamName(match.awayTeam)}
-              </span>
-            </div>
-            <div className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-              {tm("away")}
+              </div>
+              <div className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+                {tm("away")}
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {!isLive && !isFinal && (
+        <div className="mt-3 text-center text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-slate-500 sm:hidden">
+          {formatKickoff(kickoff)}
+        </div>
+      )}
 
       {myPrediction && (
         <div className="mt-4 inline-flex rounded-full bg-[#FFF1E8] px-3 py-1 text-xs font-bold text-[#EA580C]">

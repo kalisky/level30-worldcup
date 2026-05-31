@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useTransition, type RefObject } from "reac
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import CreateRoomLauncher from "@/components/CreateRoomLauncher";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { signOut } from "@/lib/actions/auth";
 import { normalizeRoomCode } from "@/lib/code";
 
@@ -29,6 +30,7 @@ export default function ProfileDialog({
   rooms,
   currentRoomCode,
   navigationItems = [],
+  showLanguageSwitcher = false,
   triggerRef,
 }: {
   open: boolean;
@@ -37,6 +39,7 @@ export default function ProfileDialog({
   rooms: ProfileRoomSummary[];
   currentRoomCode?: string | null;
   navigationItems?: NavigationItem[];
+  showLanguageSwitcher?: boolean;
   triggerRef?: RefObject<HTMLElement | null>;
 }) {
   const t = useTranslations("profile");
@@ -53,6 +56,13 @@ export default function ProfileDialog({
 
     function handlePointerDown(event: MouseEvent) {
       const target = event.target as Node;
+
+      if (
+        target instanceof Element &&
+        target.closest("[data-create-room-dialog]")
+      ) {
+        return;
+      }
 
       if (triggerRef?.current?.contains(target)) {
         return;
@@ -162,6 +172,15 @@ export default function ProfileDialog({
             })}
           </section>
 
+          <div className="my-3 h-px bg-[#e4edf8]" />
+        </>
+      )}
+
+      {showLanguageSwitcher && (
+        <>
+          <section className="px-3">
+            <LanguageSwitcher />
+          </section>
           <div className="my-3 h-px bg-[#e4edf8]" />
         </>
       )}

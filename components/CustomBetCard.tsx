@@ -9,6 +9,7 @@ import {
   placeOpenWager,
   previewOpenAnswerOdds,
 } from "@/lib/actions/custom-bets";
+import { getCustomBetInvitePath } from "@/lib/share-links";
 
 function formatLockTime(value: Date | string) {
   return new Date(value).toLocaleString(undefined, {
@@ -68,9 +69,11 @@ export default function CustomBetCard({
   const isLocked =
     bet.status !== "open" ||
     (bet.locksAt ? new Date(bet.locksAt).getTime() <= now : false);
-  const sharePath = matchId
-    ? `/r/${roomCode}/match/${matchId}?bet=${bet.id}#custom-bet-${bet.id}`
-    : `/r/${roomCode}/dashboard?bet=${bet.id}#custom-bet-${bet.id}`;
+  const sharePath = getCustomBetInvitePath({
+    roomCode,
+    betId: bet.id,
+    matchId,
+  });
 
   function submit() {
     if (optionIdx === null) return;
@@ -190,10 +193,6 @@ export default function CustomBetCard({
         >
           {contextLabel}
         </Link>
-      ) : contextLabel ? (
-        <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-          {contextLabel}
-        </p>
       ) : null}
       {bet.description && (
         <p className="mt-1 text-sm leading-6 text-slate-600">{bet.description}</p>

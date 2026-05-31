@@ -48,6 +48,7 @@ export default function CreateRoomForm({
             name="name"
             type="text"
             dir="auto"
+            autoFocus
             required
             maxLength={60}
             placeholder={t("roomNamePlaceholder")}

@@ -7,6 +7,7 @@ import { chipLedger, matches, customBets } from "@/lib/db/schema";
 import { getRoomUsers } from "@/lib/db/queries";
 import { translateTeam } from "@/lib/team-i18n";
 import RoomHeader from "@/components/RoomHeader";
+import RoomBreadcrumb from "@/components/RoomBreadcrumb";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
 
 const REASON_ICONS: Record<string, string> = {
@@ -64,6 +65,7 @@ export default async function HistoryPage(props: {
   const t = await getTranslations("history");
   const tc = await getTranslations("common");
   const tr = await getTranslations("history.reason");
+  const tnav = await getTranslations("nav");
 
   const relativeStrings: RelativeStrings = {
     justNow: tc("justNow"),
@@ -95,6 +97,11 @@ export default async function HistoryPage(props: {
       <RoomHeader room={room} user={user} />
       <DailyGrantBanner amount={dailyGrantApplied} />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 space-y-6">
+        <RoomBreadcrumb
+          roomCode={room.code}
+          dashboardLabel={tnav("dashboard")}
+          currentLabel={tnav("history")}
+        />
         <header className="rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.08)]">
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">
             {t("title")}

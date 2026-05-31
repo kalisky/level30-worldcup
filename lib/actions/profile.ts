@@ -5,7 +5,10 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { authUsers, users } from "@/lib/db/schema";
-import { requireAuthenticatedUser } from "@/lib/auth";
+import {
+  getDefaultRoomDashboardPath,
+  requireAuthenticatedUser,
+} from "@/lib/auth";
 
 const saveDisplayNameSchema = z.object({
   displayName: z.string().trim().min(1).max(40),
@@ -41,5 +44,7 @@ export async function saveDisplayName(formData: FormData) {
       .where(eq(users.authUserId, authUser.id));
   });
 
-  redirect(parsed.data.next || "/");
+  const defaultRoomPath =
+    !parsed.data.next ? await getDefaultRoomDashboardPath(authUser) : null;
+  redirect(parsed.data.next || defaultRoomPath || "/");
 }

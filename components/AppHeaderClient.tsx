@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Room, User } from "@/lib/db/schema";
 import ProfileDialog from "@/components/ProfileDialog";
@@ -10,13 +10,65 @@ import RoomSettingsDialog from "@/components/RoomSettingsDialog";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 function LogoMark() {
+  const stripesId = useId();
+
   return (
-    <span className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[linear-gradient(135deg,#1E3A8A_0%,#3B82F6_60%,#F97316_100%)] shadow-[0_10px_24px_rgba(30,58,138,0.28)]">
-      <span className="absolute inset-[7px] rounded-[14px] border border-white/35" />
-      <span className="relative h-5 w-5 rounded-full border-2 border-white/95">
-        <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/85" />
-        <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-white/85" />
-      </span>
+    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center sm:h-12 sm:w-12">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 200 200"
+        width="100%"
+        height="100%"
+        aria-hidden="true"
+        className="drop-shadow-[0_10px_24px_rgba(30,58,138,0.18)]"
+      >
+        <defs>
+          <pattern
+            id={stripesId}
+            width="24"
+            height="24"
+            patternUnits="userSpaceOnUse"
+            patternTransform="rotate(0)"
+          >
+            <rect width="12" height="24" fill="#1E3A8A" fillOpacity="0.05" />
+          </pattern>
+        </defs>
+
+        <path
+          d="M100 15 L20 40 L20 100 C20 150 50 180 100 195 C150 180 180 150 180 100 L180 40 Z"
+          fill={`url(#${stripesId})`}
+        />
+        <path
+          d="M100 15 L20 40 L20 100 C20 150 50 180 100 195 C150 180 180 150 180 100 L180 40 Z"
+          fill="none"
+          stroke="#1E3A8A"
+          strokeWidth="8"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M100 30 L35 50 L35 100 C35 140 60 165 100 178 C140 165 165 140 165 100 L165 50 Z"
+          fill="none"
+          stroke="#1E3A8A"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+
+        <g
+          stroke="#1E3A8A"
+          strokeWidth="14"
+          strokeLinejoin="round"
+          fill="none"
+        >
+          <path d="M75 60 L75 140" strokeLinecap="square" />
+          <path d="M75 67 H110 C128 67 128 100 110 100 H75" />
+          <path d="M75 96 H118 C140 96 140 140 118 140 H75" />
+        </g>
+
+        <path
+          d="M96 73 L98.5 79 L105 79.5 L100 84 L101.5 90 L96 87 L90.5 90 L92 84 L87 79.5 L93.5 79 Z"
+          fill="#F97316"
+        />
+      </svg>
     </span>
   );
 }
@@ -258,19 +310,19 @@ export default function AppHeaderClient({
 
       <header className="sticky top-0 z-20 border-b border-[#dbe5f2] bg-white/92 shadow-[0_10px_32px_rgba(15,23,42,0.08)] backdrop-blur">
         <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:py-3">
-          <div className="flex w-full items-center justify-between gap-3 sm:w-auto">
-            <div className="flex min-w-0 items-center gap-3">
+          <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:gap-3">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
               <Link
                 href={room ? `/r/${room.code}/dashboard` : "/"}
-                className="flex min-w-0 items-center gap-3"
+                className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3"
               >
                 <LogoMark />
-                <div>
-                  <p className="text-[0.65rem] font-bold uppercase tracking-[0.28em] text-slate-500">
-                    Premium Sportsbook
+                <div className="min-w-0 ">
+                  <p className="truncate text-[2rem] font-black leading-none tracking-tight text-[#1E3A8A] sm:text-3xl">
+                    BUCKECLUB
                   </p>
-                  <p className="text-lg font-black tracking-tight text-[#1E3A8A]">
-                    World Cup Bets
+                  <p className="mt-1 text-[0.54rem] font-bold uppercase leading-[1.35] tracking-[0.22em] text-slate-500 sm:text-[0.65rem] sm:tracking-[0.28em]">
+                    Social sports predictions
                   </p>
                 </div>
               </Link>
@@ -296,7 +348,7 @@ export default function AppHeaderClient({
               )}
             </div>
 
-            <div className="flex items-center gap-2 sm:hidden">
+            <div className="flex shrink-0 items-center gap-2 sm:hidden">
               {showProfilePill && (
                 <button
                   ref={mobileProfileTriggerRef}
@@ -304,7 +356,7 @@ export default function AppHeaderClient({
                   onClick={() => toggleProfileModal("mobile")}
                   aria-expanded={profileMenuOpen}
                   aria-label={profileMenuOpen ? "Close menu" : "Open menu"}
-                  className="inline-flex items-center gap-2 rounded-[18px] border border-[#dbe5f2] bg-white px-3 py-2.5 text-[#1E3A8A] shadow-[0_10px_24px_rgba(15,23,42,0.10)] transition hover:bg-[#F8FBFF]"
+                  className="inline-flex items-center gap-1.5 rounded-[18px] border border-[#dbe5f2] bg-white px-2.5 py-2.5 text-[#1E3A8A] shadow-[0_10px_24px_rgba(15,23,42,0.10)] transition hover:bg-[#F8FBFF]"
                 >
                   <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[linear-gradient(135deg,#1E3A8A_0%,#2563EB_100%)] text-sm font-black text-white">
                     {pillName.trim().charAt(0).toUpperCase() || "?"}
@@ -437,6 +489,7 @@ export default function AppHeaderClient({
               navigationItems={
                 profileMenuMode === "mobile" ? mobileNavigationItems : []
               }
+              showLanguageSwitcher={profileMenuMode === "mobile"}
               triggerRef={
                 profileMenuMode === "mobile" ? mobileProfileTriggerRef : undefined
               }

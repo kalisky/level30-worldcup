@@ -48,7 +48,7 @@ export const TEAM_NAMES: Record<string, TeamTranslations> = {
   // Group G
   Belgium: { en: "Belgium", he: "בלגיה" },
   Egypt: { en: "Egypt", he: "מצרים" },
-  "IR Iran": { en: "IR Iran", he: "איראן" },
+  "IR Iran": { en: "Iran", he: "איראן" },
   "New Zealand": { en: "New Zealand", he: "ניו זילנד" },
   // Group H
   Spain: { en: "Spain", he: "ספרד" },

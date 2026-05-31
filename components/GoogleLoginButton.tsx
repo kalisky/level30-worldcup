@@ -5,6 +5,33 @@ import { useTranslations } from "next-intl";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { getFirebaseClientAuth } from "@/lib/firebase/client";
 
+function GoogleMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      className="h-5 w-5 shrink-0"
+    >
+      <path
+        fill="#EA4335"
+        d="M12 10.2v3.9h5.4c-.24 1.26-.96 2.33-2.04 3.05l3.3 2.56c1.92-1.77 3.03-4.38 3.03-7.5 0-.72-.06-1.38-.19-2H12Z"
+      />
+      <path
+        fill="#4285F4"
+        d="M12 22c2.7 0 4.96-.9 6.61-2.43l-3.3-2.56c-.91.61-2.08.98-3.31.98-2.54 0-4.69-1.71-5.46-4.01l-3.41 2.63C4.79 19.9 8.11 22 12 22Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M6.54 13.98A5.96 5.96 0 0 1 6.23 12c0-.69.12-1.35.31-1.98L3.13 7.39A9.96 9.96 0 0 0 2 12c0 1.61.39 3.13 1.13 4.61l3.41-2.63Z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 6.01c1.47 0 2.79.51 3.83 1.5l2.86-2.86C16.95 3.03 14.69 2 12 2 8.11 2 4.79 4.1 3.13 7.39l3.41 2.63c.77-2.3 2.92-4.01 5.46-4.01Z"
+      />
+    </svg>
+  );
+}
+
 export default function GoogleLoginButton({
   redirectTo = "/",
   className,
@@ -72,10 +99,13 @@ export default function GoogleLoginButton({
         disabled={pending}
         className={
           className ??
-          "w-full rounded-[24px] bg-[linear-gradient(135deg,#1E3A8A_0%,#2563EB_100%)] px-6 py-4 text-base font-bold text-white shadow-[0_18px_36px_rgba(37,99,235,0.28)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+          "flex w-full items-center justify-center gap-3 rounded-[24px] bg-[linear-gradient(135deg,#1E3A8A_0%,#2563EB_100%)] px-6 py-4 text-base font-bold text-white shadow-[0_18px_36px_rgba(37,99,235,0.28)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
         }
       >
-        {pending ? t("signingIn") : (label ?? t("continueWithGoogle"))}
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+          <GoogleMark />
+        </span>
+        <span>{pending ? t("signingIn") : (label ?? t("continueWithGoogle"))}</span>
       </button>
       {error && (
         <p className="rounded-2xl bg-red-50 px-3 py-3 text-sm font-medium text-red-700">

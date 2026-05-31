@@ -193,6 +193,8 @@
     "checking": "Checking…",
     "cached": "cached",
     "fresh": "fresh",
+    "byAuthor": "By {name}",
+    "closesOn": "Closes {date}",
     "potentialPayout": "Potential payout for {stake} chips:",
     "wager": "Wager",
     "wagering": "Wagering…",

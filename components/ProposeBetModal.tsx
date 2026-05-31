@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { proposeCustomBet } from "@/lib/actions/custom-bets";
 
@@ -69,7 +70,6 @@ export default function ProposeBetModal({
   // Tick once a minute while the modal is open so the countdown stays live.
   useEffect(() => {
     if (!open) return;
-    setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(id);
   }, [open]);
@@ -150,6 +150,7 @@ export default function ProposeBetModal({
         type="button"
         onClick={() => {
           resetForm();
+          setNow(Date.now());
           setOpen(true);
         }}
         className="w-full rounded-[24px] border-2 border-dashed border-[#cfdced] bg-[#F8FBFF] px-4 py-3 text-sm font-bold text-[#1E3A8A] transition hover:border-[#3B82F6] hover:bg-white"
@@ -161,9 +162,14 @@ export default function ProposeBetModal({
     );
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-2 sm:items-center sm:p-4">
-      <div className="w-full max-w-md rounded-[30px] border border-[#dbe5f2] bg-white p-6 shadow-[0_28px_80px_rgba(15,23,42,0.28)]">
+  const portalTarget =
+    typeof document === "undefined" ? null : document.body;
+
+  if (!portalTarget) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-black/60 p-3 sm:p-4">
+      <div className="my-auto w-full max-w-md rounded-[30px] border border-[#dbe5f2] bg-white p-6 shadow-[0_28px_80px_rgba(15,23,42,0.28)] max-h-[calc(100vh-1.5rem)] overflow-y-auto sm:max-h-[calc(100vh-2rem)]">
         <div className="flex items-baseline justify-between">
           <h3 className="text-xl font-black text-[#1E3A8A]">
             {t("propose")}
@@ -364,6 +370,7 @@ export default function ProposeBetModal({
             : t("submit")}
         </button>
       </div>
-    </div>
+    </div>,
+    portalTarget
   );
 }

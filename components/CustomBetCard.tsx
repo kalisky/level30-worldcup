@@ -11,7 +11,7 @@ import {
 } from "@/lib/actions/custom-bets";
 import { getCustomBetInvitePath } from "@/lib/share-links";
 
-function formatLockTime(value: Date | string) {
+function formatLockDateTime(value: Date | string) {
   return new Date(value).toLocaleString(undefined, {
     month: "short",
     day: "numeric",
@@ -157,6 +157,13 @@ export default function CustomBetCard({
     }
   }
 
+  const shareLabel =
+    shareState === "copied"
+      ? tc("copied")
+      : shareState === "failed"
+        ? tc("copyFailed")
+        : tc("share");
+
   return (
     <article
       id={`custom-bet-${bet.id}`}
@@ -167,23 +174,78 @@ export default function CustomBetCard({
           : "border-[#dbe5f2]")
       }
     >
-      <header className="flex items-start justify-between gap-3">
-        <h3 className="text-lg font-black text-[#1E3A8A]">{bet.title}</h3>
-        <div className="flex items-center gap-2">
+      <header className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[0.72rem] font-medium text-slate-400">
+          <span>{t("byAuthor", { name: proposerName })}</span>
+          {bet.locksAt ? (
+            <span>
+              {t("closesOn", { date: formatLockDateTime(bet.locksAt) })}
+            </span>
+          ) : null}
+        </div>
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="min-w-0 flex-1 text-lg font-black text-[#1E3A8A]">
+            {bet.title}
+          </h3>
           <button
             type="button"
             onClick={copyShareLink}
-            className="rounded-full border border-[#cdd9ea] px-3 py-1.5 text-[0.7rem] font-bold uppercase tracking-[0.16em] text-slate-600 transition hover:border-[#3B82F6] hover:bg-[#F8FBFF] hover:text-[#1E3A8A]"
+            aria-label={shareLabel}
+            title={shareLabel}
+            className={
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition " +
+              (shareState === "copied"
+                ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]"
+                : shareState === "failed"
+                  ? "border-[#FED7AA] bg-[#FFF7ED] text-[#EA580C]"
+                  : "border-[#cdd9ea] text-slate-500 hover:border-[#3B82F6] hover:bg-[#F8FBFF] hover:text-[#1E3A8A]")
+            }
           >
-            {shareState === "copied"
-              ? tc("copied")
-              : shareState === "failed"
-                ? tc("copyFailed")
-                : tc("share")}
+            {shareState === "copied" ? (
+              <svg
+                viewBox="0 0 20 20"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m4.5 10 3.2 3.2L15.5 5.5" />
+              </svg>
+            ) : shareState === "failed" ? (
+              <svg
+                viewBox="0 0 20 20"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M10 6v4" />
+                <path d="M10 13h.01" />
+                <path d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z" />
+              </svg>
+            ) : (
+              <svg
+                viewBox="0 0 20 20"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.9"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M10 12V3.5" />
+                <path d="m6.5 7 3.5-3.5L13.5 7" />
+                <path d="M5 11.5v3A1.5 1.5 0 0 0 6.5 16h7a1.5 1.5 0 0 0 1.5-1.5v-3" />
+              </svg>
+            )}
           </button>
-          <span className="pt-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            {proposerName}
-          </span>
         </div>
       </header>
       {contextHref && contextLabel ? (
@@ -200,11 +262,6 @@ export default function CustomBetCard({
       {bet.aiReasoning && (
         <p className="mt-2 rounded-2xl bg-[#F8FBFF] px-3 py-2 text-xs italic text-slate-500 ring-1 ring-[#dbe5f2]">
           AI: {bet.aiReasoning}
-        </p>
-      )}
-      {bet.locksAt && (
-        <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-          {isLocked ? t("locked") : t("lockTime")} {formatLockTime(bet.locksAt)}
         </p>
       )}
 

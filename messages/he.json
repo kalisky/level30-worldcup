@@ -193,6 +193,8 @@
     "checking": "בודק…",
     "cached": "שמור",
     "fresh": "חדש",
+    "byAuthor": "מאת {name}",
+    "closesOn": "נסגר ב-{date}",
     "potentialPayout": "רווח אפשרי עבור {stake} אסימונים:",
     "wager": "הימור",
     "wagering": "מהמר…",

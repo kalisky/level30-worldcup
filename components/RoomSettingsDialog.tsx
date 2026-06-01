@@ -296,9 +296,9 @@ export default function RoomSettingsDialog({
 
             <div className="mt-4">
               <label className="mb-2 block text-sm font-bold text-red-700">
-                {t.rich("deleteTypeName", {
-                  name: () => <span className="font-mono">{room.name}</span>,
-                })}
+                {t("deleteTypeNamePrefix")}{" "}
+                <span className="font-mono">{room.name}</span>
+                {t("deleteTypeNameSuffix")}
               </label>
               <input
                 type="text"

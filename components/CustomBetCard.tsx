@@ -235,11 +235,8 @@ export default function CustomBetCard({
           <span>{t("byAuthor", { name: proposerName })}</span>
           {bet.locksAt ? (
             <span>
-              {t.rich("closesOn", {
-                date: () => (
-                  <LocalDateTime value={bet.locksAt!} preset="lockShort" />
-                ),
-              })}
+              {t("closes")}{" "}
+              <LocalDateTime value={bet.locksAt!} preset="lockShort" />
             </span>
           ) : null}
         </div>

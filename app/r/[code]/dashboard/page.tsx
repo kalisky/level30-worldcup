@@ -232,7 +232,6 @@ export default async function DashboardPage(props: {
           matchTabLabel="Dashboard"
           customBetsTabLabel="Custom Bets"
           targetCustomBetId={targetCustomBetId}
-          mobileTabsVariant="plain"
         />
       </main>
     </>

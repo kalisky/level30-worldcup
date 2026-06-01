@@ -10,15 +10,7 @@ import {
   previewOpenAnswerOdds,
 } from "@/lib/actions/custom-bets";
 import { getCustomBetInvitePath } from "@/lib/share-links";
-
-function formatLockDateTime(value: Date | string) {
-  return new Date(value).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
+import LocalDateTime from "@/components/LocalDateTime";
 
 export default function CustomBetCard({
   bet,
@@ -179,7 +171,11 @@ export default function CustomBetCard({
           <span>{t("byAuthor", { name: proposerName })}</span>
           {bet.locksAt ? (
             <span>
-              {t("closesOn", { date: formatLockDateTime(bet.locksAt) })}
+              {t.rich("closesOn", {
+                date: () => (
+                  <LocalDateTime value={bet.locksAt!} preset="lockShort" />
+                ),
+              })}
             </span>
           ) : null}
         </div>

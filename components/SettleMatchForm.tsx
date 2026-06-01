@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import type { Match } from "@/lib/db/schema";
+import LocalDateTime from "@/components/LocalDateTime";
 import {
   settleMatch,
   renameMatchTeams,
@@ -94,7 +95,7 @@ export default function SettleMatchForm({
     <div className="rounded-[26px] border border-[#dbe5f2] bg-white p-4 shadow-[0_14px_32px_rgba(30,58,138,0.07)]">
       <div className="flex items-center justify-between text-[0.72rem] font-semibold uppercase tracking-[0.22em] text-slate-500">
         <span>{tm("group")} {match.groupLabel}</span>
-        <span>{new Date(match.kickoff).toLocaleString(locale)}</span>
+        <span><LocalDateTime value={match.kickoff} preset="kickoffShort" /></span>
       </div>
 
       <div className="mt-2 flex items-center gap-2">

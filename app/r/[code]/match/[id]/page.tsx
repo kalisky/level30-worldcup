@@ -22,16 +22,7 @@ import RoomBreadcrumb from "@/components/RoomBreadcrumb";
 import { getTeamAbbreviation } from "@/lib/team-flags";
 import { translateTeam } from "@/lib/team-i18n";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
-
-function formatKickoff(d: Date) {
-  return d.toLocaleString(undefined, {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
+import LocalDateTime from "@/components/LocalDateTime";
 
 export async function generateMetadata(props: {
   params: Promise<{ code: string; id: string }>;
@@ -97,7 +88,7 @@ export default async function MatchPage(props: {
       <section className="rounded-[30px] border border-[#dbe5f2] bg-white p-6 shadow-[0_18px_42px_rgba(30,58,138,0.08)]">
         <div className="flex items-center justify-between gap-3 text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-500">
           <span>{tm("group")} {match.groupLabel}</span>
-          <span>{formatKickoff(kickoff)}</span>
+          <span><LocalDateTime value={kickoff} preset="kickoffLong" /></span>
         </div>
 
         <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">

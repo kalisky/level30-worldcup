@@ -2,18 +2,9 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import type { Match } from "@/lib/db/schema";
 import TeamFlag from "@/components/TeamFlag";
+import LocalDateTime from "@/components/LocalDateTime";
 import { getTeamAbbreviation } from "@/lib/team-flags";
 import { useTeamName } from "@/hooks/useTeamName";
-
-function formatKickoff(d: Date) {
-  return d.toLocaleString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
 
 export default function MatchCard({
   match,
@@ -60,7 +51,7 @@ export default function MatchCard({
             {stateLabel}
           </span>
           <span className="hidden font-medium normal-case tracking-normal text-slate-500 sm:inline">
-            {formatKickoff(kickoff)}
+            <LocalDateTime value={kickoff} preset="kickoffShort" />
           </span>
         </div>
       </div>
@@ -117,7 +108,7 @@ export default function MatchCard({
 
       {!isLive && !isFinal && (
         <div className="mt-3 text-center text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-slate-500 sm:hidden">
-          {formatKickoff(kickoff)}
+          <LocalDateTime value={kickoff} preset="kickoffShort" />
         </div>
       )}
 

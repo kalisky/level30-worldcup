@@ -20,8 +20,11 @@ export type CopyBetItem = {
   homeTeam: string;
   awayTeam: string;
   kickoff: string;
+  directionPick: "HOME" | "DRAW" | "AWAY";
+  directionStake: number;
   predictedHomeScore: number;
   predictedAwayScore: number;
+  scoreStake: number;
   totalStake: number;
   directionOddsLocked: number;
   scoreOddsLocked: number;
@@ -120,8 +123,11 @@ async function buildPreview(
       homeTeam: match.homeTeam,
       awayTeam: match.awayTeam,
       kickoff: new Date(match.kickoff).toISOString(),
+      directionPick: bet.directionPick,
+      directionStake: bet.directionStake,
       predictedHomeScore: bet.predictedHomeScore,
       predictedAwayScore: bet.predictedAwayScore,
+      scoreStake: bet.scoreStake,
       totalStake: bet.totalStake,
       directionOddsLocked: Number(bet.directionOddsLocked),
       scoreOddsLocked: Number(bet.scoreOddsLocked),
@@ -256,16 +262,13 @@ export async function copyMatchBets(formData: FormData): Promise<CopyBetsResult>
         if (existing) throw new Error("already_bet");
 
         // Use the target room's current odds, not the source-locked ones.
-        const directionPick: "HOME" | "DRAW" | "AWAY" =
-          item.predictedHomeScore > item.predictedAwayScore
-            ? "HOME"
-            : item.predictedAwayScore > item.predictedHomeScore
-              ? "AWAY"
-              : "DRAW";
+        // Carry over the user's explicit direction pick and per-bet stake
+        // split from the source row — not re-derived from the score, since
+        // those can now differ from each other.
         const directionOdds = Number(
-          directionPick === "HOME"
+          item.directionPick === "HOME"
             ? match.oddsHome
-            : directionPick === "DRAW"
+            : item.directionPick === "DRAW"
               ? match.oddsDraw
               : match.oddsAway
         );
@@ -274,8 +277,8 @@ export async function copyMatchBets(formData: FormData): Promise<CopyBetsResult>
         const scoreOdd = cache[scoreKey];
         if (!scoreOdd) throw new Error("no_odds");
 
-        const directionStake = Math.floor(item.totalStake / 2);
-        const scoreStake = item.totalStake - directionStake;
+        const directionStake = item.directionStake;
+        const scoreStake = item.scoreStake;
 
         const updated = await tx
           .update(users)
@@ -290,6 +293,7 @@ export async function copyMatchBets(formData: FormData): Promise<CopyBetsResult>
           roomId: targetRoom.id,
           userId: targetUser.id,
           matchId: item.matchId,
+          directionPick: item.directionPick,
           predictedHomeScore: item.predictedHomeScore,
           predictedAwayScore: item.predictedAwayScore,
           totalStake: item.totalStake,

@@ -13,29 +13,53 @@ import {
 import { requireRoomUser } from "@/lib/auth-context";
 import { recordLedger } from "@/lib/ledger";
 
-const placeBetSchema = z.object({
-  matchId: z.string().uuid(),
-  predictedHomeScore: z.number().int().min(0).max(99),
-  predictedAwayScore: z.number().int().min(0).max(99),
-  totalStake: z.number().int().min(2),
-});
+// Direction pick and score prediction are now independent inputs from the
+// UI — a user can bet HOME on the side but predict 2-1 South Africa for the
+// exact score. The stakes for each are also independent (either may be 0,
+// as long as the sum is at least 2).
+const placeBetSchema = z
+  .object({
+    matchId: z.string().uuid(),
+    directionPick: z.enum(["HOME", "DRAW", "AWAY"]),
+    directionStake: z.number().int().min(0),
+    predictedHomeScore: z.number().int().min(0).max(99),
+    predictedAwayScore: z.number().int().min(0).max(99),
+    scoreStake: z.number().int().min(0),
+  })
+  .refine((d) => d.directionStake + d.scoreStake >= 2, {
+    message: "Total stake must be at least 2 chips.",
+  });
+
+function parseBetForm(formData: FormData) {
+  return placeBetSchema.safeParse({
+    matchId: String(formData.get("matchId") ?? ""),
+    directionPick: String(formData.get("directionPick") ?? ""),
+    directionStake: Number(formData.get("directionStake") ?? 0),
+    predictedHomeScore: Number(formData.get("predictedHomeScore") ?? -1),
+    predictedAwayScore: Number(formData.get("predictedAwayScore") ?? -1),
+    scoreStake: Number(formData.get("scoreStake") ?? 0),
+  });
+}
 
 export async function placeMatchBet(formData: FormData) {
   const code = String(formData.get("roomCode") ?? "");
   const { room, user } = await requireRoomUser(code);
 
-  const parsed = placeBetSchema.safeParse({
-    matchId: String(formData.get("matchId") ?? ""),
-    predictedHomeScore: Number(formData.get("predictedHomeScore") ?? -1),
-    predictedAwayScore: Number(formData.get("predictedAwayScore") ?? -1),
-    totalStake: Number(formData.get("totalStake") ?? 0),
-  });
+  const parsed = parseBetForm(formData);
   if (!parsed.success) {
     throw new Error(
       "Invalid bet: " + parsed.error.issues.map((i) => i.message).join(", ")
     );
   }
-  const { matchId, predictedHomeScore, predictedAwayScore, totalStake } = parsed.data;
+  const {
+    matchId,
+    directionPick,
+    directionStake,
+    predictedHomeScore,
+    predictedAwayScore,
+    scoreStake,
+  } = parsed.data;
+  const totalStake = directionStake + scoreStake;
 
   await db.transaction(async (tx) => {
     const [match] = await tx
@@ -55,12 +79,6 @@ export async function placeMatchBet(formData: FormData) {
       throw new Error("Score odds aren't ready for this match yet.");
     }
 
-    const directionPick: "HOME" | "DRAW" | "AWAY" =
-      predictedHomeScore > predictedAwayScore
-        ? "HOME"
-        : predictedAwayScore > predictedHomeScore
-          ? "AWAY"
-          : "DRAW";
     const directionOdds = Number(
       directionPick === "HOME"
         ? match.oddsHome
@@ -74,9 +92,6 @@ export async function placeMatchBet(formData: FormData) {
     if (!scoreOddsRaw) {
       throw new Error(`No odds cached for score ${sKey}.`);
     }
-
-    const directionStake = Math.floor(totalStake / 2);
-    const scoreStakeAmount = totalStake - directionStake;
 
     // Prevent duplicate bet on this match.
     const [existing] = await tx
@@ -107,11 +122,12 @@ export async function placeMatchBet(formData: FormData) {
       roomId: room.id,
       userId: user.id,
       matchId,
+      directionPick,
       predictedHomeScore,
       predictedAwayScore,
       totalStake,
       directionStake,
-      scoreStake: scoreStakeAmount,
+      scoreStake,
       directionOddsLocked: directionOdds.toFixed(2),
       scoreOddsLocked: scoreOddsRaw.toFixed(2),
     });
@@ -123,7 +139,7 @@ export async function placeMatchBet(formData: FormData) {
       balanceAfter: updated[0].chips,
       reason: "match_bet_placed",
       refMatchId: matchId,
-      note: `Predicted ${match.homeTeam} ${predictedHomeScore}–${predictedAwayScore} ${match.awayTeam}`,
+      note: `Side: ${directionPick} (${directionStake}) · Score: ${match.homeTeam} ${predictedHomeScore}–${predictedAwayScore} ${match.awayTeam} (${scoreStake})`,
     });
   });
 
@@ -135,18 +151,21 @@ export async function updateMatchBet(formData: FormData) {
   const code = String(formData.get("roomCode") ?? "");
   const { room, user } = await requireRoomUser(code);
 
-  const parsed = placeBetSchema.safeParse({
-    matchId: String(formData.get("matchId") ?? ""),
-    predictedHomeScore: Number(formData.get("predictedHomeScore") ?? -1),
-    predictedAwayScore: Number(formData.get("predictedAwayScore") ?? -1),
-    totalStake: Number(formData.get("totalStake") ?? 0),
-  });
+  const parsed = parseBetForm(formData);
   if (!parsed.success) {
     throw new Error(
       "Invalid bet: " + parsed.error.issues.map((i) => i.message).join(", ")
     );
   }
-  const { matchId, predictedHomeScore, predictedAwayScore, totalStake } = parsed.data;
+  const {
+    matchId,
+    directionPick,
+    directionStake,
+    predictedHomeScore,
+    predictedAwayScore,
+    scoreStake,
+  } = parsed.data;
+  const totalStake = directionStake + scoreStake;
 
   await db.transaction(async (tx) => {
     const [match] = await tx
@@ -186,12 +205,6 @@ export async function updateMatchBet(formData: FormData) {
       throw new Error("This bet is already settled.");
     }
 
-    const directionPick: "HOME" | "DRAW" | "AWAY" =
-      predictedHomeScore > predictedAwayScore
-        ? "HOME"
-        : predictedAwayScore > predictedHomeScore
-          ? "AWAY"
-          : "DRAW";
     const directionOdds = Number(
       directionPick === "HOME"
         ? match.oddsHome
@@ -204,9 +217,6 @@ export async function updateMatchBet(formData: FormData) {
     if (!scoreOddsRaw) {
       throw new Error(`No odds cached for score ${sKey}.`);
     }
-
-    const directionStake = Math.floor(totalStake / 2);
-    const scoreStakeAmount = totalStake - directionStake;
 
     // Net chip movement = newStake - oldStake. If positive we deduct (and
     // verify funds); if negative we credit back; if zero nothing moves.
@@ -235,11 +245,12 @@ export async function updateMatchBet(formData: FormData) {
     await tx
       .update(matchBets)
       .set({
+        directionPick,
         predictedHomeScore,
         predictedAwayScore,
         totalStake,
         directionStake,
-        scoreStake: scoreStakeAmount,
+        scoreStake,
         directionOddsLocked: directionOdds.toFixed(2),
         scoreOddsLocked: scoreOddsRaw.toFixed(2),
       })
@@ -253,7 +264,7 @@ export async function updateMatchBet(formData: FormData) {
         balanceAfter: newBalance,
         reason: "match_bet_placed",
         refMatchId: matchId,
-        note: `Updated prediction: ${match.homeTeam} ${predictedHomeScore}–${predictedAwayScore} ${match.awayTeam}`,
+        note: `Updated bet — Side: ${directionPick} (${directionStake}) · Score: ${match.homeTeam} ${predictedHomeScore}–${predictedAwayScore} ${match.awayTeam} (${scoreStake})`,
       });
     }
   });

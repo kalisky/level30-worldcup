@@ -74,13 +74,9 @@ export async function settleMatch(formData: FormData) {
 
     let totalPaidOut = 0;
     for (const bet of openBets) {
-      const predictedDirection: "HOME" | "DRAW" | "AWAY" =
-        bet.predictedHomeScore > bet.predictedAwayScore
-          ? "HOME"
-          : bet.predictedAwayScore > bet.predictedHomeScore
-            ? "AWAY"
-            : "DRAW";
-      const directionWon = predictedDirection === actualDirection;
+      // Direction is settled by the user's explicit side pick, which is
+      // recorded independently of the predicted score (they can disagree).
+      const directionWon = bet.directionPick === actualDirection;
       const scoreWon =
         bet.predictedHomeScore === homeScore && bet.predictedAwayScore === awayScore;
 

@@ -28,6 +28,8 @@ export const matchBetStatus = pgEnum("match_bet_status", [
 
 export const outcome = pgEnum("outcome", ["pending", "won", "lost"]);
 
+export const directionPick = pgEnum("direction_pick", ["HOME", "DRAW", "AWAY"]);
+
 export const wagerStatus = pgEnum("wager_status", [
   "open",
   "won",
@@ -256,6 +258,10 @@ export const matchBets = pgTable(
     matchId: uuid("match_id")
       .notNull()
       .references(() => matches.id, { onDelete: "cascade" }),
+    // User's explicit direction pick (HOME / DRAW / AWAY). Independent of the
+    // predicted score, so a user can bet HOME for direction but predict 2-1
+    // South Africa for exact score — the UI flags the mismatch but allows it.
+    directionPick: directionPick("direction_pick").notNull(),
     predictedHomeScore: integer("predicted_home_score").notNull(),
     predictedAwayScore: integer("predicted_away_score").notNull(),
     totalStake: integer("total_stake").notNull(),

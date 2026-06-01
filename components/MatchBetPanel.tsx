@@ -65,9 +65,11 @@ export default function MatchBetPanel({
         scoreOdds={scoreOdds!}
         maxStake={maxStake + myBet.totalStake}
         existingBet={{
+          directionPick: myBet.directionPick,
+          directionStake: myBet.directionStake,
           predictedHomeScore: myBet.predictedHomeScore,
           predictedAwayScore: myBet.predictedAwayScore,
-          totalStake: myBet.totalStake,
+          scoreStake: myBet.scoreStake,
         }}
         onCancel={() => setIsEditing(false)}
       />

@@ -50,6 +50,13 @@
       "when": 1780245573446,
       "tag": "0006_majestic_wonder_man",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780297050871,
+      "tag": "0007_cuddly_psynapse",
+      "breakpoints": true
     }
   ]
 }

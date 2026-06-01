@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   getRedirectResult,
@@ -52,6 +53,7 @@ export default function GoogleLoginButton({
   className?: string;
   label?: string;
 }) {
+  const router = useRouter();
   const t = useTranslations("auth");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +64,10 @@ export default function GoogleLoginButton({
     if (redirectResultClaimed) return;
 
     redirectResultClaimed = true;
+    const frame = window.requestAnimationFrame(() => {
+      setPending(true);
+      setError(null);
+    });
 
     const auth = getFirebaseClientAuth({ preferSameOriginAuthDomain: true });
 
@@ -78,7 +84,8 @@ export default function GoogleLoginButton({
         await finalizeGoogleSignIn(
           result,
           getStoredRedirectTarget() ?? redirectTo,
-          t
+          t,
+          router
         );
       } catch (e) {
         clearRedirectState();
@@ -86,7 +93,11 @@ export default function GoogleLoginButton({
         setPending(false);
       }
     })();
-  }, [redirectTo, t]);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [redirectTo, router, t]);
 
   async function signIn() {
     setPending(true);
@@ -107,7 +118,7 @@ export default function GoogleLoginButton({
       }
 
       const result = await signInWithPopup(auth, provider);
-      await finalizeGoogleSignIn(result, redirectTo, t);
+      await finalizeGoogleSignIn(result, redirectTo, t, router);
     } catch (e) {
       clearRedirectState();
       setError(e instanceof Error ? e.message : t("signInFailed"));
@@ -164,7 +175,8 @@ function isMobileGoogleRedirectFlow() {
 async function finalizeGoogleSignIn(
   result: UserCredential,
   redirectTo: string,
-  t: ReturnType<typeof useTranslations<"auth">>
+  t: ReturnType<typeof useTranslations<"auth">>,
+  router: ReturnType<typeof useRouter>
 ) {
   const idToken = await result.user.getIdToken();
 
@@ -188,11 +200,11 @@ async function finalizeGoogleSignIn(
   clearRedirectState();
 
   if (payload.needsProfile) {
-    window.location.assign(`/welcome?next=${encodeURIComponent(redirectTo)}`);
+    router.replace(`/welcome?next=${encodeURIComponent(redirectTo)}`);
     return;
   }
 
-  window.location.assign(redirectTo);
+  router.replace(redirectTo);
 }
 
 function storeRedirectTarget(redirectTo: string) {

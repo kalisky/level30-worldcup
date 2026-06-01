@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { requireRoomUser } from "@/lib/auth-context";
 import {
   getMyMatchBets,
-  getRoomUsers,
   hydrateCustomBetRowsWithWagers,
   listOpenCustomBets,
   listRoomsForAuthUser,
@@ -11,7 +11,6 @@ import {
 } from "@/lib/db/queries";
 import { getCustomBetShareMetadata } from "@/lib/share-metadata";
 import RoomHeader from "@/components/RoomHeader";
-import Leaderboard from "@/components/Leaderboard";
 import MatchCard from "@/components/MatchCard";
 import AutoRefresh from "@/components/AutoRefresh";
 import CustomBetCard from "@/components/CustomBetCard";
@@ -69,12 +68,9 @@ export default async function DashboardPage(props: {
         })
       );
       const t = await trace.step("getTranslations", () => getTranslations("dashboard"));
+      const tnav = await getTranslations("nav");
 
-      const [members, upcoming, customBets, myBets, allRoomMemberships] =
-        await Promise.all([
-          trace.step("getRoomUsers", () => getRoomUsers(room.id), (rows) => ({
-            memberCount: rows.length,
-          })),
+      const [upcoming, customBets, myBets, allRoomMemberships] = await Promise.all([
           trace.step("listUpcomingMatches", () => listUpcomingMatches(100), (rows) => ({
             upcomingMatchCount: rows.length,
           })),
@@ -133,7 +129,6 @@ export default async function DashboardPage(props: {
       );
 
       trace.end({
-        memberCount: members.length,
         upcomingMatchCount: upcoming.length,
         customBetCount: customBets.length,
         otherRoomCount: otherRooms.length,
@@ -144,7 +139,7 @@ export default async function DashboardPage(props: {
         user,
         dailyGrantApplied,
         t,
-        members,
+        tnav,
         upcoming,
         customBets,
         customBetDetails,
@@ -163,7 +158,7 @@ export default async function DashboardPage(props: {
     user,
     dailyGrantApplied,
     t,
-    members,
+    tnav,
     upcoming,
     customBets,
     customBetDetails,
@@ -174,7 +169,33 @@ export default async function DashboardPage(props: {
 
   const dashboardPane = (
     <>
-      <Leaderboard users={members} meId={user.id} roomCode={room.code} />
+      <section className="rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.08)]">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[0.72rem] font-bold uppercase tracking-[0.28em] text-slate-500">
+              {room.code}
+            </p>
+            <h1 className="mt-1 truncate text-3xl font-black text-[#1E3A8A]">
+              {room.name}
+            </h1>
+          </div>
+
+          <nav className="flex flex-wrap gap-2">
+            <Link
+              href={`/r/${room.code}/history`}
+              className="rounded-full border border-[#dbe5f2] bg-[#F8FBFF] px-4 py-2 text-sm font-bold text-[#1E3A8A] transition hover:bg-white"
+            >
+              {tnav("history")}
+            </Link>
+            <Link
+              href={`/r/${room.code}/leaderboard`}
+              className="rounded-full border border-[#dbe5f2] bg-[#FFF1E8] px-4 py-2 text-sm font-bold text-[#EA580C] transition hover:bg-white"
+            >
+              {tnav("leaderboard")}
+            </Link>
+          </nav>
+        </div>
+      </section>
 
       <section>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">

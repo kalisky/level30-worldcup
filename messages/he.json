@@ -25,6 +25,7 @@
   },
   "nav": {
     "dashboard": "ראשי",
+    "leaderboard": "טבלת דירוג",
     "settle": "סגירת הימור",
     "rules": "כללים",
     "history": "היסטוריה",

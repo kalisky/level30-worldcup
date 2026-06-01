@@ -333,15 +333,9 @@ export default function AppHeaderClient({
                   onClick={openRoomModal}
                   className="hidden rounded-2xl border border-[#dbe5f2] bg-[#F8FBFF] px-3 py-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition hover:border-[#3B82F6] hover:bg-white sm:block"
                 >
-                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.24em] text-slate-500">
-                    Room
-                  </p>
                   <div className="mt-0.5 flex items-center gap-2">
                     <span className="text-sm font-bold text-[#1E3A8A]">
                       {room.name}
-                    </span>
-                    <span className="rounded-full bg-white px-2 py-0.5 font-mono text-[0.7rem] font-bold text-slate-500 ring-1 ring-[#dbe5f2]">
-                      {room.code}
                     </span>
                   </div>
                 </button>

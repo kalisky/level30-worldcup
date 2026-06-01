@@ -11,7 +11,7 @@ import { requireRoomUser } from "@/lib/auth-context";
 import { generateRoomCode, normalizeRoomCode } from "@/lib/code";
 import { recordLedger } from "@/lib/ledger";
 import {
-  getTournamentStart,
+  getDefaultBetsLockTime,
   seedDefaultCustomBets,
 } from "@/lib/default-custom-bets";
 import { getCustomBetTargetPath } from "@/lib/share-links";
@@ -88,7 +88,7 @@ export async function createRoom(formData: FormData) {
       .set({ defaultRoomId: room.id })
       .where(eq(authUsers.id, authUser.id));
 
-    const locksAt = await getTournamentStart(tx);
+    const locksAt = await getDefaultBetsLockTime(tx);
     await seedDefaultCustomBets(tx, {
       roomId: room.id,
       proposerId: createdUser.id,

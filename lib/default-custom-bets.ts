@@ -1,11 +1,11 @@
-import { asc, eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { customBets, matches } from "@/lib/db/schema";
 
 type Db = typeof db;
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
-const FALLBACK_TOURNAMENT_START = new Date("2026-06-11T16:00:00Z");
+const FALLBACK_DEFAULT_BETS_LOCK = new Date("2026-06-17T23:00:00Z");
 
 // Each default bet is identified by `defaultKey`, which is what the renderer
 // uses to pull the localized title/description. The stored `title` /
@@ -24,13 +24,30 @@ const FALLBACK_COPY: Record<DefaultBetKey, { title: string; description: string 
   },
 };
 
-export async function getTournamentStart(executor: Db | Tx = db): Promise<Date> {
-  const [first] = await executor
-    .select({ kickoff: matches.kickoff })
-    .from(matches)
-    .orderBy(asc(matches.kickoff))
-    .limit(1);
-  return first?.kickoff ?? FALLBACK_TOURNAMENT_START;
+/**
+ * Lock time for the seeded default bets ("Tournament winner" / "Top scorer"):
+ * the first match kickoff that happens strictly after every group has played
+ * its first match. At that point each group has finished its opener and
+ * players have enough signal to commit to a pre-tournament prediction.
+ */
+export async function getDefaultBetsLockTime(
+  executor: Db | Tx = db
+): Promise<Date> {
+  const [row] = await executor.execute<{ lock_at: Date | string | null }>(sql`
+    WITH firsts AS (
+      SELECT MIN(kickoff) AS k
+      FROM matches
+      WHERE group_label IS NOT NULL
+      GROUP BY group_label
+    ),
+    last_opener AS (SELECT MAX(k) AS k FROM firsts)
+    SELECT MIN(kickoff) AS lock_at
+    FROM matches, last_opener
+    WHERE kickoff > last_opener.k
+  `);
+  if (!row?.lock_at) return FALLBACK_DEFAULT_BETS_LOCK;
+  const v = row.lock_at;
+  return v instanceof Date ? v : new Date(v);
 }
 
 export async function seedDefaultCustomBets(

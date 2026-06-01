@@ -6,13 +6,13 @@ import { and, eq } from "drizzle-orm";
 import { db } from "../lib/db";
 import { rooms, users } from "../lib/db/schema";
 import {
-  getTournamentStart,
+  getDefaultBetsLockTime,
   seedDefaultCustomBets,
 } from "../lib/default-custom-bets";
 
 async function main() {
-  const locksAt = await getTournamentStart();
-  console.log(`Tournament start: ${locksAt.toISOString()}`);
+  const locksAt = await getDefaultBetsLockTime();
+  console.log(`Default-bets lock time: ${locksAt.toISOString()}`);
 
   const allRooms = await db.select({ id: rooms.id, code: rooms.code, name: rooms.name }).from(rooms);
   console.log(`Backfilling defaults for ${allRooms.length} rooms…`);

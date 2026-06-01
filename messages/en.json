@@ -156,6 +156,7 @@
     "step1Hint": "Win / draw / lose",
     "step2Score": "2. Pick the exact score",
     "step2Hint": "Optional second bet on the result",
+    "selectScore": "Select score",
     "sideStake": "Stake on side",
     "scoreStakeLabel": "Stake on score",
     "totalStake": "Total stake",

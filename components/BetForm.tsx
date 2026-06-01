@@ -24,8 +24,6 @@ type ExactScoreChoice = {
   odd: number;
 };
 
-const SCORE_OPTIONS = Array.from({ length: 10 }, (_, index) => index);
-
 function compareChoices(a: ExactScoreChoice, b: ExactScoreChoice) {
   if (a.odd !== b.odd) return a.odd - b.odd;
   if (a.home !== b.home) return a.home - b.home;
@@ -40,6 +38,10 @@ function impliedDirection(
   if (home > away) return "HOME";
   if (away > home) return "AWAY";
   return "DRAW";
+}
+
+function uniqueSortedNumbers(values: number[]) {
+  return Array.from(new Set(values)).sort((a, b) => a - b);
 }
 
 export default function BetForm({
@@ -120,6 +122,16 @@ export default function BetForm({
     .sort(compareChoices);
   const hasExactScoreChoices = exactScoreChoices.length > 0;
   const availableScoreKeys = new Set(exactScoreChoices.map((choice) => choice.key));
+  const availableHomeScores = uniqueSortedNumbers(
+    exactScoreChoices
+      .filter((choice) => away === null || choice.away === away)
+      .map((choice) => choice.home)
+  );
+  const availableAwayScores = uniqueSortedNumbers(
+    exactScoreChoices
+      .filter((choice) => home === null || choice.home === home)
+      .map((choice) => choice.away)
+  );
 
   const selectedKey = home !== null && away !== null ? scoreKey(home, away) : null;
   const directionOdds =
@@ -178,6 +190,30 @@ export default function BetForm({
         setError(e instanceof Error ? e.message : "Failed to place bet.");
       }
     });
+  }
+
+  function updateHomeScore(nextHome: number | null) {
+    if (nextHome === null) {
+      setHome(null);
+      return;
+    }
+
+    if (away !== null && !availableScoreKeys.has(scoreKey(nextHome, away))) {
+      setAway(null);
+    }
+    setHome(nextHome);
+  }
+
+  function updateAwayScore(nextAway: number | null) {
+    if (nextAway === null) {
+      setAway(null);
+      return;
+    }
+
+    if (home !== null && !availableScoreKeys.has(scoreKey(home, nextAway))) {
+      setHome(null);
+    }
+    setAway(nextAway);
   }
 
   return (
@@ -251,27 +287,21 @@ export default function BetForm({
         </div>
 
         <div className="space-y-3">
-          <ScorePadRow
+          <ScoreSelectField
             title={localizedHome}
             teamName={homeTeam}
             selectedScore={home}
-            scores={SCORE_OPTIONS}
-            isEnabled={(score) =>
-              hasExactScoreChoices &&
-              (away === null || availableScoreKeys.has(scoreKey(score, away)))
-            }
-            onPick={setHome}
+            scores={availableHomeScores}
+            placeholder={tb("selectScore")}
+            onPick={updateHomeScore}
           />
-          <ScorePadRow
+          <ScoreSelectField
             title={localizedAway}
             teamName={awayTeam}
             selectedScore={away}
-            scores={SCORE_OPTIONS}
-            isEnabled={(score) =>
-              hasExactScoreChoices &&
-              (home === null || availableScoreKeys.has(scoreKey(home, score)))
-            }
-            onPick={setAway}
+            scores={availableAwayScores}
+            placeholder={tb("selectScore")}
+            onPick={updateAwayScore}
           />
         </div>
 
@@ -424,20 +454,20 @@ function SideButton({
   );
 }
 
-function ScorePadRow({
+function ScoreSelectField({
   title,
   teamName,
   scores,
   selectedScore,
-  isEnabled,
+  placeholder,
   onPick,
 }: {
   title: string;
   teamName: string;
   scores: number[];
   selectedScore: number | null;
-  isEnabled: (score: number) => boolean;
-  onPick: (score: number) => void;
+  placeholder: string;
+  onPick: (score: number | null) => void;
 }) {
   return (
     <section className="rounded-[22px] border border-[#dbe5f2] bg-[#F8FBFF] p-3">
@@ -450,29 +480,39 @@ function ScorePadRow({
           {selectedScore ?? "–"}
         </span>
       </div>
-      <div className="grid grid-cols-5 gap-2">
-        {scores.map((score) => {
-          const enabled = isEnabled(score);
-          const isSelected = selectedScore === score;
-          return (
-            <button
-              key={score}
-              type="button"
-              disabled={!enabled}
-              onClick={() => onPick(score)}
-              className={
-                "rounded-[18px] border px-0 py-3 text-center font-mono text-base font-black transition " +
-                (isSelected
-                  ? "border-[#3B82F6] bg-[#E0EEFF] text-[#1D4ED8]"
-                  : enabled
-                    ? "border-[#dbe5f2] bg-white text-slate-700 hover:border-[#3B82F6] hover:bg-white"
-                    : "cursor-not-allowed border-[#e7eef8] bg-[#F8FBFF] text-slate-300")
-              }
-            >
+      <div className="relative">
+        <select
+          value={selectedScore ?? ""}
+          onChange={(event) =>
+            onPick(
+              event.target.value === "" ? null : Number(event.target.value)
+            )
+          }
+          className="w-full appearance-none rounded-[18px] border border-[#dbe5f2] bg-white px-4 py-3.5 pr-14 font-mono text-lg font-black text-[#1E3A8A] focus:border-[#3B82F6] focus:outline-none sm:text-base"
+        >
+          <option value="">{placeholder}</option>
+          {scores.map((score) => (
+            <option key={score} value={score}>
               {score}
-            </button>
-          );
-        })}
+            </option>
+          ))}
+        </select>
+        <span
+          className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[#1E3A8A]"
+          aria-hidden="true"
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-4 w-4"
+          >
+            <path d="m6 8 4 4 4-4" />
+          </svg>
+        </span>
       </div>
     </section>
   );

@@ -5,13 +5,30 @@ import { useTranslations } from "next-intl";
 import TeamFlag from "@/components/TeamFlag";
 import { useTeamName } from "@/hooks/useTeamName";
 import { placeMatchBet, updateMatchBet } from "@/lib/actions/bets";
-import { scoreKey, SCORE_RANGE, type ScoreOddsCache } from "@/lib/db/schema";
+import { parseScoreKey, scoreKey, type ScoreOddsCache } from "@/lib/db/schema";
 
 export type BetFormExisting = {
   predictedHomeScore: number;
   predictedAwayScore: number;
   totalStake: number;
 };
+
+type DirectionGroup = "HOME" | "DRAW" | "AWAY";
+
+type ExactScoreChoice = {
+  key: string;
+  home: number;
+  away: number;
+  odd: number;
+};
+
+const SCORE_OPTIONS = Array.from({ length: 10 }, (_, index) => index);
+
+function compareChoices(a: ExactScoreChoice, b: ExactScoreChoice) {
+  if (a.odd !== b.odd) return a.odd - b.odd;
+  if (a.home !== b.home) return a.home - b.home;
+  return a.away - b.away;
+}
 
 export default function BetForm({
   roomCode,
@@ -34,14 +51,8 @@ export default function BetForm({
   oddsDraw: number;
   oddsAway: number;
   scoreOdds: ScoreOddsCache;
-  /** When editing an existing bet, this is the user's remaining headroom for a
-   *  larger stake (i.e. chips + existingBet.totalStake, since the existing
-   *  stake is refunded as part of the update). */
   maxStake: number;
-  /** Present when the form is editing an existing bet. Pre-fills inputs and
-   *  switches the server call to `updateMatchBet`. */
   existingBet?: BetFormExisting;
-  /** Shown as a "Cancel" button alongside the submit when present. */
   onCancel?: () => void;
 }) {
   const tb = useTranslations("bet");
@@ -51,17 +62,43 @@ export default function BetForm({
   const localizedHome = teamName(homeTeam);
   const localizedAway = teamName(awayTeam);
   const isEdit = !!existingBet;
+  const existingKey = existingBet
+    ? scoreKey(existingBet.predictedHomeScore, existingBet.predictedAwayScore)
+    : null;
+  const existingScoreStillAvailable = existingKey
+    ? scoreOdds[existingKey] != null
+    : false;
   const [home, setHome] = useState<number | null>(
-    existingBet?.predictedHomeScore ?? null
+    existingBet && existingScoreStillAvailable ? existingBet.predictedHomeScore : null
   );
   const [away, setAway] = useState<number | null>(
-    existingBet?.predictedAwayScore ?? null
+    existingBet && existingScoreStillAvailable ? existingBet.predictedAwayScore : null
   );
   const [stake, setStake] = useState<number>(existingBet?.totalStake ?? 50);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const directionPick: "HOME" | "DRAW" | "AWAY" | null =
+  const exactScoreChoices = Object.entries(scoreOdds)
+    .flatMap(([key, odd]) => {
+      const parsed = parseScoreKey(key);
+      if (!parsed) return [];
+      const numericOdd = Number(odd);
+      if (!Number.isFinite(numericOdd) || numericOdd <= 1) return [];
+      return [
+        {
+          key,
+          home: parsed.home,
+          away: parsed.away,
+          odd: numericOdd,
+        } satisfies ExactScoreChoice,
+      ];
+    })
+    .sort(compareChoices);
+  const hasExactScoreChoices = exactScoreChoices.length > 0;
+  const availableScoreKeys = new Set(exactScoreChoices.map((choice) => choice.key));
+
+  const selectedKey = home !== null && away !== null ? scoreKey(home, away) : null;
+  const directionPick: DirectionGroup | null =
     home === null || away === null
       ? null
       : home > away
@@ -70,21 +107,23 @@ export default function BetForm({
           ? "AWAY"
           : "DRAW";
   const directionOdds =
-    directionPick === "HOME" ? oddsHome :
-    directionPick === "DRAW" ? oddsDraw :
-    directionPick === "AWAY" ? oddsAway : 0;
-  const scoreOdd =
-    home !== null && away !== null ? (scoreOdds[scoreKey(home, away)] ?? 0) : 0;
+    directionPick === "HOME"
+      ? oddsHome
+      : directionPick === "DRAW"
+        ? oddsDraw
+        : directionPick === "AWAY"
+          ? oddsAway
+          : 0;
+  const scoreOdd = selectedKey ? Number(scoreOdds[selectedKey] ?? 0) : 0;
 
   const directionStake = Math.floor(stake / 2);
   const scoreStake = stake - directionStake;
   const directionPayout = Math.floor(directionStake * directionOdds);
   const scorePayout = Math.floor(scoreStake * scoreOdd);
   const bestCase = directionPayout + scorePayout;
-
+  const hasCompleteScore = home !== null && away !== null;
   const canSubmit =
-    home !== null &&
-    away !== null &&
+    hasCompleteScore &&
     stake >= 2 &&
     stake <= maxStake &&
     directionOdds > 0 &&
@@ -103,7 +142,7 @@ export default function BetForm({
       try {
         if (isEdit) {
           await updateMatchBet(fd);
-          onCancel?.(); // closes edit mode after successful update
+          onCancel?.();
         } else {
           await placeMatchBet(fd);
         }
@@ -111,6 +150,14 @@ export default function BetForm({
         setError(e instanceof Error ? e.message : "Failed to place bet.");
       }
     });
+  }
+
+  function pickHomeScore(nextHome: number) {
+    setHome(nextHome);
+  }
+
+  function pickAwayScore(nextAway: number) {
+    setAway(nextAway);
   }
 
   return (
@@ -122,20 +169,38 @@ export default function BetForm({
         {tb("splitHint")}
       </p>
 
-      <ScoreRow
-        flagSource={homeTeam}
-        label={localizedHome}
-        selected={home}
-        onPick={setHome}
-      />
-      <ScoreRow
-        flagSource={awayTeam}
-        label={localizedAway}
-        selected={away}
-        onPick={setAway}
-      />
+      <div className="space-y-3">
+        <ScorePadRow
+          title={localizedHome}
+          teamName={homeTeam}
+          selectedScore={home}
+          scores={SCORE_OPTIONS}
+          isEnabled={(score) =>
+            hasExactScoreChoices &&
+            (away === null || availableScoreKeys.has(scoreKey(score, away)))
+          }
+          onPick={pickHomeScore}
+        />
+        <ScorePadRow
+          title={localizedAway}
+          teamName={awayTeam}
+          selectedScore={away}
+          scores={SCORE_OPTIONS}
+          isEnabled={(score) =>
+            hasExactScoreChoices &&
+            (home === null || availableScoreKeys.has(scoreKey(home, score)))
+          }
+          onPick={pickAwayScore}
+        />
+      </div>
 
-      {home !== null && away !== null && (
+      {!hasExactScoreChoices && (
+        <p className="mt-4 rounded-[22px] border border-dashed border-[#cfdced] bg-[#F8FBFF] px-4 py-4 text-sm text-slate-500">
+          {tb("noScoresAvailable")}
+        </p>
+      )}
+
+      {hasCompleteScore && (
         <div className="mt-4 rounded-[24px] border border-[#dbe5f2] bg-[#F8FBFF] p-4 text-sm">
           <div className="flex items-center justify-between">
             <span className="font-semibold text-slate-600">{tm("yourBet")}</span>
@@ -147,7 +212,11 @@ export default function BetForm({
             <span>
               {tb("direction")}:{" "}
               <span className="font-bold text-[#1E3A8A]">
-                {directionPick === "HOME" ? localizedHome : directionPick === "AWAY" ? localizedAway : tm("draw")}
+                {directionPick === "HOME"
+                  ? localizedHome
+                  : directionPick === "AWAY"
+                    ? localizedAway
+                    : tm("draw")}
               </span>{" "}
               @ <span className="font-mono">{directionOdds.toFixed(2)}x</span>
             </span>
@@ -173,7 +242,7 @@ export default function BetForm({
         </span>
       </div>
 
-      {home !== null && away !== null && (
+      {hasCompleteScore && (
         <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
           <div className="rounded-[22px] border border-[#dbe5f2] bg-[#F8FBFF] px-3 py-3">
             <div className="font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -230,42 +299,56 @@ export default function BetForm({
   );
 }
 
-function ScoreRow({
-  flagSource,
-  label,
-  selected,
+function ScorePadRow({
+  title,
+  teamName,
+  scores,
+  selectedScore,
+  isEnabled,
   onPick,
 }: {
-  /** Canonical English team name used for the flag lookup. */
-  flagSource: string;
-  /** Display label (already localized). */
-  label: string;
-  selected: number | null;
-  onPick: (n: number) => void;
+  title: string;
+  teamName: string;
+  scores: number[];
+  selectedScore: number | null;
+  isEnabled: (score: number) => boolean;
+  onPick: (score: number) => void;
 }) {
   return (
-    <div className="mb-2">
-      <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-        <TeamFlag teamName={flagSource} size={28} />
-        <span>{label}</span>
+    <section className="rounded-[22px] border border-[#dbe5f2] bg-[#F8FBFF] p-3">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+          <TeamFlag teamName={teamName} size={24} />
+          <span>{title}</span>
+        </div>
+        <span className="rounded-full border border-[#dbe5f2] bg-white px-3 py-1 font-mono text-sm font-black text-[#1E3A8A]">
+          {selectedScore ?? "–"}
+        </span>
       </div>
-      <div className="flex flex-wrap gap-1">
-        {Array.from({ length: SCORE_RANGE }).map((_, n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => onPick(n)}
-            className={
-              "h-9 w-9 rounded-xl border-2 font-mono text-sm font-bold transition " +
-              (selected === n
-                ? "border-[#3B82F6] bg-[#E0EEFF] text-[#1D4ED8]"
-                : "border-[#dbe5f2] bg-white text-slate-600 hover:border-[#3B82F6] hover:bg-[#F8FBFF]")
-            }
-          >
-            {n}
-          </button>
-        ))}
+      <div className="grid grid-cols-5 gap-2">
+        {scores.map((score) => {
+          const enabled = isEnabled(score);
+          const isSelected = selectedScore === score;
+          return (
+            <button
+              key={score}
+              type="button"
+              disabled={!enabled}
+              onClick={() => onPick(score)}
+              className={
+                "rounded-[18px] border px-0 py-3 text-center font-mono text-base font-black transition " +
+                (isSelected
+                  ? "border-[#3B82F6] bg-[#E0EEFF] text-[#1D4ED8]"
+                  : enabled
+                    ? "border-[#dbe5f2] bg-white text-slate-700 hover:border-[#3B82F6] hover:bg-white"
+                    : "cursor-not-allowed border-[#e7eef8] bg-[#F8FBFF] text-slate-300")
+              }
+            >
+              {score}
+            </button>
+          );
+        })}
       </div>
-    </div>
+    </section>
   );
 }

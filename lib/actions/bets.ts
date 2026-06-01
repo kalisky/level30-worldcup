@@ -9,15 +9,14 @@ import {
   matches,
   users,
   scoreKey,
-  SCORE_RANGE,
 } from "@/lib/db/schema";
 import { requireRoomUser } from "@/lib/auth-context";
 import { recordLedger } from "@/lib/ledger";
 
 const placeBetSchema = z.object({
   matchId: z.string().uuid(),
-  predictedHomeScore: z.number().int().min(0).max(SCORE_RANGE - 1),
-  predictedAwayScore: z.number().int().min(0).max(SCORE_RANGE - 1),
+  predictedHomeScore: z.number().int().min(0).max(99),
+  predictedAwayScore: z.number().int().min(0).max(99),
   totalStake: z.number().int().min(2),
 });
 

@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+.odds-sync-browser/
 
 # debug
 npm-debug.log*
@@ -39,3 +40,4 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+app/r/\[code]/match/\[id]/odds_h2h.json

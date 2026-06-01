@@ -53,6 +53,19 @@ export const settlementKind = pgEnum("settlement_kind", [
   "void_custom_bet",
 ]);
 
+export const oddsSyncStatus = pgEnum("odds_sync_status", [
+  "running",
+  "success",
+  "partial_success",
+  "skipped",
+  "error",
+]);
+
+export const oddsSnapshotMarket = pgEnum("odds_snapshot_market", [
+  "winner",
+  "correct_score",
+]);
+
 export const ledgerReason = pgEnum("ledger_reason", [
   "opening_balance",       // one-time backfill row when feature shipped
   "initial",               // chips granted when user joins/created
@@ -144,7 +157,8 @@ export const users = pgTable(
 );
 
 // Score odds cache shape:
-//   { "0-0": 9.12, "1-0": 7.40, "1-1": 6.20, ... }  — decimal odds for that exact score
+//   { "0-0": 9.12, "1-0": 7.40, "1-1": 6.20, ... }  — sparse decimal odds keyed
+//   by the exact scorelines currently offered by the source market.
 export type ScoreOddsCache = Record<string, number>;
 
 export const matches = pgTable(
@@ -162,13 +176,67 @@ export const matches = pgTable(
     oddsHome: numeric("odds_home", { precision: 5, scale: 2 }),
     oddsDraw: numeric("odds_draw", { precision: 5, scale: 2 }),
     oddsAway: numeric("odds_away", { precision: 5, scale: 2 }),
-    // Exact-score decimal odds for every score 0-0 through 9-9.
-    // null if not yet generated.
+    // Exact-score decimal odds for the currently offered scorelines.
+    // null if not yet synced.
     scoreOdds: jsonb("score_odds").$type<ScoreOddsCache>(),
+    oddsSourceWinnerUrl: text("odds_source_winner_url"),
+    oddsSourceCorrectScoreUrl: text("odds_source_correct_score_url"),
+    oddsLastSyncedAt: timestamp("odds_last_synced_at", { withTimezone: true }),
+    oddsLastSyncStatus: oddsSyncStatus("odds_last_sync_status"),
+    oddsLastSyncError: text("odds_last_sync_error"),
   },
   (t) => [
     index("matches_kickoff_idx").on(t.kickoff),
     index("matches_status_idx").on(t.status),
+  ]
+);
+
+export const oddsSyncRuns = pgTable(
+  "odds_sync_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    scope: text("scope").notNull(),
+    targetMatchId: uuid("target_match_id").references(() => matches.id, {
+      onDelete: "set null",
+    }),
+    force: boolean("force").notNull().default(false),
+    status: oddsSyncStatus("status").notNull(),
+    summary: text("summary").notNull().default(""),
+    details: jsonb("details").notNull().default(sql`'{}'::jsonb`),
+    startedAt: timestamp("started_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("odds_sync_runs_started_idx").on(t.startedAt),
+    index("odds_sync_runs_target_match_idx").on(t.targetMatchId),
+  ]
+);
+
+export const matchOddsSnapshots = pgTable(
+  "match_odds_snapshots",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    matchId: uuid("match_id")
+      .notNull()
+      .references(() => matches.id, { onDelete: "cascade" }),
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => oddsSyncRuns.id, { onDelete: "cascade" }),
+    market: oddsSnapshotMarket("market").notNull(),
+    sourceUrl: text("source_url").notNull(),
+    rawPayload: jsonb("raw_payload").notNull().default(sql`'{}'::jsonb`),
+    normalizedPayload: jsonb("normalized_payload")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("match_odds_snapshots_match_idx").on(t.matchId),
+    index("match_odds_snapshots_run_idx").on(t.runId),
   ]
 );
 
@@ -350,9 +418,20 @@ export type CustomBet = typeof customBets.$inferSelect;
 export type CustomWager = typeof customWagers.$inferSelect;
 export type Settlement = typeof settlements.$inferSelect;
 export type ChipLedger = typeof chipLedger.$inferSelect;
+export type OddsSyncRun = typeof oddsSyncRuns.$inferSelect;
+export type MatchOddsSnapshot = typeof matchOddsSnapshots.$inferSelect;
 
 export function scoreKey(home: number, away: number): string {
   return `${home}-${away}`;
+}
+
+export function parseScoreKey(key: string) {
+  const match = /^(\d+)-(\d+)$/.exec(key.trim());
+  if (!match) return null;
+  return {
+    home: Number(match[1]),
+    away: Number(match[2]),
+  };
 }
 
 export const SCORE_RANGE = 10; // 0..9 inclusive on each side (100 cells)

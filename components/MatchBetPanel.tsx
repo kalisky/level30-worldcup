@@ -45,7 +45,7 @@ export default function MatchBetPanel({
   const isLocked =
     new Date(kickoff).getTime() <= now || matchStatus !== "scheduled";
   const hasDirectionOdds = oddsHome != null && oddsDraw != null && oddsAway != null;
-  const hasScoreOdds = !!scoreOdds;
+  const hasScoreOdds = !!scoreOdds && Object.keys(scoreOdds).length > 0;
   const hasOdds = hasDirectionOdds && hasScoreOdds;
   const canEditBet = myBet && myBet.status === "open" && !isLocked && hasOdds;
 

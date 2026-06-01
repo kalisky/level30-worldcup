@@ -12,11 +12,11 @@ import {
   settlements,
   users,
   type CustomBetOption,
-  type ScoreOddsCache,
 } from "@/lib/db/schema";
 import { requireRoomUser } from "@/lib/auth-context";
-import { generate1X2Odds, generateScoreOdds } from "@/lib/ai/odds";
 import { recordLedger } from "@/lib/ledger";
+import { revalidateOddsSyncPaths } from "@/lib/odds-sync/revalidate";
+import { syncMatchOdds } from "@/lib/odds-sync/service";
 import {
   suggestMatchResult as aiSuggestMatchResult,
   suggestCustomBetWinner as aiSuggestCustomBetWinner,
@@ -339,6 +339,11 @@ export async function renameMatchTeams(formData: FormData) {
       oddsDraw: null,
       oddsAway: null,
       scoreOdds: null,
+      oddsSourceWinnerUrl: null,
+      oddsSourceCorrectScoreUrl: null,
+      oddsLastSyncedAt: null,
+      oddsLastSyncStatus: null,
+      oddsLastSyncError: null,
     })
     .where(eq(matches.id, matchId));
 
@@ -384,35 +389,16 @@ export async function regenerateMatchOdds(formData: FormData) {
   if (!m) throw new Error("Match not found.");
   if (m.status === "final") throw new Error("Cannot regenerate odds for a final match.");
 
-  const dirOdds = await generate1X2Odds({
-    homeTeam: m.homeTeam,
-    awayTeam: m.awayTeam,
-    groupLabel: m.groupLabel,
-    kickoff: new Date(m.kickoff),
+  const result = await syncMatchOdds({
+    force: true,
+    matchId,
+    trigger: "admin",
   });
+  if (result.status === "error") {
+    throw new Error(result.summary);
+  }
 
-  const scoreResult = await generateScoreOdds({
-    homeTeam: m.homeTeam,
-    awayTeam: m.awayTeam,
-    groupLabel: m.groupLabel,
-    kickoff: new Date(m.kickoff),
-    direction: {
-      homeProb: dirOdds.homeProb,
-      drawProb: dirOdds.drawProb,
-      awayProb: dirOdds.awayProb,
-    },
-  });
-
-  await db
-    .update(matches)
-    .set({
-      oddsHome: dirOdds.oddsHome.toFixed(2),
-      oddsDraw: dirOdds.oddsDraw.toFixed(2),
-      oddsAway: dirOdds.oddsAway.toFixed(2),
-      scoreOdds: scoreResult.scoreOdds as ScoreOddsCache,
-    })
-    .where(eq(matches.id, matchId));
-
+  revalidateOddsSyncPaths();
   revalidatePath(`/r/${code}/admin`);
   revalidatePath(`/r/${code}/match/${matchId}`);
 }

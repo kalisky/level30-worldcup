@@ -155,32 +155,32 @@ export default async function MatchPage(props: {
         </div>
 
         {match.oddsHome && match.oddsDraw && match.oddsAway && (
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-[22px] border border-[#dbe5f2] bg-[#F8FBFF] px-4 py-4 text-center">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+          <dl className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm">
+            <div className="flex items-baseline gap-2">
+              <dt className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {homeTeamLocalized}
-              </div>
-              <div className="mt-1 font-mono text-xl font-black text-[#1E3A8A]">
+              </dt>
+              <dd className="font-mono text-base font-black text-[#1E3A8A]">
                 {oddsHome.toFixed(2)}x
-              </div>
+              </dd>
             </div>
-            <div className="rounded-[22px] border border-[#dbe5f2] bg-[#F8FBFF] px-4 py-4 text-center">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <div className="flex items-baseline gap-2">
+              <dt className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {tm("draw")}
-              </div>
-              <div className="mt-1 font-mono text-xl font-black text-[#1E3A8A]">
+              </dt>
+              <dd className="font-mono text-base font-black text-[#1E3A8A]">
                 {oddsDraw.toFixed(2)}x
-              </div>
+              </dd>
             </div>
-            <div className="rounded-[22px] border border-[#dbe5f2] bg-[#F8FBFF] px-4 py-4 text-center">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <div className="flex items-baseline gap-2">
+              <dt className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {awayTeamLocalized}
-              </div>
-              <div className="mt-1 font-mono text-xl font-black text-[#1E3A8A]">
+              </dt>
+              <dd className="font-mono text-base font-black text-[#1E3A8A]">
                 {oddsAway.toFixed(2)}x
-              </div>
+              </dd>
             </div>
-          </div>
+          </dl>
         )}
       </section>
 

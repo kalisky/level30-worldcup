@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --import tsx --test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
@@ -15,6 +16,8 @@
     "fixtures:fetch-real": "tsx scripts/fetch-real-fixtures.ts",
     "odds:compute": "tsx scripts/compute-odds.ts",
     "odds:generate": "tsx scripts/generate-odds.ts",
+    "odds:build-oddschecker-json": "tsx scripts/build-oddschecker-json.ts",
+    "odds:backfill-oddschecker": "tsx scripts/backfill-oddschecker-json.ts",
     "ledger:backfill": "tsx scripts/backfill-ledger.ts"
   },
   "dependencies": {

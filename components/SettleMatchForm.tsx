@@ -56,14 +56,14 @@ export default function SettleMatchForm({
     fd.set("matchId", match.id);
     fd.set("homeTeam", homeTeam);
     fd.set("awayTeam", awayTeam);
-    runAction(renameMatchTeams, fd, "Renamed. Re-run AI odds.");
+    runAction(renameMatchTeams, fd, "Renamed. Re-sync odds.");
   }
 
   function submitOdds() {
     const fd = new FormData();
     fd.set("roomCode", roomCode);
     fd.set("matchId", match.id);
-    runAction(regenerateMatchOdds, fd, "Odds regenerated.");
+    runAction(regenerateMatchOdds, fd, "Odds synced.");
   }
 
   function submitSuggest() {

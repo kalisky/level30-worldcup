@@ -167,15 +167,45 @@ export default async function DashboardPage(props: {
     liveToken,
   } = dashboardData;
 
+  const mobileDashboardHeader = (
+    <section className="rounded-[22px] border border-[#dbe5f2] bg-white p-4 shadow-[0_12px_28px_rgba(30,58,138,0.08)] lg:hidden">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[0.64rem] font-bold uppercase tracking-[0.24em] text-slate-500">
+            {room.code}
+          </p>
+          <h1 className="mt-1 truncate text-[1.35rem] font-black text-[#1E3A8A]">
+            {room.name}
+          </h1>
+        </div>
+
+        <nav className="flex flex-wrap gap-2">
+          <Link
+            href={`/r/${room.code}/history`}
+            className="rounded-full border border-[#dbe5f2] bg-[#F8FBFF] px-3.5 py-1.5 text-xs font-bold text-[#1E3A8A] transition hover:bg-white"
+          >
+            {tnav("history")}
+          </Link>
+          <Link
+            href={`/r/${room.code}/leaderboard`}
+            className="rounded-full border border-[#dbe5f2] bg-[#FFF1E8] px-3.5 py-1.5 text-xs font-bold text-[#EA580C] transition hover:bg-white"
+          >
+            {tnav("leaderboard")}
+          </Link>
+        </nav>
+      </div>
+    </section>
+  );
+
   const dashboardPane = (
     <>
-      <section className="rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.08)]">
+      <section className="hidden rounded-[24px] border border-[#dbe5f2] bg-white p-4 shadow-[0_16px_38px_rgba(30,58,138,0.08)] lg:block">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-[0.72rem] font-bold uppercase tracking-[0.28em] text-slate-500">
+            <p className="text-[0.68rem] font-bold uppercase tracking-[0.26em] text-slate-500">
               {room.code}
             </p>
-            <h1 className="mt-1 truncate text-3xl font-black text-[#1E3A8A]">
+            <h1 className="mt-1 truncate text-[1.75rem] font-black text-[#1E3A8A]">
               {room.name}
             </h1>
           </div>
@@ -296,6 +326,7 @@ export default async function DashboardPage(props: {
         pollUrl={`/api/live/room/${encodeURIComponent(room.code)}/dashboard`}
       />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
+        <div className="mb-4 lg:hidden">{mobileDashboardHeader}</div>
         <MatchScreenLayout
           matchPane={dashboardPane}
           customBetsPane={customBetsPane}

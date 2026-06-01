@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { ensureFreshCustomBetOdds } from "@/lib/custom-bet-odds";
 import { db } from "./index";
 import {
   rooms,
@@ -98,7 +99,7 @@ export async function getMatchBetsForMatch(roomId: string, matchId: string) {
 }
 
 export async function listOpenCustomBets(roomId: string, limit = 30) {
-  return db
+  const rows = await db
     .select({
       bet: customBets,
       proposerName: users.name,
@@ -111,10 +112,17 @@ export async function listOpenCustomBets(roomId: string, limit = 30) {
     .where(and(eq(customBets.roomId, roomId), eq(customBets.status, "open")))
     .orderBy(desc(customBets.createdAt))
     .limit(limit);
+
+  return Promise.all(
+    rows.map(async (row) => ({
+      ...row,
+      bet: await ensureFreshCustomBetOdds(db, row.bet),
+    }))
+  );
 }
 
 export async function listCustomBetsForMatch(roomId: string, matchId: string) {
-  return db
+  const rows = await db
     .select({
       bet: customBets,
       proposerName: users.name,
@@ -123,11 +131,19 @@ export async function listCustomBetsForMatch(roomId: string, matchId: string) {
     .innerJoin(users, eq(users.id, customBets.proposerId))
     .where(and(eq(customBets.roomId, roomId), eq(customBets.matchId, matchId)))
     .orderBy(desc(customBets.createdAt));
+
+  return Promise.all(
+    rows.map(async (row) => ({
+      ...row,
+      bet: await ensureFreshCustomBetOdds(db, row.bet),
+    }))
+  );
 }
 
 export async function getCustomBet(id: string) {
   const [cb] = await db.select().from(customBets).where(eq(customBets.id, id)).limit(1);
-  return cb ?? null;
+  if (!cb) return null;
+  return ensureFreshCustomBetOdds(db, cb);
 }
 
 export async function getCustomWagersFor(customBetId: string) {

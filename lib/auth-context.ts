@@ -4,12 +4,15 @@ import { db } from "@/lib/db";
 import { authUsers, users } from "@/lib/db/schema";
 import { getRoomByCode } from "@/lib/db/queries";
 import type { DashboardTrace } from "@/lib/dashboard-trace";
-import { getDailyGrantAmount } from "@/lib/daily-grant";
+import {
+  DAILY_GRANT_MIN_HOURS,
+  getDailyGrantAmount,
+  hasDailyGrantStarted,
+} from "@/lib/daily-grant";
 import { touchRoomLiveRevision } from "@/lib/live-updates";
 import { requireProfiledUser } from "@/lib/auth";
 import { normalizeRoomCode } from "@/lib/code";
 import { recordLedger } from "@/lib/ledger";
-import { DAILY_GRANT_MIN_HOURS } from "@/lib/daily-grant";
 
 export async function requireRoomUser(
   rawCode: string,
@@ -76,7 +79,7 @@ export async function requireRoomUser(
 
   const grant = getDailyGrantAmount(room.startingChips);
   let dailyGrantApplied = 0;
-  if (grant > 0) {
+  if (grant > 0 && hasDailyGrantStarted()) {
     const dailyGrantRows = trace
       ? await trace.step(
           "auth.applyDailyGrant",

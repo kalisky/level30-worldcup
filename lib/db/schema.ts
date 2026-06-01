@@ -302,6 +302,7 @@ export type CustomBetOption = {
   label: string;
   probability: number;
   odds: number;
+  generatedAt?: string;
 };
 
 export const customBets = pgTable(

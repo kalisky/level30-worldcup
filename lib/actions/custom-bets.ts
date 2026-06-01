@@ -7,7 +7,6 @@ import { db } from "@/lib/db";
 import {
   customBets,
   customWagers,
-  matches,
   users,
   type CustomBetOption,
 } from "@/lib/db/schema";
@@ -16,6 +15,13 @@ import {
   generateCustomBetOdds,
   generateOpenAnswerOdds,
 } from "@/lib/ai/odds";
+import {
+  ensureFreshCustomBetOdds,
+  findOptionIdxByAnswer,
+  getCustomBetMatchContext,
+  stampCustomBetOption,
+  stampCustomBetOptions,
+} from "@/lib/custom-bet-odds";
 import { recordLedger } from "@/lib/ledger";
 import { touchRoomLiveRevision } from "@/lib/live-updates";
 
@@ -37,42 +43,6 @@ const fixedProposeSchema = baseProposeSchema.extend({
 const openProposeSchema = baseProposeSchema.extend({
   kind: z.literal("open_question"),
 });
-
-function normalizeAnswer(s: string): string {
-  return s.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function findOptionIdxByAnswer(
-  options: CustomBetOption[],
-  answer: string
-): number {
-  const n = normalizeAnswer(answer);
-  return options.findIndex((o) => normalizeAnswer(o.label) === n);
-}
-
-async function loadMatchContext(
-  matchId: string | undefined
-): Promise<Parameters<typeof generateCustomBetOdds>[0]["matchContext"]> {
-  if (!matchId) return undefined;
-  const [m] = await db
-    .select()
-    .from(matches)
-    .where(eq(matches.id, matchId))
-    .limit(1);
-  if (!m) throw new Error("Match not found.");
-  if (m.status === "final") {
-    throw new Error("Cannot propose a custom bet on a final match.");
-  }
-  return {
-    homeTeam: m.homeTeam,
-    awayTeam: m.awayTeam,
-    groupLabel: m.groupLabel,
-    status: m.status,
-    homeScore: m.homeScore,
-    awayScore: m.awayScore,
-    kickoff: new Date(m.kickoff),
-  };
-}
 
 export async function proposeCustomBet(formData: FormData) {
   const code = String(formData.get("roomCode") ?? "");
@@ -157,7 +127,10 @@ export async function proposeCustomBet(formData: FormData) {
     );
   }
 
-  const matchContext = await loadMatchContext(matchId);
+  const matchContext = await getCustomBetMatchContext(matchId, db, {
+    requireMatch: Boolean(matchId),
+    requireNonFinal: true,
+  });
 
   let options: CustomBetOption[] = [];
   let aiReasoning = "";
@@ -168,7 +141,7 @@ export async function proposeCustomBet(formData: FormData) {
       description: base.description,
       optionLabels,
     });
-    options = aiResult.options;
+    options = stampCustomBetOptions(aiResult.options);
     aiReasoning = aiResult.reasoning;
   }
   // For open_question: options start empty; each new answer adds an entry.
@@ -221,6 +194,15 @@ export async function placeCustomWager(formData: FormData) {
     );
   }
   const { customBetId, optionIdx, stake } = parsed.data;
+
+  const [betPreRaw] = await db
+    .select()
+    .from(customBets)
+    .where(eq(customBets.id, customBetId))
+    .limit(1);
+  if (!betPreRaw) throw new Error("Custom bet not found.");
+  if (betPreRaw.roomId !== room.id) throw new Error("Not your room.");
+  await ensureFreshCustomBetOdds(db, betPreRaw);
 
   await db.transaction(async (tx) => {
     const [bet] = await tx
@@ -307,6 +289,15 @@ export async function updateCustomWager(formData: FormData) {
     );
   }
   const { customBetId, optionIdx, stake } = parsed.data;
+
+  const [betPreRaw] = await db
+    .select()
+    .from(customBets)
+    .where(eq(customBets.id, customBetId))
+    .limit(1);
+  if (!betPreRaw) throw new Error("Custom bet not found.");
+  if (betPreRaw.roomId !== room.id) throw new Error("Not your room.");
+  await ensureFreshCustomBetOdds(db, betPreRaw);
 
   await db.transaction(async (tx) => {
     const [bet] = await tx
@@ -465,7 +456,8 @@ export async function removeCustomWager(formData: FormData) {
 /**
  * Returns the odds for a specific free-form answer to an open question.
  * If the answer already exists in the bet's options (case-insensitive), the
- * cached odds are returned. Otherwise Claude/Gemini is consulted for a fresh
+ * cached odds are returned unless they've gone stale (24h TTL), in which case
+ * they are refreshed first. Otherwise Claude/Gemini is consulted for a fresh
  * estimate WITHOUT persisting — pure preview. Wagering with the same answer
  * later will use the same lookup logic; if odds haven't been cached yet by a
  * concurrent wager, a fresh call is made then.
@@ -498,9 +490,10 @@ export async function previewOpenAnswerOdds(input: {
     throw new Error("Not an open-question bet.");
   }
 
-  const idx = findOptionIdxByAnswer(bet.options, answer);
+  const freshBet = await ensureFreshCustomBetOdds(db, bet);
+  const idx = findOptionIdxByAnswer(freshBet.options, answer);
   if (idx >= 0) {
-    const opt = bet.options[idx];
+    const opt = freshBet.options[idx];
     return {
       probability: opt.probability,
       odds: opt.odds,
@@ -510,13 +503,17 @@ export async function previewOpenAnswerOdds(input: {
     };
   }
 
-  const matchContext = await loadMatchContext(bet.matchId ?? undefined);
+  const matchContext = await getCustomBetMatchContext(
+    freshBet.matchId ?? undefined,
+    db,
+    { requireMatch: Boolean(freshBet.matchId) }
+  );
   const ai = await generateOpenAnswerOdds({
     matchContext,
-    title: bet.title,
-    description: bet.description,
+    title: freshBet.title,
+    description: freshBet.description,
     answer,
-    existingAnswers: bet.options.map((o) => o.label),
+    existingAnswers: freshBet.options.map((o) => o.label),
   });
   return {
     probability: ai.probability,
@@ -551,12 +548,13 @@ export async function placeOpenWager(formData: FormData) {
 
   // Resolve to an option idx + odds before opening the transaction, since the
   // AI call (if needed) is slow and we don't want to hold a DB lock for it.
-  const [betPre] = await db
+  const [betPreRaw] = await db
     .select()
     .from(customBets)
     .where(eq(customBets.id, customBetId))
     .limit(1);
-  if (!betPre) throw new Error("Custom bet not found.");
+  if (!betPreRaw) throw new Error("Custom bet not found.");
+  const betPre = await ensureFreshCustomBetOdds(db, betPreRaw);
   if (betPre.roomId !== room.id) throw new Error("Not your room.");
   if (betPre.kind !== "open_question") {
     throw new Error("Use placeCustomWager for fixed-options bets.");
@@ -569,7 +567,11 @@ export async function placeOpenWager(formData: FormData) {
   const optionIdx = findOptionIdxByAnswer(betPre.options, answer);
   let newOption: CustomBetOption | null = null;
   if (optionIdx < 0) {
-    const matchContext = await loadMatchContext(betPre.matchId ?? undefined);
+    const matchContext = await getCustomBetMatchContext(
+      betPre.matchId ?? undefined,
+      db,
+      { requireMatch: Boolean(betPre.matchId) }
+    );
     const ai = await generateOpenAnswerOdds({
       matchContext,
       title: betPre.title,
@@ -577,11 +579,11 @@ export async function placeOpenWager(formData: FormData) {
       answer,
       existingAnswers: betPre.options.map((o) => o.label),
     });
-    newOption = {
+    newOption = stampCustomBetOption({
       label: answer,
       probability: ai.probability,
       odds: ai.odds,
-    };
+    });
   }
 
   await db.transaction(async (tx) => {
@@ -678,12 +680,13 @@ export async function updateOpenWager(formData: FormData) {
   }
   const { customBetId, answer, stake } = parsed.data;
 
-  const [betPre] = await db
+  const [betPreRaw] = await db
     .select()
     .from(customBets)
     .where(eq(customBets.id, customBetId))
     .limit(1);
-  if (!betPre) throw new Error("Custom bet not found.");
+  if (!betPreRaw) throw new Error("Custom bet not found.");
+  const betPre = await ensureFreshCustomBetOdds(db, betPreRaw);
   if (betPre.roomId !== room.id) throw new Error("Not your room.");
   if (betPre.kind !== "open_question") {
     throw new Error("Use updateCustomWager for fixed-options bets.");
@@ -696,7 +699,11 @@ export async function updateOpenWager(formData: FormData) {
   const idxPre = findOptionIdxByAnswer(betPre.options, answer);
   let newOption: CustomBetOption | null = null;
   if (idxPre < 0) {
-    const matchContext = await loadMatchContext(betPre.matchId ?? undefined);
+    const matchContext = await getCustomBetMatchContext(
+      betPre.matchId ?? undefined,
+      db,
+      { requireMatch: Boolean(betPre.matchId) }
+    );
     const ai = await generateOpenAnswerOdds({
       matchContext,
       title: betPre.title,
@@ -704,7 +711,11 @@ export async function updateOpenWager(formData: FormData) {
       answer,
       existingAnswers: betPre.options.map((o) => o.label),
     });
-    newOption = { label: answer, probability: ai.probability, odds: ai.odds };
+    newOption = stampCustomBetOption({
+      label: answer,
+      probability: ai.probability,
+      odds: ai.odds,
+    });
   }
 
   await db.transaction(async (tx) => {

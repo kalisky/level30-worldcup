@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { requireRoomUser } from "@/lib/auth-context";
+import { ensureFreshCustomBetOdds } from "@/lib/custom-bet-odds";
 import { db } from "@/lib/db";
 import { customBets, customWagers, matches, users } from "@/lib/db/schema";
 import { listRecentSettlements } from "@/lib/db/queries";
@@ -22,7 +23,7 @@ export default async function AdminPage(props: {
   const tm = await getTranslations("match");
   const tnav = await getTranslations("nav");
 
-  const [allMatches, openBets, recent] = await Promise.all([
+  const [allMatches, openBetsRaw, recent] = await Promise.all([
     db.select().from(matches).orderBy(matches.kickoff),
     db
       .select({
@@ -45,6 +46,12 @@ export default async function AdminPage(props: {
       .orderBy(desc(customBets.createdAt)),
     listRecentSettlements(room.id, 30),
   ]);
+  const openBets = await Promise.all(
+    openBetsRaw.map(async (entry) => ({
+      ...entry,
+      bet: await ensureFreshCustomBetOdds(db, entry.bet),
+    }))
+  );
 
   // Split matches into 'needs attention' (past kickoff, not final) and rest.
   const now = new Date();

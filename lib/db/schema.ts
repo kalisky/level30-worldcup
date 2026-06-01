@@ -74,6 +74,7 @@ export const ledgerReason = pgEnum("ledger_reason", [
   "daily_grant",           // daily top-up
   "match_bet_placed",      // -stake when placing a match bet
   "match_bet_payout",      // +payout when match settles in your favor
+  "match_bet_refund",      // +stake when user removes their bet before kickoff
   "custom_wager_placed",   // -stake when wagering on custom bet
   "custom_wager_payout",   // +payout when custom bet settles in your favor
   "custom_wager_refund",   // +stake when custom bet is voided

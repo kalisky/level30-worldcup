@@ -10,6 +10,7 @@ export type LedgerReason =
   | "daily_grant"
   | "match_bet_placed"
   | "match_bet_payout"
+  | "match_bet_refund"
   | "custom_wager_placed"
   | "custom_wager_payout"
   | "custom_wager_refund";

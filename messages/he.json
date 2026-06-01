@@ -166,6 +166,9 @@
     "update": "עדכן תחזית",
     "updatePending": "מעדכן…",
     "edit": "ערוך תחזית",
+    "remove": "הסר הימור",
+    "removePending": "מסיר…",
+    "removeFailed": "הסרת ההימור נכשלה.",
     "ifDirectionRight": "אם הכיוון נכון",
     "ifExactScoreToo": "אם גם התוצאה המדויקת",
     "exact": "מדויק",
@@ -256,6 +259,7 @@
       "daily_grant": "מענק יומי",
       "match_bet_placed": "הימור משחק",
       "match_bet_payout": "רווח ממשחק",
+      "match_bet_refund": "הימור הוסר (החזר)",
       "custom_wager_placed": "הימור מותאם אישית",
       "custom_wager_payout": "רווח מהימור מותאם אישית",
       "custom_wager_refund": "החזר (הימור בוטל)"

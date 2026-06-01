@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import BetForm from "@/components/BetForm";
 import { useTeamName } from "@/hooks/useTeamName";
+import { removeMatchBet } from "@/lib/actions/bets";
 import type { MatchBet, ScoreOddsCache } from "@/lib/db/schema";
 
 export default function MatchBetPanel({
@@ -35,12 +36,28 @@ export default function MatchBetPanel({
 }) {
   const [now] = useState(() => Date.now());
   const [isEditing, setIsEditing] = useState(false);
+  const [removing, startRemove] = useTransition();
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const t = useTranslations("match");
   const tb = useTranslations("bet");
   const tc = useTranslations("common");
   const teamName = useTeamName();
   const localizedHome = teamName(homeTeam);
   const localizedAway = teamName(awayTeam);
+
+  function submitRemove() {
+    setRemoveError(null);
+    const fd = new FormData();
+    fd.set("roomCode", roomCode);
+    fd.set("matchId", matchId);
+    startRemove(async () => {
+      try {
+        await removeMatchBet(fd);
+      } catch (e) {
+        setRemoveError(e instanceof Error ? e.message : tb("removeFailed"));
+      }
+    });
+  }
 
   const isLocked =
     new Date(kickoff).getTime() <= now || matchStatus !== "scheduled";
@@ -84,15 +101,31 @@ export default function MatchBetPanel({
             {t("yourBet")}
           </h3>
           {canEditBet && (
-            <button
-              type="button"
-              onClick={() => setIsEditing(true)}
-              className="rounded-full border border-[#BFDBFE] bg-white px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[#1D4ED8] transition hover:bg-[#E0EEFF]"
-            >
-              {tb("edit")}
-            </button>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                disabled={removing}
+                className="rounded-full border border-[#BFDBFE] bg-white px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[#1D4ED8] transition hover:bg-[#E0EEFF] disabled:opacity-50"
+              >
+                {tb("edit")}
+              </button>
+              <button
+                type="button"
+                onClick={submitRemove}
+                disabled={removing}
+                className="rounded-full border border-red-200 bg-white px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+              >
+                {removing ? tb("removePending") : tb("remove")}
+              </button>
+            </div>
           )}
         </div>
+        {removeError && (
+          <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">
+            {removeError}
+          </p>
+        )}
         <p className="mt-2 text-xl font-black text-[#1E3A8A]">
           {localizedHome} {myBet.predictedHomeScore} – {myBet.predictedAwayScore}{" "}
           {localizedAway}

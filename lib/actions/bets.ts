@@ -147,6 +147,81 @@ export async function placeMatchBet(formData: FormData) {
   revalidatePath(`/r/${room.code}/dashboard`);
 }
 
+const removeBetSchema = z.object({
+  matchId: z.string().uuid(),
+});
+
+/**
+ * Cancels the user's bet on a match before kickoff: refunds the full stake
+ * back to their chips, deletes the match_bet row, and writes a ledger entry
+ * (reason `match_bet_refund`) so the audit trail still shows the activity.
+ *
+ * Refusing if the match has kicked off / is settled / or no bet exists.
+ */
+export async function removeMatchBet(formData: FormData) {
+  const code = String(formData.get("roomCode") ?? "");
+  const { room, user } = await requireRoomUser(code);
+
+  const parsed = removeBetSchema.safeParse({
+    matchId: String(formData.get("matchId") ?? ""),
+  });
+  if (!parsed.success) throw new Error("Invalid input.");
+  const { matchId } = parsed.data;
+
+  await db.transaction(async (tx) => {
+    const [match] = await tx
+      .select()
+      .from(matches)
+      .where(eq(matches.id, matchId))
+      .limit(1);
+    if (!match) throw new Error("Match not found.");
+    if (new Date(match.kickoff).getTime() <= Date.now()) {
+      throw new Error("Too late — kickoff has already happened.");
+    }
+    if (match.status !== "scheduled") {
+      throw new Error("This match is no longer open for changes.");
+    }
+
+    const [existing] = await tx
+      .select()
+      .from(matchBets)
+      .where(
+        and(
+          eq(matchBets.roomId, room.id),
+          eq(matchBets.userId, user.id),
+          eq(matchBets.matchId, matchId)
+        )
+      )
+      .limit(1);
+    if (!existing) throw new Error("No bet to remove.");
+    if (existing.status !== "open") {
+      throw new Error("This bet is already resolved.");
+    }
+
+    const refund = existing.totalStake;
+    const [updated] = await tx
+      .update(users)
+      .set({ chips: sql`${users.chips} + ${refund}` })
+      .where(eq(users.id, user.id))
+      .returning({ chips: users.chips });
+
+    await tx.delete(matchBets).where(eq(matchBets.id, existing.id));
+
+    await recordLedger(tx, {
+      roomId: room.id,
+      userId: user.id,
+      delta: refund,
+      balanceAfter: updated.chips,
+      reason: "match_bet_refund",
+      refMatchId: matchId,
+      note: `Removed bet — refund of ${refund} chips`,
+    });
+  });
+
+  revalidatePath(`/r/${room.code}/match/${matchId}`);
+  revalidatePath(`/r/${room.code}/dashboard`);
+}
+
 export async function updateMatchBet(formData: FormData) {
   const code = String(formData.get("roomCode") ?? "");
   const { room, user } = await requireRoomUser(code);

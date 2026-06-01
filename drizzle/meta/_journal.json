@@ -57,6 +57,13 @@
       "when": 1780297050871,
       "tag": "0007_cuddly_psynapse",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780297672913,
+      "tag": "0008_mighty_blur",
+      "breakpoints": true
     }
   ]
 }

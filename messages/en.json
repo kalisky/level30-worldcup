@@ -166,6 +166,9 @@
     "update": "Update prediction",
     "updatePending": "Updating…",
     "edit": "Edit prediction",
+    "remove": "Remove bet",
+    "removePending": "Removing…",
+    "removeFailed": "Failed to remove bet.",
     "ifDirectionRight": "If direction is right",
     "ifExactScoreToo": "If exact score too",
     "exact": "Exact",
@@ -256,6 +259,7 @@
       "daily_grant": "Daily grant",
       "match_bet_placed": "Match bet placed",
       "match_bet_payout": "Match payout",
+      "match_bet_refund": "Match bet removed (refund)",
       "custom_wager_placed": "Custom wager placed",
       "custom_wager_payout": "Custom wager payout",
       "custom_wager_refund": "Wager refund (void)"

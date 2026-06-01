@@ -1,0 +1,1 @@
+ALTER TYPE "public"."ledger_reason" ADD VALUE 'match_bet_refund' BEFORE 'custom_wager_placed';

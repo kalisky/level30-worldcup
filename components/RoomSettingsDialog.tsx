@@ -144,7 +144,7 @@ export default function RoomSettingsDialog({
         </div>
 
         {emphasizeInvite && (
-          <div className="mt-4 rounded-[24px] border border-[#FED7AA] bg-[#FFF7ED] px-4 py-4 text-[#C2410C]">
+          <div className="mt-4 rounded-[24px] border border-green-200 bg-green-100 px-4 py-4 text-green-800">
             <p className="text-[0.68rem] font-bold uppercase tracking-[0.22em]">
               {t("roomCreated")}
             </p>

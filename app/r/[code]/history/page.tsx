@@ -9,6 +9,7 @@ import { translateTeam } from "@/lib/team-i18n";
 import RoomHeader from "@/components/RoomHeader";
 import RoomBreadcrumb from "@/components/RoomBreadcrumb";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
+import LocalDateTime from "@/components/LocalDateTime";
 
 const REASON_ICONS: Record<string, string> = {
   opening_balance: "📜",
@@ -21,15 +22,6 @@ const REASON_ICONS: Record<string, string> = {
   custom_wager_refund: "↩️",
 };
 
-function formatTime(d: Date, locale: string) {
-  return d.toLocaleString(locale, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
 type RelativeStrings = {
   justNow: string;
   minutesAgo: (n: number) => string;
@@ -37,7 +29,12 @@ type RelativeStrings = {
   daysAgo: (n: number) => string;
 };
 
-function relativeTime(d: Date, locale: string, s: RelativeStrings) {
+/**
+ * Returns either a localized relative-time string (e.g., "3h ago") or a
+ * <LocalDateTime> element for older entries — the latter formats on the
+ * client to use the viewer's timezone instead of the server's.
+ */
+function relativeOrAbsolute(d: Date, s: RelativeStrings) {
   const diff = Date.now() - d.getTime();
   const m = Math.floor(diff / 60_000);
   if (m < 1) return s.justNow;
@@ -46,7 +43,7 @@ function relativeTime(d: Date, locale: string, s: RelativeStrings) {
   if (h < 24) return s.hoursAgo(h);
   const days = Math.floor(h / 24);
   if (days < 7) return s.daysAgo(days);
-  return formatTime(d, locale);
+  return <LocalDateTime value={d} preset="lockShort" />;
 }
 
 export default async function HistoryPage(props: {
@@ -192,8 +189,8 @@ export default async function HistoryPage(props: {
                       </p>
                     )}
                     <div className="mt-1 flex items-baseline justify-between gap-2 text-xs text-slate-500">
-                      <span title={ts.toLocaleString(locale)}>
-                        {relativeTime(ts, locale, relativeStrings)}
+                      <span>
+                        {relativeOrAbsolute(ts, relativeStrings)}
                       </span>
                       <span>
                         {t("balance")}{" "}

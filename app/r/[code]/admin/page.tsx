@@ -10,6 +10,7 @@ import RoomBreadcrumb from "@/components/RoomBreadcrumb";
 import SettleMatchForm from "@/components/SettleMatchForm";
 import SettleCustomBet from "@/components/SettleCustomBet";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
+import LocalDateTime from "@/components/LocalDateTime";
 
 export default async function AdminPage(props: {
   params: Promise<{ code: string }>;
@@ -158,7 +159,7 @@ export default async function AdminPage(props: {
                     </span>
                     <span className="text-xs text-zinc-500">
                       {t("by")} {actorName} ·{" "}
-                      {new Date(settlement.createdAt).toLocaleString(locale)}
+                      <LocalDateTime value={settlement.createdAt} preset="datetime" />
                     </span>
                   </div>
                   <pre className="mt-1 overflow-x-auto text-xs text-zinc-500">

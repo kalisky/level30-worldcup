@@ -42,6 +42,7 @@
       "You get 100 fresh chips each day when you come back.",
       "Before kickoff, you can place one prediction per match.",
       "A match prediction is one exact score, like 2-1 or 1-1.",
+      "Match odds are sourced from Polymarket.",
       "Each match bet has two independent parts: a side pick (home, draw, or away) and an exact score pick.",
       "You choose how many chips to stake on each part. Either stake can be 0, but the total must be at least 2 chips.",
       "If your side pick is right, that side stake pays at the locked side odds. If your exact score is right, that score stake pays at the locked score odds.",

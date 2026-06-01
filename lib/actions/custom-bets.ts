@@ -17,6 +17,7 @@ import {
   generateOpenAnswerOdds,
 } from "@/lib/ai/odds";
 import { recordLedger } from "@/lib/ledger";
+import { touchRoomLiveRevision } from "@/lib/live-updates";
 
 const baseProposeSchema = z.object({
   matchId: z.string().uuid().optional(),
@@ -188,6 +189,8 @@ export async function proposeCustomBet(formData: FormData) {
     })
     .returning();
 
+  await touchRoomLiveRevision(db, room.id);
+
   if (matchId) revalidatePath(`/r/${room.code}/match/${matchId}`);
   revalidatePath(`/r/${room.code}/dashboard`);
   revalidatePath(`/r/${room.code}/admin`);
@@ -273,6 +276,8 @@ export async function placeCustomWager(formData: FormData) {
       refCustomBetId: customBetId,
       note: `Wagered ${stake} on "${bet.options[optionIdx].label}" — ${bet.title}`,
     });
+
+    await touchRoomLiveRevision(tx, room.id);
   });
 
   if (formData.get("matchId")) {
@@ -374,6 +379,8 @@ export async function updateCustomWager(formData: FormData) {
         note: `Updated wager to ${stake} on "${bet.options[optionIdx].label}" — ${bet.title}`,
       });
     }
+
+    await touchRoomLiveRevision(tx, room.id);
   });
 
   if (formData.get("matchId")) {
@@ -443,6 +450,8 @@ export async function removeCustomWager(formData: FormData) {
       refCustomBetId: customBetId,
       note: `Removed wager on "${optLabel}" — ${bet.title}`,
     });
+
+    await touchRoomLiveRevision(tx, room.id);
   });
 
   if (formData.get("matchId")) {
@@ -637,6 +646,8 @@ export async function placeOpenWager(formData: FormData) {
       refCustomBetId: customBetId,
       note: `Wagered ${stake} on "${chosen.label}" — ${bet.title}`,
     });
+
+    await touchRoomLiveRevision(tx, room.id);
   });
 
   if (formData.get("matchId")) {
@@ -773,6 +784,8 @@ export async function updateOpenWager(formData: FormData) {
         note: `Updated wager to ${stake} on "${chosen.label}" — ${bet.title}`,
       });
     }
+
+    await touchRoomLiveRevision(tx, room.id);
   });
 
   if (formData.get("matchId")) {

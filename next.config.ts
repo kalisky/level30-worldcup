@@ -3,16 +3,6 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
-const nextConfig: NextConfig = {
-  images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "flagcdn.com",
-        pathname: "/**",
-      },
-    ],
-  },
-};
+const nextConfig: NextConfig = {};
 
 export default withNextIntl(nextConfig);

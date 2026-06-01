@@ -14,6 +14,7 @@ import {
   getTournamentStart,
   seedDefaultCustomBets,
 } from "@/lib/default-custom-bets";
+import { touchRoomLiveRevision } from "@/lib/live-updates";
 import { getCustomBetTargetPath } from "@/lib/share-links";
 
 const createRoomSchema = z.object({
@@ -95,6 +96,8 @@ export async function createRoom(formData: FormData) {
       locksAt,
     });
 
+    await touchRoomLiveRevision(tx, room.id);
+
     return room;
   });
 
@@ -151,6 +154,8 @@ export async function joinRoom(formData: FormData) {
       reason: "initial",
       note: `Opening chips for ${room.name}`,
     });
+
+    await touchRoomLiveRevision(db, room.id);
   }
 
   await db
@@ -222,6 +227,8 @@ export async function updateRoomSettings(formData: FormData) {
       maxMembers: parsed.data.maxMembers,
     })
     .where(eq(rooms.id, room.id));
+
+  await touchRoomLiveRevision(db, room.id);
 
   revalidatePath(`/r/${room.code}`);
   revalidatePath(`/r/${room.code}/dashboard`);

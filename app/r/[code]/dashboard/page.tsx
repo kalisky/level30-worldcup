@@ -20,6 +20,8 @@ import ProposeBetModal from "@/components/ProposeBetModal";
 import MatchScreenLayout from "@/components/MatchScreenLayout";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
 import CopyBetsLauncher from "@/components/CopyBetsLauncher";
+import { createDashboardTrace } from "@/lib/dashboard-trace";
+import { getDashboardLiveToken } from "@/lib/live-updates";
 
 export async function generateMetadata(props: {
   params: Promise<{ code: string }>;
@@ -45,45 +47,160 @@ export default async function DashboardPage(props: {
 }) {
   const { code } = await props.params;
   const searchParams = await props.searchParams;
-  const { room, user, dailyGrantApplied } = await requireRoomUser(code);
-  const t = await getTranslations("dashboard");
   const targetCustomBetId = Array.isArray(searchParams.bet)
     ? searchParams.bet[0]
     : searchParams.bet;
   const roomWasCreated = Array.isArray(searchParams.created)
     ? searchParams.created[0] === "1"
     : searchParams.created === "1";
+  const trace = createDashboardTrace(`/r/${code}/dashboard`, {
+    hasTargetCustomBet: Boolean(targetCustomBetId),
+    roomWasCreated,
+  });
 
-  const [members, upcoming, customBets, myBets, allRoomMemberships] = await Promise.all([
-    getRoomUsers(room.id),
-    listUpcomingMatches(100),
-    listOpenCustomBets(room.id, 100),
-    getMyMatchBets(room.id, user.id),
-    user.authUserId ? listRoomsForAuthUser(user.authUserId) : Promise.resolve([]),
-  ]);
+  const dashboardData = await (async () => {
+    try {
+      const { room, user, dailyGrantApplied } = await trace.step(
+        "requireRoomUser",
+        () => requireRoomUser(code, { trace }),
+        (value) => ({
+          roomId: value.room.id,
+          userId: value.user.id,
+          dailyGrantApplied: value.dailyGrantApplied,
+        })
+      );
+      const t = await trace.step("getTranslations", () => getTranslations("dashboard"));
 
-  const otherRooms = allRoomMemberships
-    .filter((r) => r.room.id !== room.id)
-    .map((r) => ({ code: r.room.code, name: r.room.name }));
+      const [members, upcoming, customBets, myBets, allRoomMemberships] =
+        await Promise.all([
+          trace.step("getRoomUsers", () => getRoomUsers(room.id), (rows) => ({
+            memberCount: rows.length,
+          })),
+          trace.step("listUpcomingMatches", () => listUpcomingMatches(100), (rows) => ({
+            upcomingMatchCount: rows.length,
+          })),
+          trace.step(
+            "listOpenCustomBets",
+            () => listOpenCustomBets(room.id, 100),
+            (rows) => ({
+              customBetCount: rows.length,
+            })
+          ),
+          trace.step("getMyMatchBets", () => getMyMatchBets(room.id, user.id), (rows) => ({
+            myBetCount: rows.length,
+          })),
+          trace.step(
+            "listRoomsForAuthUser",
+            () =>
+              user.authUserId ? listRoomsForAuthUser(user.authUserId) : Promise.resolve([]),
+            (rows) => ({
+              membershipCount: rows.length,
+              hasAuthUserId: Boolean(user.authUserId),
+            })
+          ),
+        ]);
 
-  const customBetDetails = await Promise.all(
-    customBets.map(async (row) => {
-      const [myWager, allWagers] = await Promise.all([
-        getMyWagerOnCustomBet(row.bet.id, user.id),
-        getCustomWagersFor(row.bet.id),
-      ]);
+      const otherRooms = allRoomMemberships
+        .filter((r) => r.room.id !== room.id)
+        .map((r) => ({ code: r.room.code, name: r.room.name }));
+
+      const customBetDetailTimings: Array<{
+        betId: string;
+        durationMs: number;
+        wagerCount: number;
+        hasMyWager: boolean;
+      }> = [];
+      const customBetDetails = await trace.step(
+        "hydrateCustomBetDetails",
+        async () =>
+          Promise.all(
+            customBets.map(async (row) => {
+              const startedAt = Date.now();
+              const [myWager, allWagers] = await Promise.all([
+                getMyWagerOnCustomBet(row.bet.id, user.id),
+                getCustomWagersFor(row.bet.id),
+              ]);
+
+              customBetDetailTimings.push({
+                betId: row.bet.id,
+                durationMs: Date.now() - startedAt,
+                wagerCount: allWagers.length,
+                hasMyWager: Boolean(myWager),
+              });
+
+              return {
+                ...row,
+                myWager,
+                allWagers,
+              };
+            })
+          ),
+        () => ({
+          customBetCount: customBets.length,
+          totalCustomWagers: customBetDetailTimings.reduce(
+            (total, entry) => total + entry.wagerCount,
+            0
+          ),
+          slowestCustomBets: [...customBetDetailTimings]
+            .sort((left, right) => right.durationMs - left.durationMs)
+            .slice(0, 3),
+        })
+      );
+
+      const myPredictionByMatch = new Map(
+        myBets.map(
+          (b) =>
+            [b.matchId, { home: b.predictedHomeScore, away: b.predictedAwayScore }] as const
+        )
+      );
+
+      const liveToken = await trace.step("getDashboardLiveToken", () =>
+        getDashboardLiveToken({
+          roomId: room.id,
+          startingChips: room.startingChips,
+          lastDailyGrantAt: user.lastDailyGrantAt,
+        })
+      );
+
+      trace.end({
+        memberCount: members.length,
+        upcomingMatchCount: upcoming.length,
+        customBetCount: customBets.length,
+        otherRoomCount: otherRooms.length,
+      });
 
       return {
-        ...row,
-        myWager,
-        allWagers,
+        room,
+        user,
+        dailyGrantApplied,
+        t,
+        members,
+        upcoming,
+        customBets,
+        customBetDetails,
+        otherRooms,
+        myPredictionByMatch,
+        liveToken,
       };
-    })
-  );
+    } catch (error) {
+      trace.fail(error);
+      throw error;
+    }
+  })();
 
-  const myPredictionByMatch = new Map(
-    myBets.map((b) => [b.matchId, { home: b.predictedHomeScore, away: b.predictedAwayScore }] as const)
-  );
+  const {
+    room,
+    user,
+    dailyGrantApplied,
+    t,
+    members,
+    upcoming,
+    customBets,
+    customBetDetails,
+    otherRooms,
+    myPredictionByMatch,
+    liveToken,
+  } = dashboardData;
 
   const dashboardPane = (
     <>
@@ -180,7 +297,11 @@ export default async function DashboardPage(props: {
         initialRoomModalOpen={roomWasCreated}
       />
       <DailyGrantBanner amount={dailyGrantApplied} />
-      <AutoRefresh />
+      <AutoRefresh
+        traceLabel="dashboard"
+        liveToken={liveToken}
+        pollUrl={`/api/live/room/${encodeURIComponent(room.code)}/dashboard`}
+      />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
         <MatchScreenLayout
           matchPane={dashboardPane}

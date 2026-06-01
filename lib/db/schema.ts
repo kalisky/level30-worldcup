@@ -417,6 +417,13 @@ export const chipLedger = pgTable(
   ]
 );
 
+export const liveRevisions = pgTable("live_revisions", {
+  scope: text("scope").primaryKey(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export type Room = typeof rooms.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type AuthUser = typeof authUsers.$inferSelect;
@@ -429,6 +436,7 @@ export type Settlement = typeof settlements.$inferSelect;
 export type ChipLedger = typeof chipLedger.$inferSelect;
 export type OddsSyncRun = typeof oddsSyncRuns.$inferSelect;
 export type MatchOddsSnapshot = typeof matchOddsSnapshots.$inferSelect;
+export type LiveRevision = typeof liveRevisions.$inferSelect;
 
 export function scoreKey(home: number, away: number): string {
   return `${home}-${away}`;

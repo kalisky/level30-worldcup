@@ -1,18 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useLocale } from "next-intl";
 
 /**
- * Formats a timestamp in the *user's* timezone and active app locale.
+ * Formats a timestamp in the user's timezone and active app locale.
  *
  * Why a dedicated component: server components render with the server's
- * timezone (UTC on Vercel), so a plain `date.toLocaleString()` in a server
- * page or RSC component shows UTC times. By bouncing the format through a
- * client component we use the browser's timezone. We render the same value
- * on first paint via a lazy `useState` initializer (which on the server
- * computes UTC, on the client computes local) and suppress the resulting
- * hydration warning since the visible mismatch is intentional.
+ * timezone (UTC in production), so a plain `date.toLocaleString()` in an
+ * RSC component shows the server's clock. We intentionally wait until the
+ * client mounts, then format via the browser so the visible value always
+ * reflects the viewer's local timezone.
  */
 
 export type LocalDateTimePreset =
@@ -76,6 +74,16 @@ function formatDate(
   return d.toLocaleString(tagFor(locale), options);
 }
 
+function toDateTimeValue(value: Date | string | number): string | undefined {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return undefined;
+  return d.toISOString();
+}
+
+function subscribeToHydration() {
+  return () => {};
+}
+
 export default function LocalDateTime({
   value,
   preset = "datetime",
@@ -87,19 +95,21 @@ export default function LocalDateTime({
 }) {
   const locale = useLocale();
   const options = PRESETS[preset];
-  const [text, setText] = useState(() => formatDate(value, locale, options));
+  const text = useSyncExternalStore(
+    subscribeToHydration,
+    () => formatDate(value, locale, options),
+    () => ""
+  );
 
-  useEffect(() => {
-    setText(formatDate(value, locale, options));
-    // We intentionally re-run when the underlying instant or locale changes.
-    // `options` is a stable lookup keyed by `preset`, so we depend on the
-    // preset name instead of the object identity.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [String(value), locale, preset]);
+  const dateTime = toDateTimeValue(value);
 
   return (
-    <span className={className} suppressHydrationWarning>
-      {text}
-    </span>
+    <time
+      dateTime={dateTime}
+      className={className}
+      style={text ? undefined : { visibility: "hidden" }}
+    >
+      {text || "\u00a0"}
+    </time>
   );
 }

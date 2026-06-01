@@ -12,6 +12,7 @@ import {
 } from "@/lib/db/schema";
 import { requireRoomUser } from "@/lib/auth-context";
 import { recordLedger } from "@/lib/ledger";
+import { touchRoomLiveRevision } from "@/lib/live-updates";
 
 // Direction pick and score prediction are now independent inputs from the
 // UI — a user can bet HOME on the side but predict 2-1 South Africa for the
@@ -141,6 +142,8 @@ export async function placeMatchBet(formData: FormData) {
       refMatchId: matchId,
       note: `Side: ${directionPick} (${directionStake}) · Score: ${match.homeTeam} ${predictedHomeScore}–${predictedAwayScore} ${match.awayTeam} (${scoreStake})`,
     });
+
+    await touchRoomLiveRevision(tx, room.id);
   });
 
   revalidatePath(`/r/${room.code}/match/${matchId}`);
@@ -216,6 +219,8 @@ export async function removeMatchBet(formData: FormData) {
       refMatchId: matchId,
       note: `Removed bet — refund of ${refund} chips`,
     });
+
+    await touchRoomLiveRevision(tx, room.id);
   });
 
   revalidatePath(`/r/${room.code}/match/${matchId}`);
@@ -342,6 +347,8 @@ export async function updateMatchBet(formData: FormData) {
         note: `Updated bet — Side: ${directionPick} (${directionStake}) · Score: ${match.homeTeam} ${predictedHomeScore}–${predictedAwayScore} ${match.awayTeam} (${scoreStake})`,
       });
     }
+
+    await touchRoomLiveRevision(tx, room.id);
   });
 
   revalidatePath(`/r/${room.code}/match/${matchId}`);

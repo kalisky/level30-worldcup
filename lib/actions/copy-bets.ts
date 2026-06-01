@@ -8,6 +8,7 @@ import { matchBets, matches, rooms, users } from "@/lib/db/schema";
 import { requireRoomUser } from "@/lib/auth-context";
 import { normalizeRoomCode } from "@/lib/code";
 import { recordLedger } from "@/lib/ledger";
+import { touchRoomLiveRevision } from "@/lib/live-updates";
 
 /**
  * Result for a single source bet considered for copying. `status` says what
@@ -322,6 +323,10 @@ export async function copyMatchBets(formData: FormData): Promise<CopyBetsResult>
       else if (msg === "already_bet") result.skippedAlreadyBet++;
       else result.skippedNoOdds++; // fallback bucket
     }
+  }
+
+  if (result.copied > 0) {
+    await touchRoomLiveRevision(db, targetRoom.id);
   }
 
   revalidatePath(`/r/${targetRoom.code}/dashboard`);

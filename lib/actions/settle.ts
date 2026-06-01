@@ -15,6 +15,10 @@ import {
 } from "@/lib/db/schema";
 import { requireRoomUser } from "@/lib/auth-context";
 import { recordLedger } from "@/lib/ledger";
+import {
+  touchMatchLiveRevisions,
+  touchRoomLiveRevision,
+} from "@/lib/live-updates";
 import { revalidateOddsSyncPaths } from "@/lib/odds-sync/revalidate";
 import { syncMatchOdds } from "@/lib/odds-sync/service";
 import {
@@ -136,6 +140,9 @@ export async function settleMatch(formData: FormData) {
         totalPaidOut,
       },
     });
+
+    await touchRoomLiveRevision(tx, room.id);
+    await touchMatchLiveRevisions(tx, matchId);
   });
 
   revalidatePath(`/r/${room.code}/match/${matchId}`);
@@ -235,6 +242,8 @@ export async function settleCustomBet(formData: FormData) {
         wagersSettled: openWagers.length,
       },
     });
+
+    await touchRoomLiveRevision(tx, room.id);
   });
 
   if (formData.get("matchId")) {
@@ -302,6 +311,8 @@ export async function voidCustomBet(formData: FormData) {
       targetId: customBetId,
       payload: { refundedWagers: openWagers.length },
     });
+
+    await touchRoomLiveRevision(tx, room.id);
   });
 
   revalidatePath(`/r/${room.code}/admin`);
@@ -342,6 +353,8 @@ export async function renameMatchTeams(formData: FormData) {
       oddsLastSyncError: null,
     })
     .where(eq(matches.id, matchId));
+
+  await touchMatchLiveRevisions(db, matchId);
 
   revalidatePath(`/r/${code}/admin`);
   revalidatePath(`/r/${code}/match/${matchId}`);

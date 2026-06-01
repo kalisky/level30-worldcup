@@ -23,6 +23,7 @@ import { getTeamAbbreviation } from "@/lib/team-flags";
 import { translateTeam } from "@/lib/team-i18n";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
 import LocalDateTime from "@/components/LocalDateTime";
+import { getMatchLiveToken } from "@/lib/live-updates";
 
 export async function generateMetadata(props: {
   params: Promise<{ code: string; id: string }>;
@@ -82,6 +83,12 @@ export default async function MatchPage(props: {
   const awayTeamAbbreviation = getTeamAbbreviation(match.awayTeam);
   const homeTeamLocalized = translateTeam(match.homeTeam, locale);
   const awayTeamLocalized = translateTeam(match.awayTeam, locale);
+  const liveToken = await getMatchLiveToken({
+    roomId: room.id,
+    matchId: match.id,
+    startingChips: room.startingChips,
+    lastDailyGrantAt: user.lastDailyGrantAt,
+  });
 
   const matchPane = (
     <>
@@ -242,7 +249,11 @@ export default async function MatchPage(props: {
     <>
       <RoomHeader room={room} user={user} />
       <DailyGrantBanner amount={dailyGrantApplied} />
-      <AutoRefresh />
+      <AutoRefresh
+        traceLabel="match"
+        liveToken={liveToken}
+        pollUrl={`/api/live/room/${encodeURIComponent(room.code)}/match/${encodeURIComponent(match.id)}`}
+      />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
         <RoomBreadcrumb
           roomCode={room.code}

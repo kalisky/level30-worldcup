@@ -182,6 +182,28 @@ export function getTeamFlagCode(teamName: string): string | null {
   return TEAM_FLAG_CODES[normalized] ?? null;
 }
 
+function getFlagEmojiFromCode(code: string): string | null {
+  if (!/^[a-z]{2}$/i.test(code)) {
+    return null;
+  }
+
+  const codePoints = code
+    .toUpperCase()
+    .split("")
+    .map((letter) => 0x1f1e6 + letter.charCodeAt(0) - 65);
+
+  return String.fromCodePoint(...codePoints);
+}
+
+export function getTeamFlagEmoji(teamName: string): string | null {
+  const flagCode = getTeamFlagCode(teamName);
+  if (!flagCode) {
+    return null;
+  }
+
+  return getFlagEmojiFromCode(flagCode);
+}
+
 export function getTeamAbbreviation(teamName: string): string {
   const placeholder = teamName.match(/group\s+([a-z])\s*-\s*pos\s*(\d+)/i);
   if (placeholder) {

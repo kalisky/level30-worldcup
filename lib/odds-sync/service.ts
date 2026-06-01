@@ -17,6 +17,7 @@ import {
   fetchPolymarketWorldCupFixtureIndex,
   fetchPolymarketWorldCupMatchMarkets,
 } from "@/lib/polymarket/api";
+import { touchMatchLiveRevisions } from "@/lib/live-updates";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -226,6 +227,7 @@ export async function syncMatchOdds(
             oddsLastSyncError: message,
           })
           .where(eq(matches.id, match.id));
+        await touchMatchLiveRevisions(db, match.id);
         continue;
       }
 
@@ -253,6 +255,7 @@ export async function syncMatchOdds(
             oddsLastSyncError: message,
           })
           .where(eq(matches.id, match.id));
+        await touchMatchLiveRevisions(db, match.id);
         continue;
       }
 
@@ -342,6 +345,8 @@ export async function syncMatchOdds(
               },
             },
           ]);
+
+          await touchMatchLiveRevisions(tx, match.id);
         });
 
         syncedMatchIds.push(match.id);
@@ -372,6 +377,7 @@ export async function syncMatchOdds(
             oddsLastSyncError: message,
           })
           .where(eq(matches.id, match.id));
+        await touchMatchLiveRevisions(db, match.id);
       }
     }
 

@@ -27,7 +27,10 @@ import { getMatchLiveToken } from "@/lib/live-updates";
 
 export async function generateMetadata(props: {
   params: Promise<{ code: string; id: string }>;
-  searchParams: Promise<{ bet?: string | string[] | undefined }>;
+  searchParams: Promise<{
+    bet?: string | string[] | undefined;
+    from?: string | string[] | undefined;
+  }>;
 }): Promise<Metadata> {
   const { code, id } = await props.params;
   const searchParams = await props.searchParams;
@@ -42,7 +45,10 @@ export async function generateMetadata(props: {
 
 export default async function MatchPage(props: {
   params: Promise<{ code: string; id: string }>;
-  searchParams: Promise<{ bet?: string | string[] | undefined }>;
+  searchParams: Promise<{
+    bet?: string | string[] | undefined;
+    from?: string | string[] | undefined;
+  }>;
 }) {
   const { code, id } = await props.params;
   const searchParams = await props.searchParams;
@@ -50,6 +56,9 @@ export default async function MatchPage(props: {
   const targetCustomBetId = Array.isArray(searchParams.bet)
     ? searchParams.bet[0]
     : searchParams.bet;
+  const preferDashboardBack = Array.isArray(searchParams.from)
+    ? searchParams.from[0] === "dashboard"
+    : searchParams.from === "dashboard";
 
   const match = await getMatch(id);
   if (!match) notFound();
@@ -259,6 +268,7 @@ export default async function MatchPage(props: {
           roomCode={room.code}
           dashboardLabel={tnav("dashboard")}
           currentLabel={`${homeTeamLocalized} ${tm("vs")} ${awayTeamLocalized}`}
+          preferBack={preferDashboardBack}
         />
         <MatchScreenLayout
           matchPane={matchPane}

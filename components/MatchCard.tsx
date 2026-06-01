@@ -33,10 +33,11 @@ export default function MatchCard({
     : isFinal
       ? "bg-slate-200 text-slate-700"
       : "bg-[#E0EEFF] text-[#1D4ED8]";
+  const matchHref = `/r/${roomCode}/match/${match.id}?from=dashboard`;
 
   return (
     <Link
-      href={`/r/${roomCode}/match/${match.id}`}
+      href={matchHref}
       className="group block rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.08)] transition hover:-translate-y-0.5 hover:border-[#c4d6ec] hover:shadow-[0_24px_50px_rgba(30,58,138,0.14)]"
     >
       <div className="flex items-center justify-between gap-3 text-[0.7rem] uppercase tracking-[0.24em] text-slate-500">

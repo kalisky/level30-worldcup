@@ -1,21 +1,42 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { MouseEvent } from "react";
 
 export default function RoomBreadcrumb({
   roomCode,
   dashboardLabel,
   currentLabel,
+  preferBack,
 }: {
   roomCode: string;
   dashboardLabel: string;
   currentLabel: string;
+  preferBack?: boolean;
 }) {
+  const router = useRouter();
+  const dashboardHref = `/r/${roomCode}/dashboard`;
+
+  function handleDashboardClick(event: MouseEvent<HTMLAnchorElement>) {
+    if (!preferBack) return;
+    if (event.defaultPrevented) return;
+    if (event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (typeof window === "undefined" || window.history.length <= 1) return;
+
+    event.preventDefault();
+    router.back();
+  }
+
   return (
     <nav
       aria-label="Breadcrumb"
       className="mb-4 flex items-center gap-2 overflow-x-auto text-sm px-1"
     >
       <Link
-        href={`/r/${roomCode}/dashboard`}
+        href={dashboardHref}
+        onClick={handleDashboardClick}
         className="group inline-flex shrink-0 items-center gap-1 font-semibold text-[#1E3A8A] transition-colors hover:text-blue-700"
       >
         <svg 

@@ -274,7 +274,9 @@ export default async function DashboardPage(props: {
                     : "Room-wide bet"
                 }
                 contextHref={
-                  bet.matchId ? `/r/${room.code}/match/${bet.matchId}` : null
+                  bet.matchId
+                    ? `/r/${room.code}/match/${bet.matchId}?from=dashboard`
+                    : null
                 }
                 highlighted={targetCustomBetId === bet.id}
                 myWager={myWager}

@@ -21,7 +21,7 @@ const TEAM_FLAG_CODES: Record<string, string> = {
   denmark: "dk",
   ecuador: "ec",
   egypt: "eg",
-  england: "gb",
+  england: "gb-eng",
   "el salvador": "sv",
   france: "fr",
   germany: "de",
@@ -60,7 +60,7 @@ const TEAM_FLAG_CODES: Record<string, string> = {
   qatar: "qa",
   romania: "ro",
   "saudi arabia": "sa",
-  scotland: "gb",
+  scotland: "gb-sct",
   senegal: "sn",
   serbia: "rs",
   slovakia: "sk",
@@ -80,7 +80,7 @@ const TEAM_FLAG_CODES: Record<string, string> = {
   uzbekistan: "uz",
   venezuela: "ve",
   "united arab emirates": "ae",
-  wales: "gb",
+  wales: "gb-wls",
 };
 
 const TEAM_ABBREVIATIONS: Record<string, string> = {

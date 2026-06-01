@@ -25,6 +25,9 @@ const baseProposeSchema = z.object({
   locksAtIso: z.string().trim().min(1),
 });
 
+const MAX_CUSTOM_BETS_PER_USER_PER_DAY = 10;
+const MAX_CUSTOM_BETS_PER_ROOM_PER_DAY = 100;
+
 const fixedProposeSchema = baseProposeSchema.extend({
   kind: z.literal("fixed_options"),
   optionLabels: z.array(z.string().trim().min(1).max(50)).min(2).max(5),
@@ -117,6 +120,40 @@ export async function proposeCustomBet(formData: FormData) {
   if (Number.isNaN(locksAt.getTime())) throw new Error("Invalid lock time.");
   if (locksAt.getTime() <= Date.now()) {
     throw new Error("Lock time must be in the future.");
+  }
+
+  // Quotas — exclude seeded defaults (defaultKey set) so they don't burn the
+  // creator's first two slots when a room is opened.
+  const [userQuota] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(customBets)
+    .where(
+      and(
+        eq(customBets.proposerId, user.id),
+        sql`${customBets.defaultKey} IS NULL`,
+        sql`${customBets.createdAt} > now() - interval '24 hours'`
+      )
+    );
+  if ((userQuota?.n ?? 0) >= MAX_CUSTOM_BETS_PER_USER_PER_DAY) {
+    throw new Error(
+      `You've reached your daily limit of ${MAX_CUSTOM_BETS_PER_USER_PER_DAY} custom bets. Try again tomorrow.`
+    );
+  }
+
+  const [roomQuota] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(customBets)
+    .where(
+      and(
+        eq(customBets.roomId, room.id),
+        sql`${customBets.defaultKey} IS NULL`,
+        sql`${customBets.createdAt} > now() - interval '24 hours'`
+      )
+    );
+  if ((roomQuota?.n ?? 0) >= MAX_CUSTOM_BETS_PER_ROOM_PER_DAY) {
+    throw new Error(
+      `This room has reached its daily limit of ${MAX_CUSTOM_BETS_PER_ROOM_PER_DAY} custom bets. Try again tomorrow.`
+    );
   }
 
   const matchContext = await loadMatchContext(matchId);
@@ -244,6 +281,176 @@ export async function placeCustomWager(formData: FormData) {
   revalidatePath(`/r/${room.code}/dashboard`);
 }
 
+const updateWagerSchema = z.object({
+  customBetId: z.string().uuid(),
+  optionIdx: z.number().int().nonnegative(),
+  stake: z.number().int().positive(),
+});
+
+export async function updateCustomWager(formData: FormData) {
+  const code = String(formData.get("roomCode") ?? "");
+  const { room, user } = await requireRoomUser(code);
+
+  const parsed = updateWagerSchema.safeParse({
+    customBetId: String(formData.get("customBetId") ?? ""),
+    optionIdx: Number(formData.get("optionIdx") ?? -1),
+    stake: Number(formData.get("stake") ?? 0),
+  });
+  if (!parsed.success) {
+    throw new Error(
+      "Invalid wager: " + parsed.error.issues.map((i) => i.message).join(", ")
+    );
+  }
+  const { customBetId, optionIdx, stake } = parsed.data;
+
+  await db.transaction(async (tx) => {
+    const [bet] = await tx
+      .select()
+      .from(customBets)
+      .where(eq(customBets.id, customBetId))
+      .limit(1);
+    if (!bet) throw new Error("Custom bet not found.");
+    if (bet.roomId !== room.id) throw new Error("Not your room.");
+    if (bet.status !== "open") throw new Error("This bet is no longer open.");
+    if (bet.locksAt && new Date(bet.locksAt).getTime() <= Date.now()) {
+      throw new Error("This bet has locked.");
+    }
+    if (bet.kind !== "fixed_options") {
+      throw new Error("Use updateOpenWager for open-question bets.");
+    }
+    if (optionIdx >= bet.options.length) throw new Error("Invalid option.");
+
+    const [existing] = await tx
+      .select()
+      .from(customWagers)
+      .where(
+        and(
+          eq(customWagers.customBetId, customBetId),
+          eq(customWagers.userId, user.id)
+        )
+      )
+      .limit(1);
+    if (!existing) throw new Error("You don't have a wager on this bet.");
+    if (existing.status !== "open") {
+      throw new Error("This wager is no longer open.");
+    }
+
+    const odds = bet.options[optionIdx].odds;
+    const delta = stake - existing.stake;
+
+    let balanceAfter = user.chips;
+    if (delta !== 0) {
+      const updated = await tx
+        .update(users)
+        .set({ chips: sql`${users.chips} - ${delta}` })
+        .where(
+          and(
+            eq(users.id, user.id),
+            delta > 0 ? sql`${users.chips} >= ${delta}` : sql`true`
+          )
+        )
+        .returning({ chips: users.chips });
+      if (updated.length === 0) throw new Error("Not enough chips.");
+      balanceAfter = updated[0].chips;
+    }
+
+    await tx
+      .update(customWagers)
+      .set({
+        optionIdx,
+        stake,
+        oddsLocked: odds.toFixed(2),
+      })
+      .where(eq(customWagers.id, existing.id));
+
+    if (delta !== 0) {
+      await recordLedger(tx, {
+        roomId: room.id,
+        userId: user.id,
+        delta: -delta,
+        balanceAfter,
+        reason: "custom_wager_placed",
+        refCustomBetId: customBetId,
+        note: `Updated wager to ${stake} on "${bet.options[optionIdx].label}" — ${bet.title}`,
+      });
+    }
+  });
+
+  if (formData.get("matchId")) {
+    revalidatePath(`/r/${room.code}/match/${String(formData.get("matchId"))}`);
+  }
+  revalidatePath(`/r/${room.code}/dashboard`);
+}
+
+const removeWagerSchema = z.object({
+  customBetId: z.string().uuid(),
+});
+
+export async function removeCustomWager(formData: FormData) {
+  const code = String(formData.get("roomCode") ?? "");
+  const { room, user } = await requireRoomUser(code);
+
+  const parsed = removeWagerSchema.safeParse({
+    customBetId: String(formData.get("customBetId") ?? ""),
+  });
+  if (!parsed.success) throw new Error("Invalid wager.");
+  const { customBetId } = parsed.data;
+
+  await db.transaction(async (tx) => {
+    const [bet] = await tx
+      .select()
+      .from(customBets)
+      .where(eq(customBets.id, customBetId))
+      .limit(1);
+    if (!bet) throw new Error("Custom bet not found.");
+    if (bet.roomId !== room.id) throw new Error("Not your room.");
+    if (bet.status !== "open") throw new Error("This bet is no longer open.");
+    if (bet.locksAt && new Date(bet.locksAt).getTime() <= Date.now()) {
+      throw new Error("This bet has locked.");
+    }
+
+    const [existing] = await tx
+      .select()
+      .from(customWagers)
+      .where(
+        and(
+          eq(customWagers.customBetId, customBetId),
+          eq(customWagers.userId, user.id)
+        )
+      )
+      .limit(1);
+    if (!existing) throw new Error("You don't have a wager on this bet.");
+    if (existing.status !== "open") {
+      throw new Error("This wager is no longer open.");
+    }
+
+    const refund = existing.stake;
+    const [updated] = await tx
+      .update(users)
+      .set({ chips: sql`${users.chips} + ${refund}` })
+      .where(eq(users.id, user.id))
+      .returning({ chips: users.chips });
+
+    await tx.delete(customWagers).where(eq(customWagers.id, existing.id));
+
+    const optLabel = bet.options[existing.optionIdx]?.label ?? "?";
+    await recordLedger(tx, {
+      roomId: room.id,
+      userId: user.id,
+      delta: refund,
+      balanceAfter: updated.chips,
+      reason: "custom_wager_canceled",
+      refCustomBetId: customBetId,
+      note: `Removed wager on "${optLabel}" — ${bet.title}`,
+    });
+  });
+
+  if (formData.get("matchId")) {
+    revalidatePath(`/r/${room.code}/match/${String(formData.get("matchId"))}`);
+  }
+  revalidatePath(`/r/${room.code}/dashboard`);
+}
+
 // --- Open-question helpers ------------------------------------------------
 
 /**
@@ -350,7 +557,7 @@ export async function placeOpenWager(formData: FormData) {
     throw new Error("This bet has locked.");
   }
 
-  let optionIdx = findOptionIdxByAnswer(betPre.options, answer);
+  const optionIdx = findOptionIdxByAnswer(betPre.options, answer);
   let newOption: CustomBetOption | null = null;
   if (optionIdx < 0) {
     const matchContext = await loadMatchContext(betPre.matchId ?? undefined);
@@ -430,6 +637,142 @@ export async function placeOpenWager(formData: FormData) {
       refCustomBetId: customBetId,
       note: `Wagered ${stake} on "${chosen.label}" — ${bet.title}`,
     });
+  });
+
+  if (formData.get("matchId")) {
+    revalidatePath(`/r/${room.code}/match/${String(formData.get("matchId"))}`);
+  }
+  revalidatePath(`/r/${room.code}/dashboard`);
+}
+
+const updateOpenWagerSchema = z.object({
+  customBetId: z.string().uuid(),
+  answer: z.string().trim().min(1).max(80),
+  stake: z.number().int().positive(),
+});
+
+export async function updateOpenWager(formData: FormData) {
+  const code = String(formData.get("roomCode") ?? "");
+  const { room, user } = await requireRoomUser(code);
+
+  const parsed = updateOpenWagerSchema.safeParse({
+    customBetId: String(formData.get("customBetId") ?? ""),
+    answer: String(formData.get("answer") ?? ""),
+    stake: Number(formData.get("stake") ?? 0),
+  });
+  if (!parsed.success) {
+    throw new Error(
+      "Invalid wager: " + parsed.error.issues.map((i) => i.message).join(", ")
+    );
+  }
+  const { customBetId, answer, stake } = parsed.data;
+
+  const [betPre] = await db
+    .select()
+    .from(customBets)
+    .where(eq(customBets.id, customBetId))
+    .limit(1);
+  if (!betPre) throw new Error("Custom bet not found.");
+  if (betPre.roomId !== room.id) throw new Error("Not your room.");
+  if (betPre.kind !== "open_question") {
+    throw new Error("Use updateCustomWager for fixed-options bets.");
+  }
+  if (betPre.status !== "open") throw new Error("This bet is no longer open.");
+  if (betPre.locksAt && new Date(betPre.locksAt).getTime() <= Date.now()) {
+    throw new Error("This bet has locked.");
+  }
+
+  const idxPre = findOptionIdxByAnswer(betPre.options, answer);
+  let newOption: CustomBetOption | null = null;
+  if (idxPre < 0) {
+    const matchContext = await loadMatchContext(betPre.matchId ?? undefined);
+    const ai = await generateOpenAnswerOdds({
+      matchContext,
+      title: betPre.title,
+      description: betPre.description,
+      answer,
+      existingAnswers: betPre.options.map((o) => o.label),
+    });
+    newOption = { label: answer, probability: ai.probability, odds: ai.odds };
+  }
+
+  await db.transaction(async (tx) => {
+    const [bet] = await tx
+      .select()
+      .from(customBets)
+      .where(eq(customBets.id, customBetId))
+      .limit(1);
+    if (!bet) throw new Error("Custom bet not found.");
+    if (bet.status !== "open") throw new Error("This bet is no longer open.");
+    if (bet.locksAt && new Date(bet.locksAt).getTime() <= Date.now()) {
+      throw new Error("This bet has locked.");
+    }
+
+    let idx = findOptionIdxByAnswer(bet.options, answer);
+    let optionsToWrite = bet.options;
+    if (idx < 0) {
+      if (!newOption) throw new Error("Odds were not computed for this answer.");
+      optionsToWrite = [...bet.options, newOption];
+      idx = optionsToWrite.length - 1;
+      await tx
+        .update(customBets)
+        .set({ options: optionsToWrite })
+        .where(eq(customBets.id, customBetId));
+    }
+    const chosen = optionsToWrite[idx];
+
+    const [existing] = await tx
+      .select()
+      .from(customWagers)
+      .where(
+        and(
+          eq(customWagers.customBetId, customBetId),
+          eq(customWagers.userId, user.id)
+        )
+      )
+      .limit(1);
+    if (!existing) throw new Error("You don't have a wager on this bet.");
+    if (existing.status !== "open") {
+      throw new Error("This wager is no longer open.");
+    }
+
+    const delta = stake - existing.stake;
+    let balanceAfter = user.chips;
+    if (delta !== 0) {
+      const updated = await tx
+        .update(users)
+        .set({ chips: sql`${users.chips} - ${delta}` })
+        .where(
+          and(
+            eq(users.id, user.id),
+            delta > 0 ? sql`${users.chips} >= ${delta}` : sql`true`
+          )
+        )
+        .returning({ chips: users.chips });
+      if (updated.length === 0) throw new Error("Not enough chips.");
+      balanceAfter = updated[0].chips;
+    }
+
+    await tx
+      .update(customWagers)
+      .set({
+        optionIdx: idx,
+        stake,
+        oddsLocked: chosen.odds.toFixed(2),
+      })
+      .where(eq(customWagers.id, existing.id));
+
+    if (delta !== 0) {
+      await recordLedger(tx, {
+        roomId: room.id,
+        userId: user.id,
+        delta: -delta,
+        balanceAfter,
+        reason: "custom_wager_placed",
+        refCustomBetId: customBetId,
+        note: `Updated wager to ${stake} on "${chosen.label}" — ${bet.title}`,
+      });
+    }
   });
 
   if (formData.get("matchId")) {

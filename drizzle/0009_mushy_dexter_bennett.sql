@@ -1,0 +1,1 @@
+ALTER TYPE "public"."ledger_reason" ADD VALUE 'custom_wager_canceled';

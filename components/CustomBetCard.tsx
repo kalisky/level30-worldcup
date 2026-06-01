@@ -8,8 +8,12 @@ import {
   placeCustomWager,
   placeOpenWager,
   previewOpenAnswerOdds,
+  removeCustomWager,
+  updateCustomWager,
+  updateOpenWager,
 } from "@/lib/actions/custom-bets";
 import { getCustomBetInvitePath } from "@/lib/share-links";
+import { customBetCopy } from "@/lib/custom-bet-copy";
 import LocalDateTime from "@/components/LocalDateTime";
 
 export default function CustomBetCard({
@@ -38,14 +42,18 @@ export default function CustomBetCard({
   const [optionIdx, setOptionIdx] = useState<number | null>(null);
   const [stake, setStake] = useState<number>(25);
   const [pending, startTransition] = useTransition();
+  const [removing, startRemove] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [shareState, setShareState] = useState<"idle" | "copied" | "failed">(
     "idle"
   );
   const [now] = useState(() => Date.now());
+  const [isEditing, setIsEditing] = useState(false);
 
   const t = useTranslations("customBet");
   const tc = useTranslations("common");
+  const tDefaults = useTranslations("customBet.defaults");
+  const copy = customBetCopy(bet, tDefaults);
 
   // Open-question state
   const [answer, setAnswer] = useState("");
@@ -61,6 +69,12 @@ export default function CustomBetCard({
   const isLocked =
     bet.status !== "open" ||
     (bet.locksAt ? new Date(bet.locksAt).getTime() <= now : false);
+  // While editing, the rest of the render treats the user as not-yet-wagered
+  // so the picker / wager controls re-appear pre-filled.
+  const wagerView = isEditing ? null : myWager;
+  const canEditWager = !!myWager && !isLocked && myWager.status === "open";
+  const stakeMax =
+    isEditing && myWager ? myChips + myWager.stake : myChips;
   const sharePath = getCustomBetInvitePath({
     roomCode,
     betId: bet.id,
@@ -76,11 +90,59 @@ export default function CustomBetCard({
     fd.set("customBetId", bet.id);
     fd.set("optionIdx", String(optionIdx));
     fd.set("stake", String(stake));
+    const action = isEditing ? updateCustomWager : placeCustomWager;
     startTransition(async () => {
       try {
-        await placeCustomWager(fd);
+        await action(fd);
+        setIsEditing(false);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to wager.");
+      }
+    });
+  }
+
+  function startEdit() {
+    if (!myWager) return;
+    setOptionIdx(myWager.optionIdx);
+    setStake(myWager.stake);
+    if (isOpenQuestion) {
+      const opt = bet.options[myWager.optionIdx];
+      if (opt) {
+        setAnswer(opt.label);
+        setPreview({
+          label: opt.label,
+          odds: opt.odds,
+          reasoning: "Cached odds — your prior pick.",
+          isExisting: true,
+        });
+      }
+    }
+    setError(null);
+    setIsEditing(true);
+  }
+
+  function cancelEdit() {
+    setIsEditing(false);
+    setError(null);
+    setOptionIdx(null);
+    if (isOpenQuestion) {
+      setAnswer("");
+      setPreview(null);
+    }
+  }
+
+  function submitRemove() {
+    if (!myWager) return;
+    setError(null);
+    const fd = new FormData();
+    fd.set("roomCode", roomCode);
+    if (matchId) fd.set("matchId", matchId);
+    fd.set("customBetId", bet.id);
+    startRemove(async () => {
+      try {
+        await removeCustomWager(fd);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to remove wager.");
       }
     });
   }
@@ -127,9 +189,11 @@ export default function CustomBetCard({
     fd.set("customBetId", bet.id);
     fd.set("answer", answer.trim());
     fd.set("stake", String(stake));
+    const action = isEditing ? updateOpenWager : placeOpenWager;
     startTransition(async () => {
       try {
-        await placeOpenWager(fd);
+        await action(fd);
+        setIsEditing(false);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to wager.");
       }
@@ -181,7 +245,7 @@ export default function CustomBetCard({
         </div>
         <div className="flex items-start justify-between gap-3">
           <h3 className="min-w-0 flex-1 text-lg font-black text-[#1E3A8A]">
-            {bet.title}
+            {copy.title}
           </h3>
           <button
             type="button"
@@ -252,8 +316,8 @@ export default function CustomBetCard({
           {contextLabel}
         </Link>
       ) : null}
-      {bet.description && (
-        <p className="mt-1 text-sm leading-6 text-slate-600">{bet.description}</p>
+      {copy.description && (
+        <p className="mt-1 text-sm leading-6 text-slate-600">{copy.description}</p>
       )}
       {bet.aiReasoning && (
         <p className="mt-2 rounded-2xl bg-[#F8FBFF] px-3 py-2 text-xs italic text-slate-500 ring-1 ring-[#dbe5f2]">
@@ -276,9 +340,9 @@ export default function CustomBetCard({
                       key={i}
                       type="button"
                       onClick={() =>
-                        !myWager && !isLocked && selectExistingAnswer(o.label, o.odds)
+                        !wagerView && !isLocked && selectExistingAnswer(o.label, o.odds)
                       }
-                      disabled={!!myWager || isLocked}
+                      disabled={!!wagerView || isLocked}
                       className={
                         "rounded-[20px] border-2 px-3 py-2 text-left transition disabled:cursor-default " +
                         (isMyPick
@@ -303,7 +367,7 @@ export default function CustomBetCard({
             </p>
           )}
 
-          {!myWager && !isLocked && (
+          {!wagerView && !isLocked && (
             <div>
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("yourAnswer")}
@@ -318,7 +382,7 @@ export default function CustomBetCard({
                     setPreview(null);
                   }}
                   maxLength={80}
-                  placeholder={t("answerPlaceholder")}
+                  placeholder={copy.placeholder ?? t("answerPlaceholder")}
                   className="flex-1 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
                 />
                 <button
@@ -367,8 +431,8 @@ export default function CustomBetCard({
               <button
                 key={i}
                 type="button"
-                onClick={() => !myWager && !isLocked && setOptionIdx(i)}
-                disabled={!!myWager || isLocked}
+                onClick={() => !wagerView && !isLocked && setOptionIdx(i)}
+                disabled={!!wagerView || isLocked}
                 className={
                   "rounded-[20px] border-2 px-3 py-2 text-left transition disabled:cursor-default " +
                   (selected
@@ -386,63 +450,107 @@ export default function CustomBetCard({
         </div>
       )}
 
-      {myWager ? (
-        <p className="mt-4 rounded-2xl bg-[#FFF1E8] px-4 py-3 text-sm text-[#C2410C]">
-          {t("youWagered", { stake: myWager.stake })}{" "}
-          <span className="font-bold">{bet.options[myWager.optionIdx]?.label}</span>{" "}
-          @ {Number(myWager.oddsLocked).toFixed(2)}x.{" "}
-          <span className="text-slate-500">
-            {t("payout", { payout: Math.floor(myWager.stake * Number(myWager.oddsLocked)) })}
-          </span>
-        </p>
+      {wagerView ? (
+        <div className="mt-4 rounded-2xl bg-[#FFF1E8] px-4 py-3 text-sm text-[#C2410C]">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <p className="min-w-0 flex-1">
+              {t("youWagered", { stake: wagerView.stake })}{" "}
+              <span className="font-bold">{bet.options[wagerView.optionIdx]?.label}</span>{" "}
+              @ {Number(wagerView.oddsLocked).toFixed(2)}x.{" "}
+              <span className="text-slate-500">
+                {t("payout", { payout: Math.floor(wagerView.stake * Number(wagerView.oddsLocked)) })}
+              </span>
+            </p>
+            {canEditWager && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={startEdit}
+                  disabled={removing}
+                  className="rounded-full border border-[#FED7AA] bg-white px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[#C2410C] transition hover:bg-[#FFF7ED] disabled:opacity-50"
+                >
+                  {t("edit")}
+                </button>
+                <button
+                  type="button"
+                  onClick={submitRemove}
+                  disabled={removing}
+                  className="rounded-full border border-red-200 bg-white px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                >
+                  {removing ? t("removePending") : t("remove")}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       ) : isLocked ? (
         <p className="mt-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
           {t("locked")}
         </p>
       ) : isOpenQuestion ? (
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <input
             type="number"
             min={1}
-            max={myChips}
+            max={stakeMax}
             value={stake}
             onChange={(e) => setStake(Number(e.target.value))}
             className="w-20 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-right font-mono text-sm font-bold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
           />
           <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            / {myChips}
+            / {stakeMax}
           </span>
+          {isEditing && (
+            <button
+              type="button"
+              onClick={cancelEdit}
+              disabled={pending}
+              className="rounded-full border border-[#cdd9ea] bg-white px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+            >
+              {tc("cancel")}
+            </button>
+          )}
           <button
             type="button"
             disabled={
-              !preview || !answer.trim() || stake < 1 || stake > myChips || pending
+              !preview || !answer.trim() || stake < 1 || stake > stakeMax || pending
             }
             onClick={submitOpen}
             className="ml-auto rounded-[20px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-2 text-sm font-bold text-white shadow-[0_14px_26px_rgba(249,115,22,0.24)] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {pending ? t("wagering") : t("wager")}
+            {pending ? (isEditing ? t("updatePending") : t("wagering")) : isEditing ? t("update") : t("wager")}
           </button>
         </div>
       ) : (
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <input
             type="number"
             min={1}
-            max={myChips}
+            max={stakeMax}
             value={stake}
             onChange={(e) => setStake(Number(e.target.value))}
             className="w-20 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-right font-mono text-sm font-bold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
           />
           <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            / {myChips}
+            / {stakeMax}
           </span>
+          {isEditing && (
+            <button
+              type="button"
+              onClick={cancelEdit}
+              disabled={pending}
+              className="rounded-full border border-[#cdd9ea] bg-white px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+            >
+              {tc("cancel")}
+            </button>
+          )}
           <button
             type="button"
-            disabled={optionIdx === null || stake < 1 || stake > myChips || pending}
+            disabled={optionIdx === null || stake < 1 || stake > stakeMax || pending}
             onClick={submit}
             className="ml-auto rounded-[20px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-2 text-sm font-bold text-white shadow-[0_14px_26px_rgba(249,115,22,0.24)] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {pending ? t("wagering") : t("wager")}
+            {pending ? (isEditing ? t("updatePending") : t("wagering")) : isEditing ? t("update") : t("wager")}
           </button>
         </div>
       )}

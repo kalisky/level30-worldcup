@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { cache } from "react";
 import { and, eq } from "drizzle-orm";
+import { getTranslations } from "next-intl/server";
 import { db } from "@/lib/db";
 import { customBets, matches, rooms, users } from "@/lib/db/schema";
 import { normalizeRoomCode } from "@/lib/code";
+import { customBetCopy } from "@/lib/custom-bet-copy";
 
 const APP_NAME = "Buckeclub";
 
@@ -56,6 +58,8 @@ export const getCustomBetShareMetadata = cache(
     const [bet] = await db
       .select({
         betTitle: customBets.title,
+        betDescription: customBets.description,
+        betDefaultKey: customBets.defaultKey,
         roomName: rooms.name,
         homeTeam: matches.homeTeam,
         awayTeam: matches.awayTeam,
@@ -76,13 +80,23 @@ export const getCustomBetShareMetadata = cache(
 
     if (!bet) return null;
 
+    const tDefaults = await getTranslations("customBet.defaults");
+    const copy = customBetCopy(
+      {
+        title: bet.betTitle,
+        description: bet.betDescription ?? "",
+        defaultKey: bet.betDefaultKey,
+      },
+      tDefaults
+    );
+
     const description =
       bet.homeTeam && bet.awayTeam
-        ? `Custom bet for ${bet.homeTeam} vs ${bet.awayTeam} in ${bet.roomName}: ${bet.betTitle}.`
-        : `Custom bet in ${bet.roomName}: ${bet.betTitle}.`;
+        ? `Custom bet for ${bet.homeTeam} vs ${bet.awayTeam} in ${bet.roomName}: ${copy.title}.`
+        : `Custom bet in ${bet.roomName}: ${copy.title}.`;
 
     return buildMetadata(
-      `${bet.betTitle} | ${bet.roomName} | ${APP_NAME}`,
+      `${copy.title} | ${bet.roomName} | ${APP_NAME}`,
       description
     );
   }

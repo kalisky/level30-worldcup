@@ -25,7 +25,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "settle": "Settle",
-    "rules": "Read the rules",
+    "rules": "Rules",
     "history": "History",
     "signOut": "Sign out",
     "profile": "Profile",
@@ -219,7 +219,24 @@
     "youWagered": "You wagered {stake} chips on",
     "payout": "(payout {payout})",
     "openHint": "Players will type their own answers when they wager. AI calculates odds the first time each answer is submitted; later wagers on the same answer use the cached odds.",
-    "locked": "Locked"
+    "locked": "Locked",
+    "edit": "Edit",
+    "update": "Update wager",
+    "updatePending": "Updating…",
+    "remove": "Remove",
+    "removePending": "Removing…",
+    "defaults": {
+      "tournament_winner": {
+        "title": "Tournament winner",
+        "description": "Who will win the 2026 World Cup?",
+        "placeholder": "e.g. Argentina"
+      },
+      "top_scorer": {
+        "title": "Top scorer",
+        "description": "Who will finish as the tournament's top scorer (Golden Boot)?",
+        "placeholder": "e.g. Messi"
+      }
+    }
   },
   "admin": {
     "needsSettlement": "Needs settlement ({count})",
@@ -262,7 +279,8 @@
       "match_bet_refund": "Match bet removed (refund)",
       "custom_wager_placed": "Custom wager placed",
       "custom_wager_payout": "Custom wager payout",
-      "custom_wager_refund": "Wager refund (void)"
+      "custom_wager_refund": "Wager refund (void)",
+      "custom_wager_canceled": "Wager removed (refund)"
     }
   },
   "dailyGrant": {

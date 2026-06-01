@@ -77,7 +77,8 @@ export const ledgerReason = pgEnum("ledger_reason", [
   "match_bet_refund",      // +stake when user removes their bet before kickoff
   "custom_wager_placed",   // -stake when wagering on custom bet
   "custom_wager_payout",   // +payout when custom bet settles in your favor
-  "custom_wager_refund",   // +stake when custom bet is voided
+  "custom_wager_refund",   // +stake when the bet is voided by an admin
+  "custom_wager_canceled", // +stake when the user removes their own wager
 ]);
 
 export const authUsers = pgTable(
@@ -318,6 +319,7 @@ export const customBets = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     description: text("description").notNull().default(""),
+    defaultKey: text("default_key"),
     kind: customBetKind("kind").notNull().default("fixed_options"),
     options: jsonb("options").$type<CustomBetOption[]>().notNull(),
     aiReasoning: text("ai_reasoning").notNull().default(""),

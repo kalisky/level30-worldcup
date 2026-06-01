@@ -13,7 +13,8 @@ export type LedgerReason =
   | "match_bet_refund"
   | "custom_wager_placed"
   | "custom_wager_payout"
-  | "custom_wager_refund";
+  | "custom_wager_refund"
+  | "custom_wager_canceled";
 
 /**
  * Inserts one row into `chip_ledger`. Call this inside the same transaction

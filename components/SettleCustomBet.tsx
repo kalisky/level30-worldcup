@@ -8,6 +8,7 @@ import {
   voidCustomBet,
   suggestCustomBetWinner,
 } from "@/lib/actions/settle";
+import { customBetCopy } from "@/lib/custom-bet-copy";
 
 export default function SettleCustomBet({
   bet,
@@ -23,6 +24,8 @@ export default function SettleCustomBet({
   wagererCount: number;
 }) {
   const t = useTranslations("admin");
+  const tDefaults = useTranslations("customBet.defaults");
+  const copy = customBetCopy(bet, tDefaults);
   const hasEnoughWagerers = wagererCount >= 2;
   const wagererLabel =
     wagererCount === 1 ? t("wagerer", { count: wagererCount }) : t("wagerers", { count: wagererCount });
@@ -89,13 +92,13 @@ export default function SettleCustomBet({
   return (
     <article className="rounded-[26px] border border-[#dbe5f2] bg-white p-4 shadow-[0_14px_32px_rgba(30,58,138,0.07)]">
       <header className="flex items-baseline justify-between gap-2">
-        <h4 className="text-sm font-black text-[#1E3A8A]">{bet.title}</h4>
+        <h4 className="text-sm font-black text-[#1E3A8A]">{copy.title}</h4>
         <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
           {proposerName}
         </span>
       </header>
-      {bet.description && (
-        <p className="mt-1 text-xs leading-6 text-slate-500">{bet.description}</p>
+      {copy.description && (
+        <p className="mt-1 text-xs leading-6 text-slate-500">{copy.description}</p>
       )}
       <div
         className={

@@ -23,9 +23,9 @@
     "justNow": "כרגע"
   },
   "nav": {
-    "dashboard": "לוח בקרה",
-    "settle": "סגירה",
-    "rules": "קרא את הכללים",
+    "dashboard": "ראשי",
+    "settle": "סגירת הימור",
+    "rules": "כללים",
     "history": "היסטוריה",
     "signOut": "התנתק",
     "profile": "פרופיל",
@@ -219,7 +219,24 @@
     "youWagered": "הימרת {stake} אסימונים על",
     "payout": "(רווח {payout})",
     "openHint": "השחקנים יקלידו את התשובות שלהם בעת ההימור. ה-AI מחשב את היחס בפעם הראשונה שתשובה מוגשת; הימורים מאוחרים יותר על אותה תשובה משתמשים ביחס השמור.",
-    "locked": "נעול"
+    "locked": "נעול",
+    "edit": "עריכה",
+    "update": "עדכון הימור",
+    "updatePending": "מעדכן…",
+    "remove": "הסרה",
+    "removePending": "מסיר…",
+    "defaults": {
+      "tournament_winner": {
+        "title": "אלופת הטורניר",
+        "description": "מי תזכה במונדיאל 2026?",
+        "placeholder": "למשל ארגנטינה"
+      },
+      "top_scorer": {
+        "title": "מלך השערים",
+        "description": "מי יסיים כמלך השערים של הטורניר (נעל הזהב)?",
+        "placeholder": "למשל מסי"
+      }
+    }
   },
   "admin": {
     "needsSettlement": "ממתינים לסגירה ({count})",
@@ -262,7 +279,8 @@
       "match_bet_refund": "הימור הוסר (החזר)",
       "custom_wager_placed": "הימור מותאם אישית",
       "custom_wager_payout": "רווח מהימור מותאם אישית",
-      "custom_wager_refund": "החזר (הימור בוטל)"
+      "custom_wager_refund": "החזר (הימור בוטל)",
+      "custom_wager_canceled": "ההימור הוסר (החזר)"
     }
   },
   "dailyGrant": {

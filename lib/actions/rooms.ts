@@ -10,6 +10,10 @@ import { requireProfiledUser } from "@/lib/auth";
 import { requireRoomUser } from "@/lib/auth-context";
 import { generateRoomCode, normalizeRoomCode } from "@/lib/code";
 import { recordLedger } from "@/lib/ledger";
+import {
+  getTournamentStart,
+  seedDefaultCustomBets,
+} from "@/lib/default-custom-bets";
 import { getCustomBetTargetPath } from "@/lib/share-links";
 
 const createRoomSchema = z.object({
@@ -83,6 +87,13 @@ export async function createRoom(formData: FormData) {
       .update(authUsers)
       .set({ defaultRoomId: room.id })
       .where(eq(authUsers.id, authUser.id));
+
+    const locksAt = await getTournamentStart(tx);
+    await seedDefaultCustomBets(tx, {
+      roomId: room.id,
+      proposerId: createdUser.id,
+      locksAt,
+    });
 
     return room;
   });

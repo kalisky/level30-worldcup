@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { chipLedger, matches, customBets } from "@/lib/db/schema";
 import { getRoomUsers } from "@/lib/db/queries";
 import { translateTeam } from "@/lib/team-i18n";
+import { customBetCopy } from "@/lib/custom-bet-copy";
 import RoomHeader from "@/components/RoomHeader";
 import RoomBreadcrumb from "@/components/RoomBreadcrumb";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
@@ -63,6 +64,7 @@ export default async function HistoryPage(props: {
   const tc = await getTranslations("common");
   const tr = await getTranslations("history.reason");
   const tnav = await getTranslations("nav");
+  const tDefaults = await getTranslations("customBet.defaults");
 
   const relativeStrings: RelativeStrings = {
     justNow: tc("justNow"),
@@ -77,6 +79,8 @@ export default async function HistoryPage(props: {
       matchHome: matches.homeTeam,
       matchAway: matches.awayTeam,
       customBetTitle: customBets.title,
+      customBetDescription: customBets.description,
+      customBetDefaultKey: customBets.defaultKey,
     })
     .from(chipLedger)
     .leftJoin(matches, eq(matches.id, chipLedger.refMatchId))
@@ -149,7 +153,7 @@ export default async function HistoryPage(props: {
           </p>
         ) : (
           <ul className="space-y-2">
-            {entries.map(({ entry, matchHome, matchAway, customBetTitle }) => {
+            {entries.map(({ entry, matchHome, matchAway, customBetTitle, customBetDescription, customBetDefaultKey }) => {
               const positive = entry.delta >= 0;
               const reasonLabel = tr(entry.reason);
               const icon = REASON_ICONS[entry.reason] ?? "•";
@@ -157,10 +161,21 @@ export default async function HistoryPage(props: {
                 matchHome && matchAway
                   ? `${translateTeam(matchHome, locale)} vs ${translateTeam(matchAway, locale)}`
                   : null;
+              const localizedBetTitle =
+                customBetTitle != null
+                  ? customBetCopy(
+                      {
+                        title: customBetTitle,
+                        description: customBetDescription ?? "",
+                        defaultKey: customBetDefaultKey,
+                      },
+                      tDefaults
+                    ).title
+                  : null;
               const subtitle =
                 entry.note ||
                 matchLabel ||
-                (customBetTitle ? customBetTitle : null);
+                localizedBetTitle;
               const ts = new Date(entry.createdAt);
               return (
                 <li

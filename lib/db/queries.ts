@@ -23,26 +23,70 @@ export async function getRoomByCode(code: string) {
 }
 
 export async function getRoomSessionAccessByCode(code: string, sessionToken: string) {
-  const [row] = await db
-    .select({
-      room: rooms,
-      authUser: authUsers,
-      user: users,
-    })
-    .from(rooms)
-    .leftJoin(
-      authSessions,
-      and(
-        eq(authSessions.token, sessionToken),
-        gt(authSessions.expiresAt, new Date())
+  try {
+    const [row] = await db
+      .select({
+        room: rooms,
+        authUser: authUsers,
+        user: users,
+      })
+      .from(rooms)
+      .leftJoin(
+        authSessions,
+        and(
+          eq(authSessions.token, sessionToken),
+          gt(authSessions.expiresAt, new Date())
+        )
       )
-    )
-    .leftJoin(authUsers, eq(authUsers.id, authSessions.authUserId))
-    .leftJoin(users, and(eq(users.roomId, rooms.id), eq(users.authUserId, authUsers.id)))
-    .where(eq(rooms.code, code))
-    .limit(1);
+      .leftJoin(authUsers, eq(authUsers.id, authSessions.authUserId))
+      .leftJoin(users, and(eq(users.roomId, rooms.id), eq(users.authUserId, authUsers.id)))
+      .where(eq(rooms.code, code))
+      .limit(1);
 
-  return row ?? null;
+    return row ?? null;
+  } catch (error) {
+    console.warn("getRoomSessionAccessByCode fast path failed, falling back", {
+      code,
+      hasSessionToken: Boolean(sessionToken),
+      error,
+    });
+
+    const room = await getRoomByCode(code);
+    if (!room) return null;
+
+    if (!sessionToken) {
+      return { room, authUser: null, user: null };
+    }
+
+    const [sessionRow] = await db
+      .select({ authUser: authUsers })
+      .from(authSessions)
+      .innerJoin(authUsers, eq(authUsers.id, authSessions.authUserId))
+      .where(
+        and(
+          eq(authSessions.token, sessionToken),
+          gt(authSessions.expiresAt, new Date())
+        )
+      )
+      .limit(1);
+
+    const authUser = sessionRow?.authUser ?? null;
+    if (!authUser) {
+      return { room, authUser: null, user: null };
+    }
+
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.roomId, room.id), eq(users.authUserId, authUser.id)))
+      .limit(1);
+
+    return {
+      room,
+      authUser,
+      user: user ?? null,
+    };
+  }
 }
 
 export async function getRoomAccessByCodeForAuthUser(code: string, authUserId: string) {

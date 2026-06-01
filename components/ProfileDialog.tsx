@@ -130,7 +130,7 @@ export default function ProfileDialog({
   return (
     <div
       ref={rootRef}
-      className="absolute right-0 top-[calc(100%+0.7rem)] z-[55] w-[min(22rem,calc(100vw-1.5rem))] rounded-[28px] border border-[#dbe5f2] bg-white p-3 shadow-[0_22px_60px_rgba(15,23,42,0.10)]"
+      className="absolute right-0 top-[calc(100%+0.7rem)] z-[55] max-h-[calc(100dvh-6rem)] w-[min(22rem,calc(100vw-1.5rem))] overflow-y-auto overscroll-contain rounded-[28px] border border-[#dbe5f2] bg-white p-3 shadow-[0_22px_60px_rgba(15,23,42,0.10)] sm:max-h-[min(44rem,calc(100vh-6rem))]"
     >
       <div className="flex items-center gap-3 rounded-[22px] px-3 py-3">
         <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[linear-gradient(135deg,#1E3A8A_0%,#3B82F6_100%)] text-sm font-black text-white shadow-[0_10px_24px_rgba(30,58,138,0.22)]">

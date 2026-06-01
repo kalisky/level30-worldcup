@@ -1,9 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import {
+  getRedirectResult,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  type UserCredential,
+} from "firebase/auth";
 import { getFirebaseClientAuth } from "@/lib/firebase/client";
+
+const REDIRECT_PENDING_KEY = "google_auth_redirect_pending";
+const REDIRECT_TARGET_KEY = "google_auth_redirect_target";
+
+let redirectResultClaimed = false;
 
 function GoogleMark() {
   return (
@@ -45,44 +56,60 @@ export default function GoogleLoginButton({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!sessionStorage.getItem(REDIRECT_PENDING_KEY)) return;
+    if (redirectResultClaimed) return;
+
+    redirectResultClaimed = true;
+
+    const auth = getFirebaseClientAuth({ preferSameOriginAuthDomain: true });
+
+    void (async () => {
+      try {
+        const result = await getRedirectResult(auth);
+
+        if (!result) {
+          clearRedirectState();
+          setPending(false);
+          return;
+        }
+
+        await finalizeGoogleSignIn(
+          result,
+          getStoredRedirectTarget() ?? redirectTo,
+          t
+        );
+      } catch (e) {
+        clearRedirectState();
+        setError(e instanceof Error ? e.message : t("signInFailed"));
+        setPending(false);
+      }
+    })();
+  }, [redirectTo, t]);
+
   async function signIn() {
     setPending(true);
     setError(null);
 
     try {
-      const auth = getFirebaseClientAuth();
+      const shouldUseRedirect = isMobileGoogleRedirectFlow();
+      const auth = getFirebaseClientAuth({
+        preferSameOriginAuthDomain: shouldUseRedirect,
+      });
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
 
-      const result = await signInWithPopup(auth, provider);
-      const idToken = await result.user.getIdToken();
-
-      const response = await fetch("/api/auth/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as
-          | { error?: string }
-          | null;
-        throw new Error(payload?.error ?? t("signInFailed"));
-      }
-
-      const payload = (await response.json()) as {
-        needsProfile: boolean;
-      };
-
-      if (payload.needsProfile) {
-        window.location.assign(
-          `/welcome?next=${encodeURIComponent(redirectTo)}`
-        );
+      if (shouldUseRedirect) {
+        storeRedirectTarget(redirectTo);
+        await signInWithRedirect(auth, provider);
         return;
       }
 
-      window.location.assign(redirectTo);
+      const result = await signInWithPopup(auth, provider);
+      await finalizeGoogleSignIn(result, redirectTo, t);
     } catch (e) {
+      clearRedirectState();
       setError(e instanceof Error ? e.message : t("signInFailed"));
       setPending(false);
       return;
@@ -114,4 +141,73 @@ export default function GoogleLoginButton({
       )}
     </div>
   );
+}
+
+function isMobileGoogleRedirectFlow() {
+  if (typeof window === "undefined") return false;
+
+  const touchMac =
+    navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  const mobileHint = (navigator as Navigator & {
+    userAgentData?: { mobile?: boolean };
+  }).userAgentData?.mobile;
+  const userAgent =
+    mobileHint ??
+    (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    ) ||
+      touchMac);
+
+  return Boolean(userAgent);
+}
+
+async function finalizeGoogleSignIn(
+  result: UserCredential,
+  redirectTo: string,
+  t: ReturnType<typeof useTranslations<"auth">>
+) {
+  const idToken = await result.user.getIdToken();
+
+  const response = await fetch("/api/auth/session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken }),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as
+      | { error?: string }
+      | null;
+    throw new Error(payload?.error ?? t("signInFailed"));
+  }
+
+  const payload = (await response.json()) as {
+    needsProfile: boolean;
+  };
+
+  clearRedirectState();
+
+  if (payload.needsProfile) {
+    window.location.assign(`/welcome?next=${encodeURIComponent(redirectTo)}`);
+    return;
+  }
+
+  window.location.assign(redirectTo);
+}
+
+function storeRedirectTarget(redirectTo: string) {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(REDIRECT_PENDING_KEY, "1");
+  sessionStorage.setItem(REDIRECT_TARGET_KEY, redirectTo);
+}
+
+function getStoredRedirectTarget() {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(REDIRECT_TARGET_KEY);
+}
+
+function clearRedirectState() {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(REDIRECT_PENDING_KEY);
+  sessionStorage.removeItem(REDIRECT_TARGET_KEY);
 }

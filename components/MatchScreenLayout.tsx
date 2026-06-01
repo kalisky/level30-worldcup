@@ -8,12 +8,14 @@ export default function MatchScreenLayout({
   matchTabLabel = "Match & Odds",
   customBetsTabLabel = "Custom Bets",
   targetCustomBetId,
+  mobileTabsVariant = "default",
 }: {
   matchPane: React.ReactNode;
   customBetsPane: React.ReactNode;
   matchTabLabel?: string;
   customBetsTabLabel?: string;
   targetCustomBetId?: string | null;
+  mobileTabsVariant?: "default" | "plain";
 }) {
   const [activeTab, setActiveTab] = useState<"match" | "custom">(() =>
     targetCustomBetId ? "custom" : "match"
@@ -56,16 +58,24 @@ export default function MatchScreenLayout({
   return (
     <>
       <div className="lg:hidden">
-        <div className="rounded-[24px] mb-4 border border-[#dbe5f2] bg-[#F8FBFF] p-1 shadow-[0_10px_24px_rgba(30,58,138,0.06)]">
-          <div className="grid grid-cols-2 gap-1">
+        <div
+          className={
+            mobileTabsVariant === "plain"
+              ? "mb-4 grid grid-cols-2 gap-2"
+              : "mb-4 rounded-[24px] border border-[#dbe5f2] bg-[#F8FBFF] p-1 shadow-[0_10px_24px_rgba(30,58,138,0.06)]"
+          }
+        >
+          <div className={mobileTabsVariant === "plain" ? "contents" : "grid grid-cols-2 gap-1"}>
             <button
               type="button"
               onClick={() => setActiveTab("match")}
               className={
-                "rounded-[18px] px-4 py-3 text-sm font-bold transition " +
+                "px-4 py-3 text-sm font-bold transition " +
                 (activeTab === "match"
-                  ? "bg-[linear-gradient(135deg,#1E3A8A_0%,#2563EB_100%)] text-white shadow-[0_10px_24px_rgba(30,58,138,0.22)]"
-                  : "text-slate-600 hover:bg-white hover:text-[#1E3A8A]")
+                  ? "rounded-[18px] bg-[linear-gradient(135deg,#1E3A8A_0%,#2563EB_100%)] text-white shadow-[0_10px_24px_rgba(30,58,138,0.22)]"
+                  : mobileTabsVariant === "plain"
+                    ? "rounded-[18px] text-slate-600 hover:bg-white/70 hover:text-[#1E3A8A]"
+                    : "rounded-[18px] text-slate-600 hover:bg-white hover:text-[#1E3A8A]")
               }
             >
               {matchTabLabel}
@@ -74,10 +84,12 @@ export default function MatchScreenLayout({
               type="button"
               onClick={() => setActiveTab("custom")}
               className={
-                "rounded-[18px] px-4 py-3 text-sm font-bold transition " +
+                "px-4 py-3 text-sm font-bold transition " +
                 (activeTab === "custom"
-                  ? "bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)]"
-                  : "text-slate-600 hover:bg-white hover:text-[#1E3A8A]")
+                  ? "rounded-[18px] bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)]"
+                  : mobileTabsVariant === "plain"
+                    ? "rounded-[18px] text-slate-600 hover:bg-white/70 hover:text-[#1E3A8A]"
+                    : "rounded-[18px] text-slate-600 hover:bg-white hover:text-[#1E3A8A]")
               }
             >
               {customBetsTabLabel}

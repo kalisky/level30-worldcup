@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
 import { requireRoomUser } from "@/lib/auth-context";
 import {
@@ -18,8 +19,8 @@ import ProposeBetModal from "@/components/ProposeBetModal";
 import MatchScreenLayout from "@/components/MatchScreenLayout";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
 import CopyBetsLauncher from "@/components/CopyBetsLauncher";
+import type { DashboardTrace } from "@/lib/dashboard-trace";
 import { createDashboardTrace } from "@/lib/dashboard-trace";
-import { getDashboardLiveToken } from "@/lib/live-updates";
 
 export async function generateMetadata(props: {
   params: Promise<{ code: string }>;
@@ -67,71 +68,15 @@ export default async function DashboardPage(props: {
           dailyGrantApplied: value.dailyGrantApplied,
         })
       );
-      const t = await trace.step("getTranslations", () => getTranslations("dashboard"));
-      const tnav = await getTranslations("nav");
-
-      const [upcoming, customBets, myBets, allRoomMemberships] = await Promise.all([
-          trace.step("listUpcomingMatches", () => listUpcomingMatches(100), (rows) => ({
-            upcomingMatchCount: rows.length,
-          })),
-          trace.step(
-            "listOpenCustomBets",
-            () => listOpenCustomBets(room.id, 100),
-            (rows) => ({
-              customBetCount: rows.length,
-            })
-          ),
-          trace.step("getMyMatchBets", () => getMyMatchBets(room.id, user.id), (rows) => ({
-            myBetCount: rows.length,
-          })),
-          trace.step(
-            "listRoomsForAuthUser",
-            () =>
-              user.authUserId ? listRoomsForAuthUser(user.authUserId) : Promise.resolve([]),
-            (rows) => ({
-              membershipCount: rows.length,
-              hasAuthUserId: Boolean(user.authUserId),
-            })
-          ),
-        ]);
-
-      const otherRooms = allRoomMemberships
-        .filter((r) => r.room.id !== room.id)
-        .map((r) => ({ code: r.room.code, name: r.room.name }));
-
-      const customBetDetails = await trace.step(
-        "hydrateCustomBetDetails",
-        () => hydrateCustomBetRowsWithWagers(customBets, user.id),
-        (rows) => ({
-          customBetCount: rows.length,
-          totalCustomWagers: rows.reduce(
-            (total, entry) => total + entry.allWagers.length,
-            0
-          ),
-          betsWithAnyWagers: rows.filter((entry) => entry.allWagers.length > 0).length,
-          betsWithMyWager: rows.filter((entry) => entry.myWager != null).length,
-        })
-      );
-
-      const myPredictionByMatch = new Map(
-        myBets.map(
-          (b) =>
-            [b.matchId, { home: b.predictedHomeScore, away: b.predictedAwayScore }] as const
-        )
-      );
-
-      const liveToken = await trace.step("getDashboardLiveToken", () =>
-        getDashboardLiveToken({
-          roomId: room.id,
-          startingChips: room.startingChips,
-          lastDailyGrantAt: user.lastDailyGrantAt,
-        })
-      );
+      const [t, tnav] = await Promise.all([
+        trace.step("getTranslations", () => getTranslations("dashboard")),
+        getTranslations("nav"),
+      ]);
 
       trace.end({
-        upcomingMatchCount: upcoming.length,
-        customBetCount: customBets.length,
-        otherRoomCount: otherRooms.length,
+        upcomingDeferred: true,
+        customBetsDeferred: true,
+        liveTokenDeferred: true,
       });
 
       return {
@@ -140,12 +85,6 @@ export default async function DashboardPage(props: {
         dailyGrantApplied,
         t,
         tnav,
-        upcoming,
-        customBets,
-        customBetDetails,
-        otherRooms,
-        myPredictionByMatch,
-        liveToken,
       };
     } catch (error) {
       trace.fail(error);
@@ -153,44 +92,58 @@ export default async function DashboardPage(props: {
     }
   })();
 
-  const {
-    room,
-    user,
-    dailyGrantApplied,
-    t,
-    tnav,
-    upcoming,
-    customBets,
-    customBetDetails,
-    otherRooms,
-    myPredictionByMatch,
-    liveToken,
-  } = dashboardData;
+  const { room, user, dailyGrantApplied, t, tnav } = dashboardData;
 
   const mobileDashboardHeader = (
-    <section className="rounded-[22px] border border-[#dbe5f2] bg-white p-4 shadow-[0_12px_28px_rgba(30,58,138,0.08)] lg:hidden">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[0.64rem] font-bold uppercase tracking-[0.24em] text-slate-500">
-            {room.code}
-          </p>
-          <h1 className="mt-1 truncate text-[1.35rem] font-black text-[#1E3A8A]">
-            {room.name}
-          </h1>
-        </div>
+    <section className="lg:hidden">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="min-w-0 truncate text-[1.7rem] font-black text-[#1E3A8A]">
+          {room.name}
+        </h1>
 
-        <nav className="flex flex-wrap gap-2">
+        <nav className="flex shrink-0 items-center gap-2">
           <Link
             href={`/r/${room.code}/history`}
-            className="rounded-full border border-[#dbe5f2] bg-[#F8FBFF] px-3.5 py-1.5 text-xs font-bold text-[#1E3A8A] transition hover:bg-white"
+            aria-label={tnav("history")}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#d7deea] bg-white text-slate-700 transition hover:border-[#c3cedd] hover:bg-[#F8FBFF] hover:text-[#1E3A8A]"
           >
-            {tnav("history")}
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path d="M3.5 10a6.5 6.5 0 1 0 1.9-4.6" />
+              <path d="M3.5 4.5v3.4h3.4" />
+              <path d="M10 6.7v3.7l2.5 1.5" />
+            </svg>
+            <span className="sr-only">{tnav("history")}</span>
           </Link>
           <Link
             href={`/r/${room.code}/leaderboard`}
-            className="rounded-full border border-[#dbe5f2] bg-[#FFF1E8] px-3.5 py-1.5 text-xs font-bold text-[#EA580C] transition hover:bg-white"
+            aria-label={tnav("leaderboard")}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#d7deea] bg-white text-slate-700 transition hover:border-[#c3cedd] hover:bg-[#F8FBFF] hover:text-[#1E3A8A]"
           >
-            {tnav("leaderboard")}
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path d="M4.5 16.5h11" />
+              <path d="M6 16.5V9.5" />
+              <path d="M10 16.5V5.5" />
+              <path d="M14 16.5v-4" />
+            </svg>
+            <span className="sr-only">{tnav("leaderboard")}</span>
           </Link>
         </nav>
       </div>
@@ -199,78 +152,230 @@ export default async function DashboardPage(props: {
 
   const dashboardPane = (
     <>
-      <section className="hidden rounded-[24px] border border-[#dbe5f2] bg-white p-4 shadow-[0_16px_38px_rgba(30,58,138,0.08)] lg:block">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-[0.68rem] font-bold uppercase tracking-[0.26em] text-slate-500">
-              {room.code}
-            </p>
-            <h1 className="mt-1 truncate text-[1.75rem] font-black text-[#1E3A8A]">
-              {room.name}
-            </h1>
-          </div>
-
-          <nav className="flex flex-wrap gap-2">
-            <Link
-              href={`/r/${room.code}/history`}
-              className="rounded-full border border-[#dbe5f2] bg-[#F8FBFF] px-4 py-2 text-sm font-bold text-[#1E3A8A] transition hover:bg-white"
-            >
-              {tnav("history")}
-            </Link>
-            <Link
-              href={`/r/${room.code}/leaderboard`}
-              className="rounded-full border border-[#dbe5f2] bg-[#FFF1E8] px-4 py-2 text-sm font-bold text-[#EA580C] transition hover:bg-white"
-            >
-              {tnav("leaderboard")}
-            </Link>
-          </nav>
-        </div>
-      </section>
-
-      <section>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            {t("upcomingMatches")}
-          </h2>
-          <CopyBetsLauncher targetRoomCode={room.code} otherRooms={otherRooms} />
-        </div>
-        {upcoming.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 dark:border-zinc-700">
-            {t("noMatches")}
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {upcoming.map((m) => (
-              <MatchCard
-                key={m.id}
-                match={m}
-                roomCode={room.code}
-                myPrediction={myPredictionByMatch.get(m.id) ?? null}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+      <Suspense
+        fallback={
+          <DashboardMatchesPaneSkeleton
+            heading={t("upcomingMatches")}
+            showCopyLauncher
+          />
+        }
+      >
+        <DashboardMatchesPane
+          trace={trace}
+          roomId={room.id}
+          roomCode={room.code}
+          userId={user.id}
+          authUserId={user.authUserId}
+          heading={t("upcomingMatches")}
+          emptyLabel={t("noMatches")}
+        />
+      </Suspense>
     </>
   );
 
   const customBetsPane = (
+    <Suspense fallback={<DashboardCustomBetsPaneSkeleton heading={t("customBets")} />}>
+      <DashboardCustomBetsPane
+        trace={trace}
+        roomId={room.id}
+        roomCode={room.code}
+        userId={user.id}
+        myChips={user.chips}
+        heading={t("customBets")}
+        emptyLabel={t("noCustomBets")}
+        targetCustomBetId={targetCustomBetId}
+      />
+    </Suspense>
+  );
+
+  return (
+    <>
+      <RoomHeader
+        room={room}
+        user={user}
+        active="dashboard"
+        initialRoomModalOpen={roomWasCreated}
+      />
+      <DailyGrantBanner amount={dailyGrantApplied} />
+      <AutoRefresh
+        traceLabel="dashboard"
+        liveToken={null}
+        pollUrl={`/api/live/room/${encodeURIComponent(room.code)}/dashboard`}
+      />
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
+        <div className="mb-4 lg:hidden">{mobileDashboardHeader}</div>
+        <section className="mb-6 hidden lg:block">
+          <div className="flex items-center justify-between gap-4 pb-5">
+            <h1 className="min-w-0 truncate text-[2rem] font-black text-[#1E3A8A]">
+              {room.name}
+            </h1>
+            <nav className="flex shrink-0 flex-wrap items-center gap-2">
+              <Link
+                href={`/r/${room.code}/history`}
+                className="rounded-full border border-[#d7deea] bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-[#c3cedd] hover:bg-[#F8FBFF] hover:text-[#1E3A8A]"
+              >
+                {tnav("history")}
+              </Link>
+              <Link
+                href={`/r/${room.code}/leaderboard`}
+                className="rounded-full border border-[#d7deea] bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-[#c3cedd] hover:bg-[#F8FBFF] hover:text-[#1E3A8A]"
+              >
+                {tnav("leaderboard")}
+              </Link>
+            </nav>
+          </div>
+          <div className="h-px w-full bg-[#dbe5f2]" aria-hidden="true" />
+        </section>
+        <MatchScreenLayout
+          matchPane={dashboardPane}
+          customBetsPane={customBetsPane}
+          matchTabLabel="Dashboard"
+          customBetsTabLabel="Custom Bets"
+          targetCustomBetId={targetCustomBetId}
+          mobileTabsVariant="plain"
+        />
+      </main>
+    </>
+  );
+}
+
+async function DashboardMatchesPane({
+  trace,
+  roomId,
+  roomCode,
+  userId,
+  authUserId,
+  heading,
+  emptyLabel,
+}: {
+  trace: DashboardTrace;
+  roomId: string;
+  roomCode: string;
+  userId: string;
+  authUserId: string | null;
+  heading: string;
+  emptyLabel: string;
+}) {
+  const [upcoming, myBets, allRoomMemberships] = await Promise.all([
+    trace.step("listUpcomingMatches", () => listUpcomingMatches(100), (rows) => ({
+      upcomingMatchCount: rows.length,
+    })),
+    trace.step("getMyMatchBets", () => getMyMatchBets(roomId, userId), (rows) => ({
+      myBetCount: rows.length,
+    })),
+    trace.step(
+      "listRoomsForAuthUser",
+      () => (authUserId ? listRoomsForAuthUser(authUserId) : Promise.resolve([])),
+      (rows) => ({
+        membershipCount: rows.length,
+        hasAuthUserId: Boolean(authUserId),
+      })
+    ),
+  ]);
+
+  const otherRooms = allRoomMemberships
+    .filter((membership) => membership.room.id !== roomId)
+    .map((membership) => ({
+      code: membership.room.code,
+      name: membership.room.name,
+    }));
+
+  const myPredictionByMatch = new Map(
+    myBets.map(
+      (bet) =>
+        [
+          bet.matchId,
+          { home: bet.predictedHomeScore, away: bet.predictedAwayScore },
+        ] as const
+    )
+  );
+
+  return (
+    <section>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+          {heading}
+        </h2>
+        <CopyBetsLauncher targetRoomCode={roomCode} otherRooms={otherRooms} />
+      </div>
+      {upcoming.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 dark:border-zinc-700">
+          {emptyLabel}
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {upcoming.map((match) => (
+            <MatchCard
+              key={match.id}
+              match={match}
+              roomCode={roomCode}
+              myPrediction={myPredictionByMatch.get(match.id) ?? null}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+async function DashboardCustomBetsPane({
+  trace,
+  roomId,
+  roomCode,
+  userId,
+  myChips,
+  heading,
+  emptyLabel,
+  targetCustomBetId,
+}: {
+  trace: DashboardTrace;
+  roomId: string;
+  roomCode: string;
+  userId: string;
+  myChips: number;
+  heading: string;
+  emptyLabel: string;
+  targetCustomBetId?: string | null;
+}) {
+  const customBets = await trace.step(
+    "listOpenCustomBets",
+    () => listOpenCustomBets(roomId, 100),
+    (rows) => ({
+      customBetCount: rows.length,
+    })
+  );
+
+  const customBetDetails = await trace.step(
+    "hydrateCustomBetDetails",
+    () => hydrateCustomBetRowsWithWagers(customBets, userId),
+    (rows) => ({
+      customBetCount: rows.length,
+      totalCustomWagers: rows.reduce(
+        (total, entry) => total + entry.allWagers.length,
+        0
+      ),
+      betsWithAnyWagers: rows.filter((entry) => entry.allWagers.length > 0).length,
+      betsWithMyWager: rows.filter((entry) => entry.myWager != null).length,
+    })
+  );
+
+  return (
     <section className="rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.07)]">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-[0.72rem] font-bold uppercase tracking-[0.28em] text-slate-500">
-            {t("customBets")}
+            {heading}
           </h2>
         </div>
       </div>
 
       <div className="mb-4">
-        <ProposeBetModal roomCode={room.code} />
+        <ProposeBetModal roomCode={roomCode} />
       </div>
 
-      {customBets.length === 0 ? (
+      {customBetDetails.length === 0 ? (
         <p className="rounded-[22px] border border-dashed border-[#cfdced] bg-[#F8FBFF] p-6 text-center text-sm text-slate-500">
-          {t("noCustomBets")}
+          {emptyLabel}
         </p>
       ) : (
         <div className="space-y-3">
@@ -287,7 +392,7 @@ export default async function DashboardPage(props: {
                 key={bet.id}
                 bet={bet}
                 proposerName={proposerName}
-                roomCode={room.code}
+                roomCode={roomCode}
                 matchId={bet.matchId ?? undefined}
                 contextLabel={
                   matchHomeTeam && matchAwayTeam
@@ -296,12 +401,12 @@ export default async function DashboardPage(props: {
                 }
                 contextHref={
                   bet.matchId
-                    ? `/r/${room.code}/match/${bet.matchId}?from=dashboard`
+                    ? `/r/${roomCode}/match/${bet.matchId}?from=dashboard`
                     : null
                 }
                 highlighted={targetCustomBetId === bet.id}
                 myWager={myWager}
-                myChips={user.chips}
+                myChips={myChips}
                 wagers={allWagers}
               />
             )
@@ -310,31 +415,103 @@ export default async function DashboardPage(props: {
       )}
     </section>
   );
+}
 
+function DashboardMatchesPaneSkeleton({
+  heading,
+  showCopyLauncher = false,
+}: {
+  heading: string;
+  showCopyLauncher?: boolean;
+}) {
   return (
-    <>
-      <RoomHeader
-        room={room}
-        user={user}
-        active="dashboard"
-        initialRoomModalOpen={roomWasCreated}
-      />
-      <DailyGrantBanner amount={dailyGrantApplied} />
-      <AutoRefresh
-        traceLabel="dashboard"
-        liveToken={liveToken}
-        pollUrl={`/api/live/room/${encodeURIComponent(room.code)}/dashboard`}
-      />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
-        <div className="mb-4 lg:hidden">{mobileDashboardHeader}</div>
-        <MatchScreenLayout
-          matchPane={dashboardPane}
-          customBetsPane={customBetsPane}
-          matchTabLabel="Dashboard"
-          customBetsTabLabel="Custom Bets"
-          targetCustomBetId={targetCustomBetId}
-        />
-      </main>
-    </>
+    <section>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+          {heading}
+        </h2>
+        {showCopyLauncher ? (
+          <div className="h-10 w-52 animate-pulse rounded-full bg-[#F3F7FD]" />
+        ) : null}
+      </div>
+      <div className="space-y-2">
+        <DashboardMatchCardSkeleton />
+        <DashboardMatchCardSkeleton />
+        <DashboardMatchCardSkeleton />
+      </div>
+    </section>
+  );
+}
+
+function DashboardMatchCardSkeleton() {
+  return (
+    <article className="rounded-[26px] border border-[#dbe5f2] bg-white p-5 shadow-[0_14px_32px_rgba(30,58,138,0.08)]">
+      <div className="animate-pulse space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="h-3 w-24 rounded-full bg-slate-200" />
+          <div className="h-3 w-16 rounded-full bg-slate-200" />
+        </div>
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+          <div className="space-y-2">
+            <div className="h-4 w-24 rounded-full bg-slate-200" />
+            <div className="h-3 w-16 rounded-full bg-slate-100" />
+          </div>
+          <div className="h-8 w-12 rounded-2xl bg-[#F3F7FD]" />
+          <div className="space-y-2 text-right">
+            <div className="ml-auto h-4 w-24 rounded-full bg-slate-200" />
+            <div className="ml-auto h-3 w-16 rounded-full bg-slate-100" />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="h-12 rounded-2xl bg-[#F8FBFF] ring-1 ring-[#dbe5f2]" />
+          <div className="h-12 rounded-2xl bg-[#F8FBFF] ring-1 ring-[#dbe5f2]" />
+          <div className="h-12 rounded-2xl bg-[#F8FBFF] ring-1 ring-[#dbe5f2]" />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function DashboardCustomBetsPaneSkeleton({ heading }: { heading: string }) {
+  return (
+    <section className="rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.07)]">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-[0.72rem] font-bold uppercase tracking-[0.28em] text-slate-500">
+            {heading}
+          </h2>
+        </div>
+      </div>
+
+      <div className="mb-4 h-12 w-full animate-pulse rounded-[20px] bg-[#F3F7FD]" />
+
+      <div className="space-y-3">
+        <DashboardCustomBetCardSkeleton />
+        <DashboardCustomBetCardSkeleton />
+      </div>
+    </section>
+  );
+}
+
+function DashboardCustomBetCardSkeleton() {
+  return (
+    <article className="rounded-[26px] border border-[#dbe5f2] bg-white p-5 shadow-[0_14px_32px_rgba(30,58,138,0.07)]">
+      <div className="animate-pulse space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="h-3 w-24 rounded-full bg-slate-200" />
+          <div className="h-3 w-20 rounded-full bg-slate-200" />
+        </div>
+        <div className="h-6 w-3/4 rounded-full bg-slate-200" />
+        <div className="h-4 w-full rounded-full bg-slate-100" />
+        <div className="h-4 w-5/6 rounded-full bg-slate-100" />
+        <div className="rounded-2xl border border-[#e7eef8] bg-[#F8FBFF] p-4">
+          <div className="h-4 w-20 rounded-full bg-slate-200" />
+          <div className="mt-3 space-y-2">
+            <div className="h-10 rounded-2xl bg-white ring-1 ring-[#dbe5f2]" />
+            <div className="h-10 rounded-2xl bg-white ring-1 ring-[#dbe5f2]" />
+          </div>
+        </div>
+      </div>
+    </article>
   );
 }

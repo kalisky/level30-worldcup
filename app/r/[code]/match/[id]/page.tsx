@@ -145,34 +145,6 @@ export default async function MatchPage(props: {
           </div>
         </div>
 
-        {match.oddsHome && match.oddsDraw && match.oddsAway && (
-          <dl className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm">
-            <div className="flex items-baseline gap-2">
-              <dt className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                {homeTeamLocalized}
-              </dt>
-              <dd className="font-mono text-base font-black text-[#1E3A8A]">
-                {oddsHome.toFixed(2)}x
-              </dd>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <dt className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                {tm("draw")}
-              </dt>
-              <dd className="font-mono text-base font-black text-[#1E3A8A]">
-                {oddsDraw.toFixed(2)}x
-              </dd>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <dt className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                {awayTeamLocalized}
-              </dt>
-              <dd className="font-mono text-base font-black text-[#1E3A8A]">
-                {oddsAway.toFixed(2)}x
-              </dd>
-            </div>
-          </dl>
-        )}
       </section>
 
       <MatchBetPanel

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 type AutoRefreshProps = {
   intervalMs?: number;
   pollUrl: string;
-  liveToken: string;
+  liveToken?: string | null;
   traceLabel?: string;
   requestTimeoutMs?: number;
   maxBackoffMs?: number;
@@ -23,7 +23,7 @@ type LivePollResponse = {
 export default function AutoRefresh({
   intervalMs = 60_000,
   pollUrl,
-  liveToken,
+  liveToken = null,
   traceLabel,
   requestTimeoutMs = 15_000,
   maxBackoffMs = 5 * 60_000,
@@ -32,7 +32,7 @@ export default function AutoRefresh({
   const [isPending, startTransition] = useTransition();
   const debugEnabled = traceLabel ? process.env.NODE_ENV === "development" : false;
 
-  const tokenRef = useRef(liveToken);
+  const tokenRef = useRef<string | null>(liveToken);
   const pendingRef = useRef(isPending);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -50,9 +50,11 @@ export default function AutoRefresh({
 
   useEffect(() => {
     const previousToken = tokenRef.current;
-    tokenRef.current = liveToken;
+    if (liveToken != null) {
+      tokenRef.current = liveToken;
+    }
 
-    if (!refreshingRef.current) return;
+    if (!refreshingRef.current || liveToken == null) return;
 
     refreshingRef.current = false;
     logPollRef.current("refresh_applied", {
@@ -65,8 +67,12 @@ export default function AutoRefresh({
     if (isPending || !refreshingRef.current) return;
 
     refreshingRef.current = false;
-    tokenRef.current = liveToken;
-    logPollRef.current("refresh_settled");
+    if (liveToken != null) {
+      tokenRef.current = liveToken;
+    }
+    logPollRef.current("refresh_settled", {
+      tokenSuppliedByServer: liveToken != null,
+    });
     scheduleNextPollRef.current(intervalMs);
   }, [intervalMs, isPending, liveToken]);
 
@@ -166,10 +172,15 @@ export default function AutoRefresh({
           method: "GET",
           cache: "no-store",
           credentials: "same-origin",
-          headers: {
-            accept: "application/json",
-            "if-none-match": `"${tokenRef.current}"`,
-          },
+          headers:
+            tokenRef.current == null
+              ? {
+                  accept: "application/json",
+                }
+              : {
+                  accept: "application/json",
+                  "if-none-match": `"${tokenRef.current}"`,
+                },
           signal: controller.signal,
         });
 
@@ -192,6 +203,15 @@ export default function AutoRefresh({
 
         const data = (await response.json()) as LivePollResponse;
         failureCountRef.current = 0;
+
+        if (tokenRef.current == null) {
+          tokenRef.current = data.token;
+          logPoll("seeded", {
+            nextToken: data.token,
+          });
+          scheduleNextPoll(intervalMs);
+          return;
+        }
 
         if (data.token !== tokenRef.current) {
           logPoll("changed", {
@@ -252,7 +272,7 @@ export default function AutoRefresh({
       clearInFlightPoll();
     };
 
-    scheduleNextPoll(intervalMs);
+    scheduleNextPoll(tokenRef.current == null ? 0 : intervalMs);
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);

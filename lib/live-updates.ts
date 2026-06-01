@@ -1,10 +1,10 @@
-import { and, eq } from "drizzle-orm";
-import { getAuthenticatedUser } from "@/lib/auth";
+import { inArray } from "drizzle-orm";
+import { getSessionToken } from "@/lib/auth";
 import { normalizeRoomCode } from "@/lib/code";
 import { db } from "@/lib/db";
-import { getMatch, getRoomByCode } from "@/lib/db/queries";
+import { getMatch, getRoomSessionAccessByCode } from "@/lib/db/queries";
 import type { User } from "@/lib/db/schema";
-import { liveRevisions, users } from "@/lib/db/schema";
+import { liveRevisions, rooms } from "@/lib/db/schema";
 import { isDailyGrantEligible } from "@/lib/daily-grant";
 
 const ROOM_SCOPE_PREFIX = "room:";
@@ -44,19 +44,30 @@ function serializeRevision(updatedAt: Date | null) {
   return updatedAt ? updatedAt.toISOString() : "0";
 }
 
-async function getRevision(scope: string) {
-  try {
-    const [row] = await db
-      .select({ updatedAt: liveRevisions.updatedAt })
-      .from(liveRevisions)
-      .where(eq(liveRevisions.scope, scope))
-      .limit(1);
+async function getRevisions(scopes: string[]) {
+  const revisions = new Map<string, Date | null>(scopes.map((scope) => [scope, null]));
+  if (scopes.length === 0) {
+    return revisions;
+  }
 
-    return row?.updatedAt ?? null;
+  try {
+    const rows = await db
+      .select({
+        scope: liveRevisions.scope,
+        updatedAt: liveRevisions.updatedAt,
+      })
+      .from(liveRevisions)
+      .where(inArray(liveRevisions.scope, scopes));
+
+    for (const row of rows) {
+      revisions.set(row.scope, row.updatedAt);
+    }
+
+    return revisions;
   } catch (error) {
     if (isMissingLiveRevisionsTable(error)) {
       warnMissingLiveRevisionsTableOnce();
-      return null;
+      return revisions;
     }
 
     throw error;
@@ -126,10 +137,12 @@ export async function getDashboardLiveToken(input: {
   startingChips: number;
   lastDailyGrantAt: Date | null;
 }) {
-  const [roomUpdatedAt, dashboardMatchesUpdatedAt] = await Promise.all([
-    getRevision(roomScope(input.roomId)),
-    getRevision(DASHBOARD_MATCHES_SCOPE),
+  const revisions = await getRevisions([
+    roomScope(input.roomId),
+    DASHBOARD_MATCHES_SCOPE,
   ]);
+  const roomUpdatedAt = revisions.get(roomScope(input.roomId)) ?? null;
+  const dashboardMatchesUpdatedAt = revisions.get(DASHBOARD_MATCHES_SCOPE) ?? null;
 
   return [
     `room=${serializeRevision(roomUpdatedAt)}`,
@@ -144,10 +157,12 @@ export async function getMatchLiveToken(input: {
   startingChips: number;
   lastDailyGrantAt: Date | null;
 }) {
-  const [roomUpdatedAt, matchUpdatedAt] = await Promise.all([
-    getRevision(roomScope(input.roomId)),
-    getRevision(matchScope(input.matchId)),
+  const revisions = await getRevisions([
+    roomScope(input.roomId),
+    matchScope(input.matchId),
   ]);
+  const roomUpdatedAt = revisions.get(roomScope(input.roomId)) ?? null;
+  const matchUpdatedAt = revisions.get(matchScope(input.matchId)) ?? null;
 
   return [
     `room=${serializeRevision(roomUpdatedAt)}`,
@@ -160,7 +175,7 @@ export type LivePollAccess =
   | {
       ok: true;
       code: string;
-      room: NonNullable<Awaited<ReturnType<typeof getRoomByCode>>>;
+      room: typeof rooms.$inferSelect;
       user: User;
     }
   | {
@@ -175,27 +190,21 @@ export async function getLivePollAccess(rawCode: string): Promise<LivePollAccess
     return { ok: false, status: 400, error: "Invalid room code." };
   }
 
-  const room = await getRoomByCode(code);
-  if (!room) {
+  const sessionToken = await getSessionToken();
+  const roomAccess = await getRoomSessionAccessByCode(code, sessionToken ?? "");
+  if (!roomAccess) {
     return { ok: false, status: 404, error: "Room not found." };
   }
 
-  const authUser = await getAuthenticatedUser();
-  if (!authUser?.displayName) {
+  if (!roomAccess.authUser?.displayName) {
     return { ok: false, status: 401, error: "Authentication required." };
   }
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(and(eq(users.roomId, room.id), eq(users.authUserId, authUser.id)))
-    .limit(1);
-
-  if (!user) {
+  if (!roomAccess.user) {
     return { ok: false, status: 403, error: "Room membership required." };
   }
 
-  return { ok: true, code, room, user };
+  return { ok: true, code, room: roomAccess.room, user: roomAccess.user };
 }
 
 export async function getLivePollMatchAccess(rawCode: string, matchId: string) {

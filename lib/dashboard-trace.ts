@@ -1,19 +1,24 @@
 type TraceFields = Record<string, unknown>;
 type TraceSummary<T> = ((value: T) => TraceFields | undefined) | undefined;
 
-export type DashboardRenderTrace = {
+export type RouteRenderTrace = {
   id: string;
   totalMs: number;
 };
 
-export type DashboardTrace = {
+export type RouteTrace = {
   id: string;
   enabled: boolean;
   log(event: string, fields?: TraceFields): void;
   step<T>(name: string, work: () => Promise<T>, summarize?: TraceSummary<T>): Promise<T>;
-  end(fields?: TraceFields): DashboardRenderTrace;
+  end(fields?: TraceFields): RouteRenderTrace;
   fail(error: unknown, fields?: TraceFields): void;
 };
+
+export type DashboardRenderTrace = RouteRenderTrace;
+export type MatchRenderTrace = RouteRenderTrace;
+export type DashboardTrace = RouteTrace;
+export type MatchTrace = RouteTrace;
 
 function nowMs() {
   return Date.now();
@@ -36,24 +41,33 @@ function describeError(error: unknown) {
   return { value: String(error) };
 }
 
-export function isDashboardTraceEnabled() {
+export function isRouteTraceEnabled(kind?: "dashboard" | "match") {
+  const debugAll = process.env.NEXT_PUBLIC_DEBUG_ROUTE_FETCH === "1";
+  const debugDashboard = process.env.NEXT_PUBLIC_DEBUG_DASHBOARD_FETCH === "1";
+  const debugMatch = process.env.NEXT_PUBLIC_DEBUG_MATCH_FETCH === "1";
+
   return (
     process.env.NODE_ENV === "development" ||
-    process.env.NEXT_PUBLIC_DEBUG_DASHBOARD_FETCH === "1"
+    debugAll ||
+    (kind === "dashboard" ? debugDashboard : false) ||
+    (kind === "match" ? debugMatch : false) ||
+    debugDashboard
   );
 }
 
-export function createDashboardTrace(
+function createRouteTrace(
+  kind: "dashboard" | "match",
   route: string,
   fields: TraceFields = {}
-): DashboardTrace {
-  const enabled = isDashboardTraceEnabled();
-  const id = makeTraceId("dashboard");
+): RouteTrace {
+  const enabled = isRouteTraceEnabled(kind);
+  const id = makeTraceId(kind);
   const startedAt = nowMs();
+  const logPrefix = `[${kind}-trace]`;
 
   const log = (event: string, extraFields: TraceFields = {}) => {
     if (!enabled) return;
-    console.info(`[dashboard-trace] ${event}`, {
+    console.info(`${logPrefix} ${event}`, {
       traceId: id,
       route,
       ...fields,
@@ -102,4 +116,18 @@ export function createDashboardTrace(
       });
     },
   };
+}
+
+export function createDashboardTrace(
+  route: string,
+  fields: TraceFields = {}
+): DashboardTrace {
+  return createRouteTrace("dashboard", route, fields);
+}
+
+export function createMatchTrace(
+  route: string,
+  fields: TraceFields = {}
+): MatchTrace {
+  return createRouteTrace("match", route, fields);
 }

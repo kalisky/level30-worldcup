@@ -2,7 +2,7 @@ import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { authUsers, users } from "@/lib/db/schema";
-import { getRoomByCode } from "@/lib/db/queries";
+import { getRoomSessionAccessByCode } from "@/lib/db/queries";
 import type { DashboardTrace } from "@/lib/dashboard-trace";
 import {
   DAILY_GRANT_MIN_HOURS,
@@ -10,7 +10,7 @@ import {
   hasDailyGrantStarted,
 } from "@/lib/daily-grant";
 import { touchRoomLiveRevision } from "@/lib/live-updates";
-import { requireProfiledUser } from "@/lib/auth";
+import { authRedirectPath, getSessionToken, profileRedirectPath } from "@/lib/auth";
 import { normalizeRoomCode } from "@/lib/code";
 import { recordLedger } from "@/lib/ledger";
 
@@ -20,43 +20,26 @@ export async function requireRoomUser(
 ) {
   const trace = options?.trace;
   const code = normalizeRoomCode(rawCode);
-  const room = trace
+  const sessionToken = await getSessionToken();
+  const roomSessionAccess = trace
     ? await trace.step(
-        "auth.getRoomByCode",
-        () => getRoomByCode(code),
-        (value) => ({ roomFound: Boolean(value) })
-      )
-    : await getRoomByCode(code);
-  if (!room) notFound();
-
-  const authUser = trace
-    ? await trace.step(
-        "auth.requireProfiledUser",
-        () => requireProfiledUser(`/r/${code}`),
+        "auth.getSessionRoomAccess",
+        () => getRoomSessionAccessByCode(code, sessionToken ?? ""),
         (value) => ({
-          authUserId: value.id,
-          hasDefaultRoomId: Boolean(value.defaultRoomId),
+          roomFound: Boolean(value?.room),
+          authUserFound: Boolean(value?.authUser),
+          hasDisplayName: Boolean(value?.authUser?.displayName),
+          hasDefaultRoomId: Boolean(value?.authUser?.defaultRoomId),
+          membershipFound: Boolean(value?.user),
         })
       )
-    : await requireProfiledUser(`/r/${code}`);
+    : await getRoomSessionAccessByCode(code, sessionToken ?? "");
+  if (!roomSessionAccess) notFound();
 
-  const membershipRows = trace
-    ? await trace.step(
-        "auth.getRoomMembership",
-        () =>
-          db
-            .select()
-            .from(users)
-            .where(and(eq(users.roomId, room.id), eq(users.authUserId, authUser.id)))
-            .limit(1),
-        (rows) => ({ membershipFound: Boolean(rows[0]) })
-      )
-    : await db
-        .select()
-        .from(users)
-        .where(and(eq(users.roomId, room.id), eq(users.authUserId, authUser.id)))
-        .limit(1);
-  const [user] = membershipRows;
+  const { room, authUser, user } = roomSessionAccess;
+
+  if (!authUser) redirect(authRedirectPath(`/r/${code}`));
+  if (!authUser.displayName) redirect(profileRedirectPath(`/r/${code}`));
 
   if (!user) redirect(`/r/${code}`);
 

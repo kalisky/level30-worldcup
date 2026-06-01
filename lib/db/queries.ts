@@ -1,7 +1,9 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray } from "drizzle-orm";
 import { ensureFreshCustomBetOdds } from "@/lib/custom-bet-odds";
 import { db } from "./index";
 import {
+  authSessions,
+  authUsers,
   rooms,
   users,
   matches,
@@ -9,11 +11,52 @@ import {
   customBets,
   customWagers,
   settlements,
+  type CustomWager,
 } from "./schema";
+
+type MatchBetWithUserName = Awaited<ReturnType<typeof getMatchBetsForMatch>>[number];
+type CustomWagerWithUserName = Awaited<ReturnType<typeof getCustomWagersFor>>[number];
 
 export async function getRoomByCode(code: string) {
   const [room] = await db.select().from(rooms).where(eq(rooms.code, code)).limit(1);
   return room ?? null;
+}
+
+export async function getRoomSessionAccessByCode(code: string, sessionToken: string) {
+  const [row] = await db
+    .select({
+      room: rooms,
+      authUser: authUsers,
+      user: users,
+    })
+    .from(rooms)
+    .leftJoin(
+      authSessions,
+      and(
+        eq(authSessions.token, sessionToken),
+        gt(authSessions.expiresAt, new Date())
+      )
+    )
+    .leftJoin(authUsers, eq(authUsers.id, authSessions.authUserId))
+    .leftJoin(users, and(eq(users.roomId, rooms.id), eq(users.authUserId, authUsers.id)))
+    .where(eq(rooms.code, code))
+    .limit(1);
+
+  return row ?? null;
+}
+
+export async function getRoomAccessByCodeForAuthUser(code: string, authUserId: string) {
+  const [row] = await db
+    .select({
+      room: rooms,
+      user: users,
+    })
+    .from(rooms)
+    .leftJoin(users, and(eq(users.roomId, rooms.id), eq(users.authUserId, authUserId)))
+    .where(eq(rooms.code, code))
+    .limit(1);
+
+  return row ?? null;
 }
 
 export async function listRoomsForAuthUser(authUserId: string) {
@@ -98,6 +141,20 @@ export async function getMatchBetsForMatch(roomId: string, matchId: string) {
     .orderBy(desc(matchBets.createdAt));
 }
 
+export async function getMatchBetBundleForMatch(
+  roomId: string,
+  userId: string,
+  matchId: string
+): Promise<{
+  myBet: MatchBetWithUserName["bet"] | null;
+  allBets: MatchBetWithUserName[];
+}> {
+  const allBets = await getMatchBetsForMatch(roomId, matchId);
+  const myBet = allBets.find((row) => row.bet.userId === userId)?.bet ?? null;
+
+  return { myBet, allBets };
+}
+
 export async function listOpenCustomBets(roomId: string, limit = 30) {
   const rows = await db
     .select({
@@ -158,6 +215,22 @@ export async function getCustomWagersFor(customBetId: string) {
     .orderBy(desc(customWagers.createdAt));
 }
 
+export async function getCustomWagersForBets(customBetIds: string[]) {
+  if (customBetIds.length === 0) {
+    return [] as CustomWagerWithUserName[];
+  }
+
+  return db
+    .select({
+      wager: customWagers,
+      userName: users.name,
+    })
+    .from(customWagers)
+    .innerJoin(users, eq(users.id, customWagers.userId))
+    .where(inArray(customWagers.customBetId, customBetIds))
+    .orderBy(desc(customWagers.createdAt));
+}
+
 export async function getMyWagerOnCustomBet(customBetId: string, userId: string) {
   const [w] = await db
     .select()
@@ -167,6 +240,46 @@ export async function getMyWagerOnCustomBet(customBetId: string, userId: string)
     )
     .limit(1);
   return w ?? null;
+}
+
+export async function hydrateCustomBetRowsWithWagers<T extends { bet: { id: string } }>(
+  rows: T[],
+  userId: string
+): Promise<
+  Array<
+    T & {
+      myWager: CustomWager | null;
+      allWagers: CustomWagerWithUserName[];
+    }
+  >
+> {
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const wagerRows = await getCustomWagersForBets(rows.map((row) => row.bet.id));
+  const wagerMap = new Map<string, CustomWagerWithUserName[]>();
+
+  for (const wagerRow of wagerRows) {
+    const existing = wagerMap.get(wagerRow.wager.customBetId);
+    if (existing) {
+      existing.push(wagerRow);
+    } else {
+      wagerMap.set(wagerRow.wager.customBetId, [wagerRow]);
+    }
+  }
+
+  return rows.map((row) => {
+    const allWagers = wagerMap.get(row.bet.id) ?? [];
+    const myWager =
+      allWagers.find((entry) => entry.wager.userId === userId)?.wager ?? null;
+
+    return {
+      ...row,
+      myWager,
+      allWagers,
+    };
+  });
 }
 
 export async function listRecentSettlements(roomId: string, limit = 20) {

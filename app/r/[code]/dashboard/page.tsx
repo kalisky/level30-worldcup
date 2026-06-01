@@ -2,10 +2,9 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { requireRoomUser } from "@/lib/auth-context";
 import {
-  getCustomWagersFor,
   getMyMatchBets,
-  getMyWagerOnCustomBet,
   getRoomUsers,
+  hydrateCustomBetRowsWithWagers,
   listOpenCustomBets,
   listRoomsForAuthUser,
   listUpcomingMatches,
@@ -104,46 +103,17 @@ export default async function DashboardPage(props: {
         .filter((r) => r.room.id !== room.id)
         .map((r) => ({ code: r.room.code, name: r.room.name }));
 
-      const customBetDetailTimings: Array<{
-        betId: string;
-        durationMs: number;
-        wagerCount: number;
-        hasMyWager: boolean;
-      }> = [];
       const customBetDetails = await trace.step(
         "hydrateCustomBetDetails",
-        async () =>
-          Promise.all(
-            customBets.map(async (row) => {
-              const startedAt = Date.now();
-              const [myWager, allWagers] = await Promise.all([
-                getMyWagerOnCustomBet(row.bet.id, user.id),
-                getCustomWagersFor(row.bet.id),
-              ]);
-
-              customBetDetailTimings.push({
-                betId: row.bet.id,
-                durationMs: Date.now() - startedAt,
-                wagerCount: allWagers.length,
-                hasMyWager: Boolean(myWager),
-              });
-
-              return {
-                ...row,
-                myWager,
-                allWagers,
-              };
-            })
-          ),
-        () => ({
-          customBetCount: customBets.length,
-          totalCustomWagers: customBetDetailTimings.reduce(
-            (total, entry) => total + entry.wagerCount,
+        () => hydrateCustomBetRowsWithWagers(customBets, user.id),
+        (rows) => ({
+          customBetCount: rows.length,
+          totalCustomWagers: rows.reduce(
+            (total, entry) => total + entry.allWagers.length,
             0
           ),
-          slowestCustomBets: [...customBetDetailTimings]
-            .sort((left, right) => right.durationMs - left.durationMs)
-            .slice(0, 3),
+          betsWithAnyWagers: rows.filter((entry) => entry.allWagers.length > 0).length,
+          betsWithMyWager: rows.filter((entry) => entry.myWager != null).length,
         })
       );
 

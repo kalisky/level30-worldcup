@@ -3,18 +3,13 @@ import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { requireRoomUser } from "@/lib/auth-context";
 import {
-  getCustomWagersFor,
   getMatch,
-  getMatchBetForUser,
-  getMatchBetsForMatch,
-  getMyWagerOnCustomBet,
-  listCustomBetsForMatch,
+  getMatchBetBundleForMatch,
 } from "@/lib/db/queries";
 import { getCustomBetShareMetadata } from "@/lib/share-metadata";
 import RoomHeader from "@/components/RoomHeader";
 import AutoRefresh from "@/components/AutoRefresh";
-import CustomBetCard from "@/components/CustomBetCard";
-import ProposeBetModal from "@/components/ProposeBetModal";
+import MatchCustomBetsPane from "@/components/MatchCustomBetsPane";
 import MatchBetPanel from "@/components/MatchBetPanel";
 import MatchScreenLayout from "@/components/MatchScreenLayout";
 import TeamFlag from "@/components/TeamFlag";
@@ -23,7 +18,7 @@ import { getTeamAbbreviation } from "@/lib/team-flags";
 import { translateTeam } from "@/lib/team-i18n";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
 import LocalDateTime from "@/components/LocalDateTime";
-import { getMatchLiveToken } from "@/lib/live-updates";
+import { createMatchTrace } from "@/lib/dashboard-trace";
 
 export async function generateMetadata(props: {
   params: Promise<{ code: string; id: string }>;
@@ -52,38 +47,101 @@ export default async function MatchPage(props: {
 }) {
   const { code, id } = await props.params;
   const searchParams = await props.searchParams;
-  const { room, user, dailyGrantApplied } = await requireRoomUser(code);
   const targetCustomBetId = Array.isArray(searchParams.bet)
     ? searchParams.bet[0]
     : searchParams.bet;
   const preferDashboardBack = Array.isArray(searchParams.from)
     ? searchParams.from[0] === "dashboard"
     : searchParams.from === "dashboard";
+  const trace = createMatchTrace(`/r/${code}/match/${id}`, {
+    hasTargetCustomBet: Boolean(targetCustomBetId),
+    preferDashboardBack,
+  });
 
-  const match = await getMatch(id);
-  if (!match) notFound();
+  const matchData = await (async () => {
+    try {
+      const { room, user, dailyGrantApplied } = await trace.step(
+        "requireRoomUser",
+        () => requireRoomUser(code, { trace }),
+        (value) => ({
+          roomId: value.room.id,
+          userId: value.user.id,
+          dailyGrantApplied: value.dailyGrantApplied,
+        })
+      );
 
-  const [myBet, allBets, customBetRows] = await Promise.all([
-    getMatchBetForUser(room.id, user.id, id),
-    getMatchBetsForMatch(room.id, id),
-    listCustomBetsForMatch(room.id, id),
-  ]);
-
-  const customBetDetails = await Promise.all(
-    customBetRows.map(async (row) => {
-      const [myWager, allWagers] = await Promise.all([
-        getMyWagerOnCustomBet(row.bet.id, user.id),
-        getCustomWagersFor(row.bet.id),
+      const [match, matchBetBundle, locale, translations] = await Promise.all([
+        trace.step(
+          "getMatch",
+          () => getMatch(id),
+          (value) =>
+            value
+              ? {
+                  matchId: value.id,
+                  matchStatus: value.status,
+                  hasScoreOdds: Boolean(value.scoreOdds),
+                }
+              : { matchFound: false }
+        ),
+        trace.step(
+          "getMatchBetBundleForMatch",
+          () => getMatchBetBundleForMatch(room.id, user.id, id),
+          (value) => ({
+            hasMyBet: Boolean(value.myBet),
+            matchBetCount: value.allBets.length,
+          })
+        ),
+        trace.step("getLocale", () => getLocale(), (value) => ({ locale: value })),
+        trace.step("getTranslations", async () => {
+          const [tm, tcomm, tnav] = await Promise.all([
+            getTranslations("match"),
+            getTranslations("common"),
+            getTranslations("nav"),
+          ]);
+          return { tm, tcomm, tnav };
+        }),
       ]);
-      return { ...row, myWager, allWagers };
-    })
-  );
+      if (!match) {
+        trace.log("match_not_found", { matchId: id });
+        notFound();
+      }
 
-  const locale = await getLocale();
-  const tm = await getTranslations("match");
-  const tc = await getTranslations("customBet");
-  const tcomm = await getTranslations("common");
-  const tnav = await getTranslations("nav");
+      trace.end({
+        matchStatus: match.status,
+        matchBetCount: matchBetBundle.allBets.length,
+        customBetsDeferred: true,
+        liveTokenDeferred: true,
+      });
+
+      return {
+        room,
+        user,
+        dailyGrantApplied,
+        match,
+        myBet: matchBetBundle.myBet,
+        allBets: matchBetBundle.allBets,
+        locale,
+        ...translations,
+      };
+    } catch (error) {
+      trace.fail(error);
+      throw error;
+    }
+  })();
+
+  const {
+    room,
+    user,
+    dailyGrantApplied,
+    match,
+    myBet,
+    allBets,
+    locale,
+    tm,
+    tcomm,
+    tnav,
+  } = matchData;
+
   const kickoff = new Date(match.kickoff);
   const oddsHome = Number(match.oddsHome ?? 0);
   const oddsDraw = Number(match.oddsDraw ?? 0);
@@ -92,12 +150,6 @@ export default async function MatchPage(props: {
   const awayTeamAbbreviation = getTeamAbbreviation(match.awayTeam);
   const homeTeamLocalized = translateTeam(match.homeTeam, locale);
   const awayTeamLocalized = translateTeam(match.awayTeam, locale);
-  const liveToken = await getMatchLiveToken({
-    roomId: room.id,
-    matchId: match.id,
-    startingChips: room.startingChips,
-    lastDailyGrantAt: user.lastDailyGrantAt,
-  });
 
   const matchPane = (
     <>
@@ -207,51 +259,16 @@ export default async function MatchPage(props: {
   );
 
   const customBetsPane = (
-    <section className="rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.07)]">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-[0.72rem] font-bold uppercase tracking-[0.28em] text-slate-500">
-            {tc("matchBet")}
-          </h2>
-        </div>
-        <span className="rounded-full bg-[#F8FBFF] px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 ring-1 ring-[#dbe5f2]">
-          {customBetDetails.length}
-        </span>
-      </div>
-
-      {match.status !== "final" && (
-        <div className="mb-4">
-          <ProposeBetModal
-            roomCode={room.code}
-            matchId={match.id}
-            matchLabel={`${homeTeamLocalized} ${tm("vs")} ${awayTeamLocalized}`}
-            matchKickoff={new Date(match.kickoff).toISOString()}
-          />
-        </div>
-      )}
-
-      {customBetDetails.length === 0 ? (
-        <p className="rounded-[22px] border border-dashed border-[#cfdced] bg-[#F8FBFF] p-6 text-center text-sm text-slate-500">
-          {tc("noAnswers")}
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {customBetDetails.map(({ bet, proposerName, myWager, allWagers }) => (
-            <CustomBetCard
-              key={bet.id}
-              bet={bet}
-              proposerName={proposerName}
-              roomCode={room.code}
-              matchId={match.id}
-              highlighted={targetCustomBetId === bet.id}
-              myWager={myWager}
-              myChips={user.chips}
-              wagers={allWagers}
-            />
-          ))}
-        </div>
-      )}
-    </section>
+    <MatchCustomBetsPane
+      roomCode={room.code}
+      matchId={match.id}
+      matchStatus={match.status}
+      matchLabel={`${homeTeamLocalized} ${tm("vs")} ${awayTeamLocalized}`}
+      matchKickoff={new Date(match.kickoff).toISOString()}
+      myChips={user.chips}
+      targetCustomBetId={targetCustomBetId}
+      requestKey={trace.id}
+    />
   );
 
   return (
@@ -260,7 +277,6 @@ export default async function MatchPage(props: {
       <DailyGrantBanner amount={dailyGrantApplied} />
       <AutoRefresh
         traceLabel="match"
-        liveToken={liveToken}
         pollUrl={`/api/live/room/${encodeURIComponent(room.code)}/match/${encodeURIComponent(match.id)}`}
       />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">

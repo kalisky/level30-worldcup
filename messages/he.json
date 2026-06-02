@@ -127,7 +127,9 @@
     "noMatches": "אין משחקים בלוח הזמנים.",
     "customBets": "הימורים מותאמים אישית",
     "noCustomBets": "אין כרגע הימורים פתוחים. הציעו אחד מדף משחק במהלך המשחק.",
-    "yourPrediction": "התחזית שלך"
+    "yourPrediction": "התחזית שלך",
+    "matchCount": "{count, plural, one {# משחק} other {# משחקים}}",
+    "predictBefore": "נחשו לפני"
   },
   "match": {
     "vs": "נגד",

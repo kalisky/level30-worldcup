@@ -12,13 +12,13 @@ import {
 } from "@/lib/db/queries";
 import { getCustomBetShareMetadata } from "@/lib/share-metadata";
 import RoomHeader from "@/components/RoomHeader";
-import MatchCard from "@/components/MatchCard";
 import AutoRefresh from "@/components/AutoRefresh";
 import CustomBetCard from "@/components/CustomBetCard";
 import ProposeBetModal from "@/components/ProposeBetModal";
 import MatchScreenLayout from "@/components/MatchScreenLayout";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
 import CopyBetsLauncher from "@/components/CopyBetsLauncher";
+import DashboardMatchGroups from "@/components/DashboardMatchGroups";
 import type { DashboardTrace } from "@/lib/dashboard-trace";
 import { createDashboardTrace } from "@/lib/dashboard-trace";
 
@@ -279,15 +279,22 @@ async function DashboardMatchesPane({
       name: membership.room.name,
     }));
 
-  const myPredictionByMatch = new Map(
-    myBets.map(
-      (bet) =>
-        [
-          bet.matchId,
-          { home: bet.predictedHomeScore, away: bet.predictedAwayScore },
-        ] as const
-    )
+  const myPredictionByMatch = Object.fromEntries(
+    myBets.map((bet) => [
+      bet.matchId,
+      { home: bet.predictedHomeScore, away: bet.predictedAwayScore },
+    ])
   );
+  const upcomingForDisplay = upcoming.map((match) => ({
+    id: match.id,
+    groupLabel: match.groupLabel,
+    homeTeam: match.homeTeam,
+    awayTeam: match.awayTeam,
+    kickoff: new Date(match.kickoff).toISOString(),
+    status: match.status,
+    homeScore: match.homeScore,
+    awayScore: match.awayScore,
+  }));
 
   return (
     <section>
@@ -302,16 +309,11 @@ async function DashboardMatchesPane({
           {emptyLabel}
         </p>
       ) : (
-        <div className="space-y-2">
-          {upcoming.map((match) => (
-            <MatchCard
-              key={match.id}
-              match={match}
-              roomCode={roomCode}
-              myPrediction={myPredictionByMatch.get(match.id) ?? null}
-            />
-          ))}
-        </div>
+        <DashboardMatchGroups
+          matches={upcomingForDisplay}
+          roomCode={roomCode}
+          myPredictions={myPredictionByMatch}
+        />
       )}
     </section>
   );

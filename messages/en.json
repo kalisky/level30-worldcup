@@ -127,7 +127,9 @@
     "noMatches": "No matches scheduled.",
     "customBets": "Custom bets",
     "noCustomBets": "No open custom bets right now. Propose one from a match page during the game.",
-    "yourPrediction": "Your prediction"
+    "yourPrediction": "Your prediction",
+    "matchCount": "{count, plural, one {# match} other {# matches}}",
+    "predictBefore": "Predict before"
   },
   "match": {
     "vs": "vs",

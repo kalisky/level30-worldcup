@@ -18,8 +18,10 @@ export type LocalDateTimePreset =
   | "kickoffLong" //  "Saturday, Jun 11, 7:30 PM" — match page header
   | "datetime" //     "Jun 12, 3:45 PM" — generic timestamp
   | "lockShort" //    same as datetime; semantic alias for lock times
+  | "dateWeekdayShort" // "Thu, Jun 11" — grouped dashboard headers
   | "date" //         "Jun 12" — date only
-  | "time"; //        "3:45 PM" — time only
+  | "time" //         "3:45 PM" — time only
+  | "time24"; //      "22:00" — compact local kickoff time
 
 const PRESETS: Record<LocalDateTimePreset, Intl.DateTimeFormatOptions> = {
   kickoffShort: {
@@ -48,6 +50,11 @@ const PRESETS: Record<LocalDateTimePreset, Intl.DateTimeFormatOptions> = {
     hour: "numeric",
     minute: "2-digit",
   },
+  dateWeekdayShort: {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  },
   date: {
     month: "short",
     day: "numeric",
@@ -55,6 +62,11 @@ const PRESETS: Record<LocalDateTimePreset, Intl.DateTimeFormatOptions> = {
   time: {
     hour: "numeric",
     minute: "2-digit",
+  },
+  time24: {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
   },
 };
 

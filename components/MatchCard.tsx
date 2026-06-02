@@ -6,14 +6,36 @@ import LocalDateTime from "@/components/LocalDateTime";
 import { getTeamAbbreviation } from "@/lib/team-flags";
 import { useTeamName } from "@/hooks/useTeamName";
 
+export type MatchCardMatch = Omit<
+  Pick<
+  Match,
+  | "id"
+  | "groupLabel"
+  | "homeTeam"
+  | "awayTeam"
+  | "kickoff"
+  | "status"
+  | "homeScore"
+  | "awayScore"
+  >,
+  "kickoff"
+> & {
+  kickoff: Match["kickoff"] | string | number;
+};
+
+export type MatchCardPrediction = {
+  home: number;
+  away: number;
+};
+
 export default function MatchCard({
   match,
   roomCode,
   myPrediction,
 }: {
-  match: Match;
+  match: MatchCardMatch;
   roomCode: string;
-  myPrediction?: { home: number; away: number } | null;
+  myPrediction?: MatchCardPrediction | null;
 }) {
   const tm = useTranslations("match");
   const td = useTranslations("dashboard");
@@ -40,19 +62,21 @@ export default function MatchCard({
       href={matchHref}
       className="group block rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.08)] transition hover:-translate-y-0.5 hover:border-[#c4d6ec] hover:shadow-[0_24px_50px_rgba(30,58,138,0.14)]"
     >
-      <div className="flex items-center justify-between gap-3 text-[0.7rem] uppercase tracking-[0.24em] text-slate-500">
-        <span className="font-semibold">{tm("group")} {match.groupLabel}</span>
+      <div className="flex items-center justify-between gap-3 text-slate-500">
+        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+          {tm("group")} {match.groupLabel}
+        </span>
         <div className="flex items-center gap-2">
+          <span className="font-medium tabular-nums text-slate-500">
+            <LocalDateTime value={kickoff} preset="time24" />
+          </span>
           <span
-            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold ${stateClass}`}
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.7rem] font-bold uppercase tracking-[0.24em] ${stateClass}`}
           >
             {isLive && (
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
             )}
             {stateLabel}
-          </span>
-          <span className="hidden font-medium normal-case tracking-normal text-slate-500 sm:inline">
-            <LocalDateTime value={kickoff} preset="kickoffShort" />
           </span>
         </div>
       </div>
@@ -106,12 +130,6 @@ export default function MatchCard({
           </div>
         </div>
       </div>
-
-      {!isLive && !isFinal && (
-        <div className="mt-3 text-center text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-slate-500 sm:hidden">
-          <LocalDateTime value={kickoff} preset="kickoffShort" />
-        </div>
-      )}
 
       {myPrediction && (
         <div className="mt-4 inline-flex rounded-full bg-[#FFF1E8] px-3 py-1 text-xs font-bold text-[#EA580C]">

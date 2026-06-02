@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Room, User } from "@/lib/db/schema";
 import ProfileDialog from "@/components/ProfileDialog";
@@ -10,64 +10,19 @@ import RoomSettingsDialog from "@/components/RoomSettingsDialog";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 function LogoMark() {
-  const stripesId = useId();
-
   return (
-    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center sm:h-12 sm:w-12">
+    <span className="inline-flex h-[30px] w-[30px] shrink-0 items-center justify-center">
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 200 200"
+        viewBox="0 0 100 100"
         width="100%"
         height="100%"
         aria-hidden="true"
-        className="drop-shadow-[0_10px_24px_rgba(30,58,138,0.18)]"
+        className="drop-shadow-[0_10px_24px_rgba(24,95,165,0.18)]"
       >
-        <defs>
-          <pattern
-            id={stripesId}
-            width="24"
-            height="24"
-            patternUnits="userSpaceOnUse"
-            patternTransform="rotate(0)"
-          >
-            <rect width="12" height="24" fill="#1E3A8A" fillOpacity="0.05" />
-          </pattern>
-        </defs>
-
-        <path
-          d="M100 15 L20 40 L20 100 C20 150 50 180 100 195 C150 180 180 150 180 100 L180 40 Z"
-          fill={`url(#${stripesId})`}
-        />
-        <path
-          d="M100 15 L20 40 L20 100 C20 150 50 180 100 195 C150 180 180 150 180 100 L180 40 Z"
-          fill="none"
-          stroke="#1E3A8A"
-          strokeWidth="8"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M100 30 L35 50 L35 100 C35 140 60 165 100 178 C140 165 165 140 165 100 L165 50 Z"
-          fill="none"
-          stroke="#1E3A8A"
-          strokeWidth="2"
-          strokeLinejoin="round"
-        />
-
-        <g
-          stroke="#1E3A8A"
-          strokeWidth="14"
-          strokeLinejoin="round"
-          fill="none"
-        >
-          <path d="M75 60 L75 140" strokeLinecap="square" />
-          <path d="M75 67 H110 C128 67 128 100 110 100 H75" />
-          <path d="M75 96 H118 C140 96 140 140 118 140 H75" />
-        </g>
-
-        <path
-          d="M96 73 L98.5 79 L105 79.5 L100 84 L101.5 90 L96 87 L90.5 90 L92 84 L87 79.5 L93.5 79 Z"
-          fill="#F97316"
-        />
+        <rect width="100" height="100" rx="22" fill="#185FA5" />
+        <rect x="22" y="22" width="22" height="56" rx="5" fill="#FFFFFF" />
+        <rect x="56" y="34" width="22" height="44" rx="5" fill="#B5D4F4" />
       </svg>
     </span>
   );
@@ -311,15 +266,21 @@ export default function AppHeaderClient({
       <header className="sticky top-0 z-20 border-b border-[#dbe5f2] bg-white/92 shadow-[0_10px_32px_rgba(15,23,42,0.08)] backdrop-blur">
         <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:py-3">
           <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:gap-3">
-            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <div className="flex min-w-0 items-center gap-[9px]">
               <Link
                 href={room ? `/r/${room.code}/dashboard` : "/"}
-                className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3"
+                className="flex min-w-0 flex-1 items-center gap-[9px]"
               >
                 <LogoMark />
                 <div className="min-w-0 ">
-                  <p className="truncate text-[2rem] font-black leading-none tracking-tight text-[#1E3A8A] sm:text-3xl">
-                    BUCKECLUB
+                  <p
+                    className="text-2xl font-semibold text-[#185FA5] md:text-3xl"
+                    style={{
+                      fontFamily: "system-ui, sans-serif",
+                      letterSpacing: "-0.6px",
+                    }}
+                  >
+                    Buckeclub
                   </p>
                   <p className="mt-1 text-[0.54rem] font-bold uppercase leading-[1.35] tracking-[0.22em] text-slate-500 sm:text-[0.65rem] sm:tracking-[0.28em]">
                     Social sports predictions

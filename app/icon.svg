@@ -1,32 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Buckeclub">
-  <rect width="200" height="200" rx="44" fill="#F8FBFF" />
-  <path
-    d="M100 24 L36 44 L36 98 C36 138 60 164 100 178 C140 164 164 138 164 98 L164 44 Z"
-    fill="white"
-    stroke="#1E3A8A"
-    stroke-width="8"
-    stroke-linejoin="round"
-  />
-  <path
-    d="M100 38 L50 54 L50 98 C50 128 68 148 100 160 C132 148 150 128 150 98 L150 54 Z"
-    fill="none"
-    stroke="#1E3A8A"
-    stroke-width="2.5"
-    stroke-linejoin="round"
-  />
-  <g
-    fill="none"
-    stroke="#1E3A8A"
-    stroke-width="13"
-    stroke-linejoin="round"
-    stroke-linecap="square"
-  >
-    <path d="M78 62 V140" />
-    <path d="M78 69 H111 C128 69 128 98 111 98 H78" />
-    <path d="M78 98 H116 C138 98 138 140 116 140 H78" />
-  </g>
-  <path
-    d="M97 75 L99.5 81 L106 81.5 L101 86 L102.5 92 L97 89 L91.5 92 L93 86 L88 81.5 L94.5 81 Z"
-    fill="#F97316"
-  />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Buckeclub">
+  <rect width="100" height="100" rx="22" fill="#185FA5" />
+  <rect x="22" y="22" width="22" height="56" rx="5" fill="#FFFFFF" />
+  <rect x="56" y="34" width="22" height="44" rx="5" fill="#B5D4F4" />
 </svg>

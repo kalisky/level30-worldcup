@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <title>Buckeclub</title>
+  <desc>Buckeclub two-bar mark — a rounded square with two vertical bars representing a leaderboard podium</desc>
+
+  <!-- Background -->
+  <rect width="100" height="100" rx="22" fill="#185FA5"/>
+
+  <!-- Tall bar (left) -->
+  <rect x="22" y="22" width="22" height="56" rx="5" fill="#FFFFFF"/>
+
+  <!-- Medium bar (right) -->
+  <rect x="56" y="34" width="22" height="44" rx="5" fill="#B5D4F4"/>
+</svg>

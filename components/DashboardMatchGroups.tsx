@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 import LocalDateTime from "@/components/LocalDateTime";
 import MatchCard, {
   type MatchCardMatch,
-  type MatchCardPrediction,
 } from "@/components/MatchCard";
+import type { DashboardQuickBetExisting } from "@/components/DashboardQuickBet";
 import { groupMatchesByLocalDate } from "@/lib/dashboard-match-groups";
 
 let currentNow = Date.now();
@@ -68,11 +68,15 @@ function ClockIcon() {
 export default function DashboardMatchGroups({
   matches,
   roomCode,
-  myPredictions,
+  myBets,
+  customBetCounts,
+  maxStake,
 }: {
   matches: MatchCardMatch[];
   roomCode: string;
-  myPredictions: Record<string, MatchCardPrediction | null | undefined>;
+  myBets: Record<string, DashboardQuickBetExisting | null | undefined>;
+  customBetCounts?: Record<string, number>;
+  maxStake: number;
 }) {
   const t = useTranslations("dashboard");
   const hydrated = useSyncExternalStore(
@@ -94,7 +98,10 @@ export default function DashboardMatchGroups({
           key={match.id}
           match={match}
           roomCode={roomCode}
-          myPrediction={myPredictions[match.id] ?? null}
+          myBet={myBets[match.id] ?? null}
+          customBetCount={customBetCounts?.[match.id] ?? 0}
+          maxStake={maxStake}
+          now={now}
         />
       ))}
     </div>
@@ -113,7 +120,7 @@ export default function DashboardMatchGroups({
     <div className="space-y-5">
       {matchGroups.map((group) => (
         <section key={group.dateKey} className="space-y-2">
-          <div className="flex items-center gap-3">
+          <div className="sticky top-[11rem] z-[5] -mx-4 flex items-center gap-3 bg-background px-4 py-2 shadow-[0_2px_8px_rgba(15,23,42,0.04)] lg:top-[4.75rem] lg:mx-0 lg:px-0 lg:shadow-none">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[13px] font-medium text-slate-700">
                 <LocalDateTime

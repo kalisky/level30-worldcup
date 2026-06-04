@@ -129,7 +129,9 @@
     "noCustomBets": "No open custom bets right now. Propose one from a match page during the game.",
     "yourPrediction": "Your prediction",
     "matchCount": "{count, plural, one {# match} other {# matches}}",
-    "predictBefore": "Predict before"
+    "predictBefore": "Predict before",
+    "optional": "Optional",
+    "exactScoreHint": "Add an exact score for a bigger payout"
   },
   "match": {
     "vs": "vs",
@@ -145,7 +147,9 @@
     "yourBet": "Your bet",
     "yourBets": "Predictions on this match",
     "settled": "Settled. Payout:",
-    "openOutcome": "open"
+    "openOutcome": "open",
+    "customBetCount": "{count, plural, one {# custom bet} other {# custom bets}}",
+    "customBetTooltip": "Custom bets your friends created on this match. Tap the card to see them."
   },
   "bet": {
     "predictScore": "Predict the score",
@@ -203,7 +207,8 @@
     "lockTimeHint": "Pick when wagering should close — must set explicitly.",
     "lockTimePast": "⚠️ Lock time is in the past — pick a later moment.",
     "locksIn": "🔒 Locks in",
-    "endOfMatch": "End of this match",
+    "matchKickoff": "Match kickoff",
+    "tenMinutes": "10 minutes from now",
     "endOfTournament": "End of tournament",
     "useEnd": "Use",
     "submit": "Propose bet",

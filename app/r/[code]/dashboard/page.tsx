@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
 import { requireRoomUser } from "@/lib/auth-context";
 import {
+  countOpenCustomBetsByMatch,
   getMyMatchBets,
   hydrateCustomBetRowsWithWagers,
   listOpenCustomBets,
@@ -19,6 +20,7 @@ import MatchScreenLayout from "@/components/MatchScreenLayout";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
 import CopyBetsLauncher from "@/components/CopyBetsLauncher";
 import DashboardMatchGroups from "@/components/DashboardMatchGroups";
+import StickyDashboardHeader from "@/components/StickyDashboardHeader";
 import type { DashboardTrace } from "@/lib/dashboard-trace";
 import { createDashboardTrace } from "@/lib/dashboard-trace";
 
@@ -95,59 +97,12 @@ export default async function DashboardPage(props: {
   const { room, user, dailyGrantApplied, t, tnav } = dashboardData;
 
   const mobileDashboardHeader = (
-    <section className="lg:hidden">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="min-w-0 truncate text-[1.7rem] font-black text-[#1E3A8A]">
-          {room.name}
-        </h1>
-
-        <nav className="flex shrink-0 items-center gap-2">
-          <Link
-            href={`/r/${room.code}/history`}
-            aria-label={tnav("history")}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#d7deea] bg-white text-slate-700 transition hover:border-[#c3cedd] hover:bg-[#F8FBFF] hover:text-[#1E3A8A]"
-          >
-            <svg
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-4 w-4"
-              aria-hidden="true"
-            >
-              <path d="M3.5 10a6.5 6.5 0 1 0 1.9-4.6" />
-              <path d="M3.5 4.5v3.4h3.4" />
-              <path d="M10 6.7v3.7l2.5 1.5" />
-            </svg>
-            <span className="sr-only">{tnav("history")}</span>
-          </Link>
-          <Link
-            href={`/r/${room.code}/leaderboard`}
-            aria-label={tnav("leaderboard")}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#d7deea] bg-white text-slate-700 transition hover:border-[#c3cedd] hover:bg-[#F8FBFF] hover:text-[#1E3A8A]"
-          >
-            <svg
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-4 w-4"
-              aria-hidden="true"
-            >
-              <path d="M4.5 16.5h11" />
-              <path d="M6 16.5V9.5" />
-              <path d="M10 16.5V5.5" />
-              <path d="M14 16.5v-4" />
-            </svg>
-            <span className="sr-only">{tnav("leaderboard")}</span>
-          </Link>
-        </nav>
-      </div>
-    </section>
+    <StickyDashboardHeader
+      roomName={room.name}
+      roomCode={room.code}
+      historyLabel={tnav("history")}
+      leaderboardLabel={tnav("leaderboard")}
+    />
   );
 
   const dashboardPane = (
@@ -166,6 +121,7 @@ export default async function DashboardPage(props: {
           roomCode={room.code}
           userId={user.id}
           authUserId={user.authUserId}
+          myChips={user.chips}
           heading={t("upcomingMatches")}
           emptyLabel={t("noMatches")}
         />
@@ -203,7 +159,7 @@ export default async function DashboardPage(props: {
         pollUrl={`/api/live/room/${encodeURIComponent(room.code)}/dashboard`}
       />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
-        <div className="mb-4 lg:hidden">{mobileDashboardHeader}</div>
+        {mobileDashboardHeader}
         <section className="mb-6 hidden lg:block">
           <div className="flex items-center justify-between gap-4 pb-5">
             <h1 className="min-w-0 truncate text-[2rem] font-black text-[#1E3A8A]">
@@ -244,6 +200,7 @@ async function DashboardMatchesPane({
   roomCode,
   userId,
   authUserId,
+  myChips,
   heading,
   emptyLabel,
 }: {
@@ -252,10 +209,11 @@ async function DashboardMatchesPane({
   roomCode: string;
   userId: string;
   authUserId: string | null;
+  myChips: number;
   heading: string;
   emptyLabel: string;
 }) {
-  const [upcoming, myBets, allRoomMemberships] = await Promise.all([
+  const [upcoming, myBets, allRoomMemberships, customBetCounts] = await Promise.all([
     trace.step("listUpcomingMatches", () => listUpcomingMatches(100), (rows) => ({
       upcomingMatchCount: rows.length,
     })),
@@ -270,6 +228,13 @@ async function DashboardMatchesPane({
         hasAuthUserId: Boolean(authUserId),
       })
     ),
+    trace.step(
+      "countOpenCustomBetsByMatch",
+      () => countOpenCustomBetsByMatch(roomId),
+      (rows) => ({
+        matchesWithCustomBets: Object.keys(rows).length,
+      })
+    ),
   ]);
 
   const otherRooms = allRoomMemberships
@@ -279,10 +244,17 @@ async function DashboardMatchesPane({
       name: membership.room.name,
     }));
 
-  const myPredictionByMatch = Object.fromEntries(
+  const myBetByMatch = Object.fromEntries(
     myBets.map((bet) => [
       bet.matchId,
-      { home: bet.predictedHomeScore, away: bet.predictedAwayScore },
+      {
+        directionPick: bet.directionPick,
+        directionStake: bet.directionStake,
+        predictedHomeScore: bet.predictedHomeScore,
+        predictedAwayScore: bet.predictedAwayScore,
+        scoreStake: bet.scoreStake,
+        totalStake: bet.totalStake,
+      },
     ])
   );
   const upcomingForDisplay = upcoming.map((match) => ({
@@ -294,6 +266,10 @@ async function DashboardMatchesPane({
     status: match.status,
     homeScore: match.homeScore,
     awayScore: match.awayScore,
+    oddsHome: match.oddsHome != null ? Number(match.oddsHome) : null,
+    oddsDraw: match.oddsDraw != null ? Number(match.oddsDraw) : null,
+    oddsAway: match.oddsAway != null ? Number(match.oddsAway) : null,
+    scoreOdds: match.scoreOdds ?? null,
   }));
 
   return (
@@ -312,7 +288,9 @@ async function DashboardMatchesPane({
         <DashboardMatchGroups
           matches={upcomingForDisplay}
           roomCode={roomCode}
-          myPredictions={myPredictionByMatch}
+          myBets={myBetByMatch}
+          customBetCounts={customBetCounts}
+          maxStake={myChips}
         />
       )}
     </section>

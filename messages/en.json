@@ -148,7 +148,8 @@
     "yourBets": "Predictions on this match",
     "settled": "Settled. Payout:",
     "openOutcome": "open",
-    "customBetCount": "{count, plural, one {# custom bet} other {# custom bets}}"
+    "customBetCount": "{count, plural, one {# custom bet} other {# custom bets}}",
+    "customBetTooltip": "Custom bets your friends created on this match. Tap the card to see them."
   },
   "bet": {
     "predictScore": "Predict the score",

@@ -148,7 +148,8 @@
     "yourBets": "תחזיות למשחק זה",
     "settled": "נסגר. רווח:",
     "openOutcome": "פתוח",
-    "customBetCount": "{count, plural, one {הימור מותאם #} other {# הימורים מותאמים}}"
+    "customBetCount": "{count, plural, one {הימור מותאם #} other {# הימורים מותאמים}}",
+    "customBetTooltip": "הימורים מותאמים שחברים יצרו על המשחק. הקש על הכרטיס כדי לראות."
   },
   "bet": {
     "predictScore": "נחש את התוצאה",

@@ -120,7 +120,7 @@ export default function DashboardMatchGroups({
     <div className="space-y-5">
       {matchGroups.map((group) => (
         <section key={group.dateKey} className="space-y-2">
-          <div className="flex items-center gap-3">
+          <div className="sticky top-[11rem] z-[5] -mx-4 flex items-center gap-3 bg-background px-4 py-2 shadow-[0_2px_8px_rgba(15,23,42,0.04)] lg:top-[4.75rem] lg:mx-0 lg:px-0 lg:shadow-none">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[13px] font-medium text-slate-700">
                 <LocalDateTime

@@ -4,7 +4,7 @@ import { requireRoomUser } from "@/lib/auth-context";
 import { ensureFreshCustomBetOdds } from "@/lib/custom-bet-odds";
 import { db } from "@/lib/db";
 import { customBets, customWagers, matches, users } from "@/lib/db/schema";
-import { listRecentSettlements } from "@/lib/db/queries";
+import { getCustomWagersForBets, listRecentSettlements } from "@/lib/db/queries";
 import { translateTeam } from "@/lib/team-i18n";
 import RoomHeader from "@/components/RoomHeader";
 import RoomBreadcrumb from "@/components/RoomBreadcrumb";
@@ -52,6 +52,19 @@ export default async function AdminPage(props: {
       bet: await ensureFreshCustomBetOdds(db, entry.bet),
     }))
   );
+
+  // Pull every wager for the open bets in one query, then bucket by bet id so
+  // each SettleCustomBet card can render its list of wagerers like the player
+  // dashboard's CustomBetCard does.
+  const allWagerRows = await getCustomWagersForBets(
+    openBets.map((entry) => entry.bet.id)
+  );
+  const wagersByBet = new Map<string, typeof allWagerRows>();
+  for (const row of allWagerRows) {
+    const existing = wagersByBet.get(row.wager.customBetId);
+    if (existing) existing.push(row);
+    else wagersByBet.set(row.wager.customBetId, [row]);
+  }
 
   // Split matches into 'needs attention' (past kickoff, not final) and rest.
   const now = new Date();
@@ -103,6 +116,7 @@ export default async function AdminPage(props: {
                   roomCode={room.code}
                   proposerName={proposerName}
                   wagererCount={wagererCount}
+                  wagers={wagersByBet.get(bet.id) ?? []}
                 />
               ))}
             </div>

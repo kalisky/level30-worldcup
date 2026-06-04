@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import type { CustomBet } from "@/lib/db/schema";
+import type { CustomBet, CustomWager } from "@/lib/db/schema";
 import {
   settleCustomBet,
   voidCustomBet,
@@ -15,6 +15,7 @@ export default function SettleCustomBet({
   roomCode,
   proposerName,
   wagererCount,
+  wagers,
 }: {
   bet: CustomBet;
   roomCode: string;
@@ -22,6 +23,7 @@ export default function SettleCustomBet({
   /** Distinct number of users who've wagered. Below 2 the bet is invalid and
    *  can only be voided. */
   wagererCount: number;
+  wagers: { wager: CustomWager; userName: string }[];
 }) {
   const t = useTranslations("admin");
   const tDefaults = useTranslations("customBet.defaults");
@@ -177,6 +179,28 @@ export default function SettleCustomBet({
         <p className="mt-2 rounded-2xl bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
           {error}
         </p>
+      )}
+
+      {wagers.length > 0 && (
+        <details className="mt-3" open>
+          <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            {wagers.length} {wagers.length === 1 ? "wager" : "wagers"} placed
+          </summary>
+          <ul className="mt-2 space-y-1 text-xs">
+            {wagers.map(({ wager, userName }) => (
+              <li key={wager.id} className="flex items-center justify-between">
+                <span>
+                  <span className="font-semibold text-[#1E3A8A]">{userName}</span>{" "}
+                  <span className="text-slate-500">→</span>{" "}
+                  {bet.options[wager.optionIdx]?.label}
+                </span>
+                <span className="font-mono font-semibold text-slate-500">
+                  {wager.stake} @ {Number(wager.oddsLocked).toFixed(2)}x
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
     </article>
   );

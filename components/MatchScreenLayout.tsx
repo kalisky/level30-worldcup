@@ -55,8 +55,8 @@ export default function MatchScreenLayout({
 
   return (
     <>
-      <div className="lg:hidden">
-        <div className="mb-4 rounded-[24px] border border-[#dbe5f2] bg-[#F8FBFF] p-1 shadow-[0_10px_24px_rgba(30,58,138,0.06)]">
+      <div className="sticky top-[7rem] z-10 -mx-4 mb-4 bg-background px-4 py-2 shadow-[0_4px_12px_rgba(15,23,42,0.06)] lg:hidden">
+        <div className="rounded-[24px] border border-[#dbe5f2] bg-[#F8FBFF] p-1 shadow-[0_10px_24px_rgba(30,58,138,0.06)]">
           <div className="grid grid-cols-2 gap-1">
             <button
               type="button"

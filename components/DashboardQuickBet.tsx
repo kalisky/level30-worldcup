@@ -154,6 +154,7 @@ function ExactScoreDialog({
   sideStake,
   maxStake,
   choices,
+  directionPick,
 }: {
   open: boolean;
   onClose: () => void;
@@ -166,6 +167,7 @@ function ExactScoreDialog({
   sideStake: number;
   maxStake: number;
   choices: ExactScoreChoice[];
+  directionPick: DirectionGroup | null;
 }) {
   const tb = useTranslations("bet");
   const tm = useTranslations("match");
@@ -173,6 +175,7 @@ function ExactScoreDialog({
   const teamName = useTeamName();
   const localizedHome = teamName(homeTeam);
   const localizedAway = teamName(awayTeam);
+  const drawLabel = tm("draw");
   const [home, setHome] = useState<number | null>(initialHome);
   const [away, setAway] = useState<number | null>(initialAway);
   const [stake, setStake] = useState<number>(initialStake);
@@ -193,6 +196,11 @@ function ExactScoreDialog({
   const selectedScoreOdd = choices.find((choice) => choice.key === selectedKey)?.odd ?? 0;
   const stakeNum = Math.max(0, Math.floor(stake) || 0);
   const totalStake = sideStake + stakeNum;
+  const scoreImpliesDirection = impliedDirection(home, away);
+  const mismatched =
+    directionPick !== null &&
+    scoreImpliesDirection !== null &&
+    directionPick !== scoreImpliesDirection;
   const canSave =
     selectedKey !== null &&
     selectedScoreOdd > 0 &&
@@ -281,11 +289,18 @@ function ExactScoreDialog({
               <span className="text-xs font-semibold text-slate-500">
                 {tc("chips")}
               </span>
-              {selectedKey !== null && selectedScoreOdd > 0 && stakeNum > 0 ? (
-                <span className="ml-auto text-xs text-slate-500">
-                  {tb("payIfExact", {
-                    amount: Math.floor(stakeNum * selectedScoreOdd),
-                  })}
+              {selectedKey !== null && selectedScoreOdd > 0 ? (
+                <span className="ml-auto flex items-center gap-2 text-xs text-slate-500">
+                  <span className="font-mono font-black text-[#1D4ED8]">
+                    {selectedScoreOdd.toFixed(2)}x
+                  </span>
+                  {stakeNum > 0 ? (
+                    <span>
+                      {tb("payIfExact", {
+                        amount: Math.floor(stakeNum * selectedScoreOdd),
+                      })}
+                    </span>
+                  ) : null}
                 </span>
               ) : null}
             </div>
@@ -296,6 +311,27 @@ function ExactScoreDialog({
             ) : null}
           </div>
         </div>
+
+        {mismatched && home !== null && away !== null && (
+          <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {tb("mismatchWarning", {
+              side:
+                directionPick === "HOME"
+                  ? localizedHome
+                  : directionPick === "AWAY"
+                    ? localizedAway
+                    : drawLabel,
+              scoreSide:
+                scoreImpliesDirection === "HOME"
+                  ? localizedHome
+                  : scoreImpliesDirection === "AWAY"
+                    ? localizedAway
+                    : drawLabel,
+              home,
+              away,
+            })}
+          </div>
+        )}
 
         <div className="mt-5 flex gap-2">
           <button
@@ -422,6 +458,13 @@ export default function DashboardQuickBet({
       : null;
   const fallbackChoice =
     directionPick != null ? pickDefaultScore(exactScoreChoices, directionPick) : null;
+  const scoreImpliesDirection = impliedDirection(home, away);
+  const mismatched =
+    directionPick !== null &&
+    scoreImpliesDirection !== null &&
+    directionPick !== scoreImpliesDirection &&
+    sideStakeNum > 0 &&
+    scoreStakeNum > 0;
   const canSubmit =
     directionPick !== null &&
     sideStakeNum >= 2 &&
@@ -596,11 +639,14 @@ export default function DashboardQuickBet({
             <button
               type="button"
               onClick={openScoreDialog}
-              className="flex w-full items-center justify-between gap-3 rounded-[20px] border border-dashed border-[#bfdbfe] bg-[#F8FBFF] px-4 py-3 text-start transition hover:border-[#3B82F6] hover:bg-white"
+              className="group flex w-full items-center justify-between gap-3 rounded-[20px] border border-[#bfdbfe] bg-white px-4 py-3 text-start shadow-[0_2px_8px_rgba(30,58,138,0.06)] transition hover:border-[#3B82F6] hover:bg-[#F8FBFF] hover:shadow-[0_6px_18px_rgba(30,58,138,0.10)] active:translate-y-px"
             >
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-[#1E3A8A]">
+                <div className="flex items-center gap-2 text-sm font-semibold text-[#1E3A8A]">
                   {tb("predictScore")}
+                  <span className="rounded-full bg-[#E0EEFF] px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.16em] text-[#1D4ED8]">
+                    {td("optional")}
+                  </span>
                 </div>
                 <div className="mt-1 truncate text-xs text-slate-500">
                   {scoreStakeNum > 0 && home !== null && away !== null && selectedScoreOdd > 0
@@ -608,10 +654,40 @@ export default function DashboardQuickBet({
                     : td("exactScoreHint")}
                 </div>
               </div>
-              <span className="shrink-0 rounded-full bg-[#E0EEFF] px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[#1D4ED8]">
-                {td("optional")}
-              </span>
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                className="h-5 w-5 shrink-0 text-[#1D4ED8] transition-transform group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5"
+              >
+                <path d="m7 5 5 5-5 5" />
+              </svg>
             </button>
+
+            {mismatched && (
+              <div className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                {tb("mismatchWarning", {
+                  side:
+                    directionPick === "HOME"
+                      ? localizedHome
+                      : directionPick === "AWAY"
+                        ? localizedAway
+                        : drawLabel,
+                  scoreSide:
+                    scoreImpliesDirection === "HOME"
+                      ? localizedHome
+                      : scoreImpliesDirection === "AWAY"
+                        ? localizedAway
+                        : drawLabel,
+                  home: home ?? 0,
+                  away: away ?? 0,
+                })}
+              </div>
+            )}
 
             {totalStake > maxStake ? (
               <p className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">
@@ -653,7 +729,7 @@ export default function DashboardQuickBet({
                 type="button"
                 onClick={handleCancel}
                 disabled={pending}
-                className="rounded-[16px] border border-[#cdd9ea] bg-white px-3 text-xs font-semibold text-slate-500 transition hover:bg-[#F8FBFF] hover:text-[#1E3A8A] disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-full border border-[#cdd9ea] bg-white px-4 text-xs font-semibold text-slate-500 transition hover:bg-[#F8FBFF] hover:text-[#1E3A8A] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {tc("cancel")}
               </button>
@@ -695,6 +771,7 @@ export default function DashboardQuickBet({
         sideStake={sideStakeNum}
         maxStake={maxStake}
         choices={exactScoreChoices}
+        directionPick={directionPick}
       />
     </>
   );

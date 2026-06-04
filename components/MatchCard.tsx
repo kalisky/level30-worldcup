@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Match } from "@/lib/db/schema";
 import TeamFlag from "@/components/TeamFlag";
@@ -49,6 +50,24 @@ export default function MatchCard({
 }) {
   const tm = useTranslations("match");
   const teamName = useTeamName();
+  const [tooltipOpen, setTooltipOpen] = useState(false);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!tooltipOpen) return;
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
+      if (!tooltipRef.current) return;
+      if (tooltipRef.current.contains(event.target as Node)) return;
+      setTooltipOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [tooltipOpen]);
+
   const kickoff = new Date(match.kickoff);
   const isFinal = match.status === "final";
   const isLive = match.status === "live";
@@ -75,13 +94,34 @@ export default function MatchCard({
               {tm("group")} {match.groupLabel}
             </span>
             {customBetCount > 0 && (
-              <span
-                className="inline-flex items-center gap-1 rounded-full bg-[#FFF1E8] px-2.5 py-1 text-[11px] font-bold text-[#EA580C]"
-                aria-label={tm("customBetCount", { count: customBetCount })}
-              >
-                <span aria-hidden="true">🎲</span>
-                {customBetCount}
-              </span>
+              <div ref={tooltipRef} className="relative">
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setTooltipOpen((open) => !open);
+                  }}
+                  title={tm("customBetTooltip")}
+                  aria-label={`${tm("customBetCount", { count: customBetCount })} — ${tm("customBetTooltip")}`}
+                  aria-expanded={tooltipOpen}
+                  className="inline-flex items-center gap-1 rounded-full bg-[#FFF1E8] px-2.5 py-1 text-[11px] font-bold text-[#EA580C] transition hover:bg-[#FFE5D5]"
+                >
+                  <span aria-hidden="true">🎲</span>
+                  {customBetCount}
+                  <span aria-hidden="true" className="font-bold text-[#FB923C] sm:opacity-70">
+                    ⓘ
+                  </span>
+                </button>
+                {tooltipOpen && (
+                  <div
+                    role="tooltip"
+                    className="absolute left-0 top-full z-20 mt-2 w-64 rounded-2xl border border-[#dbe5f2] bg-white px-3 py-2 text-xs leading-relaxed text-slate-700 shadow-[0_10px_28px_rgba(15,23,42,0.18)] rtl:left-auto rtl:right-0"
+                  >
+                    {tm("customBetTooltip")}
+                  </div>
+                )}
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2">

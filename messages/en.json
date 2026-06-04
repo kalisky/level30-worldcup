@@ -93,6 +93,100 @@
     "joinRoomPending": "Looking up room…",
     "kickoff": "Tournament kicks off June 11, 2026."
   },
+  "friendsLanding": {
+    "eyebrow": "Bets to make with friends app",
+    "title": "Custom bets with friends, now with special World Cup 2026 support.",
+    "subtitle": "Run sport props and off-topic side bets in one private room. We added special World Cup 2026 support, and the match odds we show come from Polymarket.",
+    "benefitPrivate": "Custom bets",
+    "benefitChips": "World Cup 2026 ready",
+    "benefitLive": "Polymarket odds",
+    "signedOutTitle": "Start a custom-bet room in minutes",
+    "signedOutSubtitle": "Sign in once, then invite your group chat, watch party, or office pool into one room for sport props and random side bets.",
+    "signedOutCta": "Sign in and start a room",
+    "signedInTitle": "Start tonight's custom bets",
+    "signedInSubtitle": "Create a private room or join one with a code, then add your props.",
+    "previewLabel": "Sample custom bet room",
+    "previewTitle": "World Cup 2026 Watch Party",
+    "previewMeta": "6 friends • private room • Polymarket match odds",
+    "previewStatus": "Open",
+    "previewLockedLabel": "Sport prop #1",
+    "previewPick": "Who scores first for Mexico?",
+    "previewScoreLabel": "Sport prop #2",
+    "previewScore": "Who gets the first yellow card?",
+    "previewCustomLabel": "Unrelated side bet",
+    "previewCustom": "Who shows up last with the snacks?",
+    "previewLeader": "Live leader",
+    "previewLeaderName": "Noa",
+    "previewLeaderChips": "1,340 chips",
+    "whyLabel": "Why Buckeclub",
+    "whyTitle": "Built around custom bets, not just winner picks.",
+    "featureCards": [
+      {
+        "title": "Sport props stay organized",
+        "body": "Run first scorer, first yellow card, or other match props in one place instead of losing them in the group chat."
+      },
+      {
+        "title": "Special World Cup 2026 support",
+        "body": "We added special World Cup 2026 support so rooms can mix match picks with custom bets around the tournament."
+      },
+      {
+        "title": "Polymarket-backed match odds",
+        "body": "Regular match odds are fetched from Polymarket, while your room can layer custom bets on top."
+      }
+    ],
+    "ideasLabel": "Custom bet examples",
+    "ideasTitle": "Three bets you can make with friends tonight",
+    "ideaCards": [
+      {
+        "title": "First scorer",
+        "body": "A football prop for World Cup 2026 nights: who finds the net first in the match?"
+      },
+      {
+        "title": "First yellow card",
+        "body": "Another sport-related custom bet: which player or team gets booked first?"
+      },
+      {
+        "title": "Who arrives last?",
+        "body": "Not everything has to be about the match. Add one unrelated bet for the watch party itself."
+      }
+    ],
+    "stepsLabel": "How it works",
+    "stepsTitle": "Set up the room, add the props, let the group answer.",
+    "steps": [
+      {
+        "title": "Create a room",
+        "body": "Start a private competition for your group chat, fantasy league, or office pool."
+      },
+      {
+        "title": "Add custom bets",
+        "body": "Mix World Cup 2026 match props, room-specific questions, and one unrelated side bet for the night."
+      },
+      {
+        "title": "Track the room live",
+        "body": "Use Polymarket-backed match odds, lock answers before kickoff, and watch the leaderboard move in real time."
+      }
+    ],
+    "faqLabel": "FAQ",
+    "faqTitle": "Questions people ask before they start",
+    "faq": [
+      {
+        "question": "Is Buckeclub a real-money betting app?",
+        "answer": "No. Buckeclub uses virtual chips for friendly competition with friends."
+      },
+      {
+        "question": "What custom bets can we make with friends in the app?",
+        "answer": "You can run football props like first scorer and first yellow card, plus unrelated bets like who arrives last to the watch party."
+      },
+      {
+        "question": "Where do the match odds come from?",
+        "answer": "For supported World Cup 2026 match markets, Buckeclub fetches the displayed odds from Polymarket."
+      },
+      {
+        "question": "Do all my friends need accounts?",
+        "answer": "Yes. Each friend signs in and joins the same room so every bet and leaderboard move is tied to a real player."
+      }
+    ]
+  },
   "welcome": {
     "title": "What should we call you?",
     "subtitle": "Your display name appears on the leaderboard. Pick something your friends will recognize.",

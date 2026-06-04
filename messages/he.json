@@ -147,7 +147,8 @@
     "yourBet": "ההימור שלך",
     "yourBets": "תחזיות למשחק זה",
     "settled": "נסגר. רווח:",
-    "openOutcome": "פתוח"
+    "openOutcome": "פתוח",
+    "customBetCount": "{count, plural, one {הימור מותאם #} other {# הימורים מותאמים}}"
   },
   "bet": {
     "predictScore": "נחש את התוצאה",
@@ -205,7 +206,8 @@
     "lockTimeHint": "בחר מתי ההימור ייסגר — חובה לקבוע במפורש.",
     "lockTimePast": "⚠️ מועד הנעילה כבר עבר — בחר מועד מאוחר יותר.",
     "locksIn": "🔒 ייסגר בעוד",
-    "endOfMatch": "סוף המשחק הזה",
+    "matchKickoff": "שריקת פתיחה",
+    "tenMinutes": "10 דקות מעכשיו",
     "endOfTournament": "סוף המונדיאל",
     "useEnd": "השתמש ב-",
     "submit": "הצע הימור",

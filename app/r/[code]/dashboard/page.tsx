@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
 import { requireRoomUser } from "@/lib/auth-context";
 import {
+  countOpenCustomBetsByMatch,
   getMyMatchBets,
   hydrateCustomBetRowsWithWagers,
   listOpenCustomBets,
@@ -258,7 +259,7 @@ async function DashboardMatchesPane({
   heading: string;
   emptyLabel: string;
 }) {
-  const [upcoming, myBets, allRoomMemberships] = await Promise.all([
+  const [upcoming, myBets, allRoomMemberships, customBetCounts] = await Promise.all([
     trace.step("listUpcomingMatches", () => listUpcomingMatches(100), (rows) => ({
       upcomingMatchCount: rows.length,
     })),
@@ -271,6 +272,13 @@ async function DashboardMatchesPane({
       (rows) => ({
         membershipCount: rows.length,
         hasAuthUserId: Boolean(authUserId),
+      })
+    ),
+    trace.step(
+      "countOpenCustomBetsByMatch",
+      () => countOpenCustomBetsByMatch(roomId),
+      (rows) => ({
+        matchesWithCustomBets: Object.keys(rows).length,
       })
     ),
   ]);
@@ -327,6 +335,7 @@ async function DashboardMatchesPane({
           matches={upcomingForDisplay}
           roomCode={roomCode}
           myBets={myBetByMatch}
+          customBetCounts={customBetCounts}
           maxStake={myChips}
         />
       )}

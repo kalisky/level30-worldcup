@@ -36,12 +36,14 @@ export default function MatchCard({
   match,
   roomCode,
   myBet,
+  customBetCount = 0,
   maxStake,
   now,
 }: {
   match: MatchCardMatch;
   roomCode: string;
   myBet?: DashboardQuickBetExisting | null;
+  customBetCount?: number;
   maxStake: number;
   now: number;
 }) {
@@ -68,9 +70,20 @@ export default function MatchCard({
     <article className="group rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.08)] transition hover:-translate-y-0.5 hover:border-[#c4d6ec] hover:shadow-[0_24px_50px_rgba(30,58,138,0.14)]">
       <Link href={matchHref} className="block">
         <div className="flex items-center justify-between gap-3 text-slate-500">
-          <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">
-            {tm("group")} {match.groupLabel}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+              {tm("group")} {match.groupLabel}
+            </span>
+            {customBetCount > 0 && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-[#FFF1E8] px-2.5 py-1 text-[11px] font-bold text-[#EA580C]"
+                aria-label={tm("customBetCount", { count: customBetCount })}
+              >
+                <span aria-hidden="true">🎲</span>
+                {customBetCount}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <span className="font-medium tabular-nums text-slate-500">
               <LocalDateTime value={kickoff} preset="time24" />
@@ -89,7 +102,7 @@ export default function MatchCard({
         <div className="mt-5 grid grid-cols-[minmax(0,35%)_minmax(0,30%)_minmax(0,35%)] items-center gap-0 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-3">
           <div className="min-w-0">
             <div className="flex w-full items-center justify-end gap-2 whitespace-nowrap text-right sm:hidden">
-              <span className="shrink-0 text-[0.95rem] font-black leading-tight text-[#1E3A8A]">
+              <span className="shrink-0 text-2xl font-black leading-tight text-[#1E3A8A]">
                 {homeTeamAbbreviation}
               </span>
               <TeamFlag teamName={match.homeTeam} size={30} />
@@ -117,7 +130,7 @@ export default function MatchCard({
           <div className="min-w-0">
             <div className="flex w-full items-center justify-start gap-2 whitespace-nowrap sm:hidden">
               <TeamFlag teamName={match.awayTeam} size={30} />
-              <span className="shrink-0 text-[0.95rem] font-black leading-tight text-[#1E3A8A]">
+              <span className="shrink-0 text-2xl font-black leading-tight text-[#1E3A8A]">
                 {awayTeamAbbreviation}
               </span>
             </div>

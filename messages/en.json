@@ -147,7 +147,8 @@
     "yourBet": "Your bet",
     "yourBets": "Predictions on this match",
     "settled": "Settled. Payout:",
-    "openOutcome": "open"
+    "openOutcome": "open",
+    "customBetCount": "{count, plural, one {# custom bet} other {# custom bets}}"
   },
   "bet": {
     "predictScore": "Predict the score",
@@ -205,7 +206,8 @@
     "lockTimeHint": "Pick when wagering should close — must set explicitly.",
     "lockTimePast": "⚠️ Lock time is in the past — pick a later moment.",
     "locksIn": "🔒 Locks in",
-    "endOfMatch": "End of this match",
+    "matchKickoff": "Match kickoff",
+    "tenMinutes": "10 minutes from now",
     "endOfTournament": "End of tournament",
     "useEnd": "Use",
     "submit": "Propose bet",

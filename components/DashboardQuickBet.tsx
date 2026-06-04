@@ -444,6 +444,16 @@ export default function DashboardQuickBet({
     }
   }
 
+  function handleCancel() {
+    setDirectionPick(null);
+    setHome(null);
+    setAway(null);
+    setScoreStake(0);
+    setScoreWasCustomized(false);
+    setError(null);
+    setDirectionStake(Math.min(50, Math.max(0, maxStake)));
+  }
+
   function openScoreDialog() {
     if (directionPick === null) return;
     if (home === null || away === null) {
@@ -586,7 +596,7 @@ export default function DashboardQuickBet({
             <button
               type="button"
               onClick={openScoreDialog}
-              className="flex w-full items-center justify-between gap-3 rounded-[20px] border border-dashed border-[#bfdbfe] bg-[#F8FBFF] px-4 py-3 text-left transition hover:border-[#3B82F6] hover:bg-white"
+              className="flex w-full items-center justify-between gap-3 rounded-[20px] border border-dashed border-[#bfdbfe] bg-[#F8FBFF] px-4 py-3 text-start transition hover:border-[#3B82F6] hover:bg-white"
             >
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-[#1E3A8A]">
@@ -638,14 +648,24 @@ export default function DashboardQuickBet({
               </div>
             </div>
 
-            <button
-              type="button"
-              disabled={!canSubmit || pending}
-              onClick={submit}
-              className="w-full rounded-[20px] bg-[#1E3A8A] px-4 py-3.5 text-sm font-bold text-white shadow-[0_14px_30px_rgba(30,58,138,0.18)] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {pending ? tb("placePending") : tc("confirm")}
-            </button>
+            <div className="flex items-stretch gap-2">
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={pending}
+                className="rounded-[16px] border border-[#cdd9ea] bg-white px-3 text-xs font-semibold text-slate-500 transition hover:bg-[#F8FBFF] hover:text-[#1E3A8A] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {tc("cancel")}
+              </button>
+              <button
+                type="button"
+                disabled={!canSubmit || pending}
+                onClick={submit}
+                className="flex-1 rounded-[20px] bg-[#1E3A8A] px-4 py-3.5 text-sm font-bold text-white shadow-[0_14px_30px_rgba(30,58,138,0.18)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {pending ? tb("placePending") : tc("confirm")}
+              </button>
+            </div>
           </div>
         ) : null}
       </div>
@@ -682,7 +702,6 @@ export default function DashboardQuickBet({
 
 function QuickSideButton({
   label,
-  teamName,
   odds,
   selected,
   onSelect,
@@ -697,22 +716,15 @@ function QuickSideButton({
     <button
       type="button"
       onClick={onSelect}
+      aria-label={label}
       className={
-        "flex min-w-0 flex-col items-center gap-1 rounded-[18px] border px-2 py-3 transition " +
+        "flex min-w-0 items-center justify-center rounded-[18px] border px-2 py-3 transition " +
         (selected
           ? "border-[#3B82F6] bg-[#E0EEFF]"
           : "border-[#dbe5f2] bg-white hover:border-[#3B82F6] hover:bg-[#F8FBFF]")
       }
     >
-      {teamName ? (
-        <TeamFlag teamName={teamName} size={24} />
-      ) : (
-        <span className="text-base" aria-hidden="true">
-          ⚖️
-        </span>
-      )}
-      <span className="truncate text-xs font-bold text-[#1E3A8A]">{label}</span>
-      <span className="font-mono text-sm font-black text-[#1D4ED8]">
+      <span className="font-mono text-base font-black text-[#1D4ED8]">
         {odds.toFixed(2)}x
       </span>
     </button>

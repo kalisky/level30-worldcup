@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNotNull, sql } from "drizzle-orm";
 import { ensureFreshCustomBetOdds } from "@/lib/custom-bet-odds";
 import { db } from "./index";
 import {
@@ -197,6 +197,31 @@ export async function getMatchBetBundleForMatch(
   const myBet = allBets.find((row) => row.bet.userId === userId)?.bet ?? null;
 
   return { myBet, allBets };
+}
+
+export async function countOpenCustomBetsByMatch(
+  roomId: string
+): Promise<Record<string, number>> {
+  const rows = await db
+    .select({
+      matchId: customBets.matchId,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(customBets)
+    .where(
+      and(
+        eq(customBets.roomId, roomId),
+        eq(customBets.status, "open"),
+        isNotNull(customBets.matchId)
+      )
+    )
+    .groupBy(customBets.matchId);
+
+  const map: Record<string, number> = {};
+  for (const row of rows) {
+    if (row.matchId) map[row.matchId] = row.count;
+  }
+  return map;
 }
 
 export async function listOpenCustomBets(roomId: string, limit = 30) {

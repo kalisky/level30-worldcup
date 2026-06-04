@@ -37,10 +37,11 @@ function formatCountdown(targetMs: number, nowMs: number) {
 // WC 2026 final: Sunday July 19, 2026 — buffer to 22:00 UTC after the final match.
 const TOURNAMENT_END_MS = Date.UTC(2026, 6, 19, 22, 0);
 
-// Group-stage matches finish ~2 hours after kickoff (90' + stoppage + halftime).
-// If we later seed knockout matches that can go to extra time + penalties this
-// constant should be expanded by ~1.5h for those rounds.
-const MATCH_END_OFFSET_MS = 2 * 60 * 60 * 1000;
+// For live matches (kickoff already in the past) the "Use…" quick-set
+// suggests now + this offset, so the user still has a reasonable window to
+// wager before the action ends.
+const LIVE_BET_OFFSET_MS = 10 * 60 * 1000;
+
 
 export default function ProposeBetModal({
   roomCode,
@@ -79,16 +80,18 @@ export default function ProposeBetModal({
   const lockAtIsPast = lockAtValid && lockAtMs <= now;
   const countdown = lockAtValid && !lockAtIsPast ? formatCountdown(lockAtMs, now) : null;
 
-  // Per-scope suggestion for the "Use…" quick-set button. We only surface it
-  // if the suggested time is still in the future.
+  // Per-scope suggestion for the "Use…" quick-set button. For a match-scoped
+  // bet we suggest the match kickoff; if the match is already live we suggest
+  // now + 10 minutes instead so users can still propose in-game bets with a
+  // sensible default lock.
+  const kickoffMs = matchKickoff ? new Date(matchKickoff).getTime() : null;
   const suggestion = isMatchBet
-    ? matchKickoff
-      ? {
-          label: "End of this match",
-          atMs: new Date(matchKickoff).getTime() + MATCH_END_OFFSET_MS,
-        }
+    ? kickoffMs != null
+      ? kickoffMs > now
+        ? { labelKey: "matchKickoff" as const, atMs: kickoffMs }
+        : { labelKey: "tenMinutes" as const, atMs: now + LIVE_BET_OFFSET_MS }
       : null
-    : { label: "End of tournament", atMs: TOURNAMENT_END_MS };
+    : { labelKey: "endOfTournament" as const, atMs: TOURNAMENT_END_MS };
   const suggestionUsable = suggestion && suggestion.atMs > now;
 
   function applySuggestion() {
@@ -286,7 +289,7 @@ export default function ProposeBetModal({
                 className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[#cdd9ea] bg-white px-3 py-1.5 text-xs font-bold text-[#1E3A8A] transition hover:border-[#3B82F6] hover:bg-[#EFF6FF]"
               >
                 <span aria-hidden>📅</span>
-                {t("useEnd")} {isMatchBet ? t("endOfMatch") : t("endOfTournament")}
+                {t("useEnd")} {suggestion ? t(suggestion.labelKey) : ""}
               </button>
             )}
             {lockAtIsPast && (

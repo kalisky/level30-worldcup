@@ -69,11 +69,13 @@ export default function DashboardMatchGroups({
   matches,
   roomCode,
   myBets,
+  customBetCounts,
   maxStake,
 }: {
   matches: MatchCardMatch[];
   roomCode: string;
   myBets: Record<string, DashboardQuickBetExisting | null | undefined>;
+  customBetCounts?: Record<string, number>;
   maxStake: number;
 }) {
   const t = useTranslations("dashboard");
@@ -97,6 +99,7 @@ export default function DashboardMatchGroups({
           match={match}
           roomCode={roomCode}
           myBet={myBets[match.id] ?? null}
+          customBetCount={customBetCounts?.[match.id] ?? 0}
           maxStake={maxStake}
           now={now}
         />

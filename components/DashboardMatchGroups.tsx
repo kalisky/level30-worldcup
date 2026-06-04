@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 import LocalDateTime from "@/components/LocalDateTime";
 import MatchCard, {
   type MatchCardMatch,
-  type MatchCardPrediction,
 } from "@/components/MatchCard";
+import type { DashboardQuickBetExisting } from "@/components/DashboardQuickBet";
 import { groupMatchesByLocalDate } from "@/lib/dashboard-match-groups";
 
 let currentNow = Date.now();
@@ -68,11 +68,13 @@ function ClockIcon() {
 export default function DashboardMatchGroups({
   matches,
   roomCode,
-  myPredictions,
+  myBets,
+  maxStake,
 }: {
   matches: MatchCardMatch[];
   roomCode: string;
-  myPredictions: Record<string, MatchCardPrediction | null | undefined>;
+  myBets: Record<string, DashboardQuickBetExisting | null | undefined>;
+  maxStake: number;
 }) {
   const t = useTranslations("dashboard");
   const hydrated = useSyncExternalStore(
@@ -94,7 +96,9 @@ export default function DashboardMatchGroups({
           key={match.id}
           match={match}
           roomCode={roomCode}
-          myPrediction={myPredictions[match.id] ?? null}
+          myBet={myBets[match.id] ?? null}
+          maxStake={maxStake}
+          now={now}
         />
       ))}
     </div>

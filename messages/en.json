@@ -129,7 +129,9 @@
     "noCustomBets": "No open custom bets right now. Propose one from a match page during the game.",
     "yourPrediction": "Your prediction",
     "matchCount": "{count, plural, one {# match} other {# matches}}",
-    "predictBefore": "Predict before"
+    "predictBefore": "Predict before",
+    "optional": "Optional",
+    "exactScoreHint": "Add an exact score for a bigger payout"
   },
   "match": {
     "vs": "vs",

@@ -166,6 +166,7 @@ export default async function DashboardPage(props: {
           roomCode={room.code}
           userId={user.id}
           authUserId={user.authUserId}
+          myChips={user.chips}
           heading={t("upcomingMatches")}
           emptyLabel={t("noMatches")}
         />
@@ -244,6 +245,7 @@ async function DashboardMatchesPane({
   roomCode,
   userId,
   authUserId,
+  myChips,
   heading,
   emptyLabel,
 }: {
@@ -252,6 +254,7 @@ async function DashboardMatchesPane({
   roomCode: string;
   userId: string;
   authUserId: string | null;
+  myChips: number;
   heading: string;
   emptyLabel: string;
 }) {
@@ -279,10 +282,17 @@ async function DashboardMatchesPane({
       name: membership.room.name,
     }));
 
-  const myPredictionByMatch = Object.fromEntries(
+  const myBetByMatch = Object.fromEntries(
     myBets.map((bet) => [
       bet.matchId,
-      { home: bet.predictedHomeScore, away: bet.predictedAwayScore },
+      {
+        directionPick: bet.directionPick,
+        directionStake: bet.directionStake,
+        predictedHomeScore: bet.predictedHomeScore,
+        predictedAwayScore: bet.predictedAwayScore,
+        scoreStake: bet.scoreStake,
+        totalStake: bet.totalStake,
+      },
     ])
   );
   const upcomingForDisplay = upcoming.map((match) => ({
@@ -294,6 +304,10 @@ async function DashboardMatchesPane({
     status: match.status,
     homeScore: match.homeScore,
     awayScore: match.awayScore,
+    oddsHome: match.oddsHome != null ? Number(match.oddsHome) : null,
+    oddsDraw: match.oddsDraw != null ? Number(match.oddsDraw) : null,
+    oddsAway: match.oddsAway != null ? Number(match.oddsAway) : null,
+    scoreOdds: match.scoreOdds ?? null,
   }));
 
   return (
@@ -312,7 +326,8 @@ async function DashboardMatchesPane({
         <DashboardMatchGroups
           matches={upcomingForDisplay}
           roomCode={roomCode}
-          myPredictions={myPredictionByMatch}
+          myBets={myBetByMatch}
+          maxStake={myChips}
         />
       )}
     </section>

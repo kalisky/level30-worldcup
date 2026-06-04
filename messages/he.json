@@ -129,7 +129,9 @@
     "noCustomBets": "אין כרגע הימורים פתוחים. הציעו אחד מדף משחק במהלך המשחק.",
     "yourPrediction": "התחזית שלך",
     "matchCount": "{count, plural, one {# משחק} other {# משחקים}}",
-    "predictBefore": "נחשו לפני"
+    "predictBefore": "נחשו לפני",
+    "optional": "לא חובה",
+    "exactScoreHint": "הוסף תוצאה מדויקת בשביל רווח גדול יותר"
   },
   "match": {
     "vs": "נגד",

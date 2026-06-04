@@ -44,6 +44,13 @@ export default function MatchBetPanel({
   const teamName = useTeamName();
   const localizedHome = teamName(homeTeam);
   const localizedAway = teamName(awayTeam);
+  const directionLabel = myBet
+    ? myBet.directionPick === "HOME"
+      ? localizedHome
+      : myBet.directionPick === "AWAY"
+        ? localizedAway
+        : t("draw")
+    : null;
 
   function submitRemove() {
     setRemoveError(null);
@@ -94,6 +101,8 @@ export default function MatchBetPanel({
   }
 
   if (myBet) {
+    const hasScoreBet = myBet.scoreStake > 0;
+
     return (
       <section className="rounded-[28px] border border-[#BFDBFE] bg-[#EFF6FF] p-5 shadow-[0_16px_38px_rgba(59,130,246,0.10)]">
         <div className="flex items-start justify-between gap-3">
@@ -127,10 +136,16 @@ export default function MatchBetPanel({
           </p>
         )}
         <p className="mt-2 text-xl font-black text-[#1E3A8A]">
-          {localizedHome} {myBet.predictedHomeScore} – {myBet.predictedAwayScore}{" "}
-          {localizedAway}
+          {hasScoreBet
+            ? `${localizedHome} ${myBet.predictedHomeScore} – ${myBet.predictedAwayScore} ${localizedAway}`
+            : directionLabel}
         </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        {hasScoreBet ? (
+          <p className="mt-1 text-sm text-slate-500">
+            {tb("directionOutcome")}: {directionLabel}
+          </p>
+        ) : null}
+        <div className={`mt-3 grid gap-3 ${hasScoreBet ? "sm:grid-cols-2" : ""}`}>
           <div className="rounded-[22px] border border-white/80 bg-white/80 px-4 py-3">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               {tb("directionOutcome")}
@@ -145,20 +160,22 @@ export default function MatchBetPanel({
               </span>
             </div>
           </div>
-          <div className="rounded-[22px] border border-white/80 bg-white/80 px-4 py-3">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              {tb("scoreOutcome")}
+          {hasScoreBet ? (
+            <div className="rounded-[22px] border border-white/80 bg-white/80 px-4 py-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                {tb("scoreOutcome")}
+              </div>
+              <div className="mt-1 text-sm text-[#1E3A8A]">
+                <span className="font-bold">{myBet.scoreStake} {tc("chips")}</span> @{" "}
+                <span className="font-mono font-bold">
+                  {Number(myBet.scoreOddsLocked).toFixed(2)}x
+                </span>{" "}
+                <span className="text-slate-500">
+                  ({myBet.scoreOutcome === "pending" ? t("openOutcome") : myBet.scoreOutcome})
+                </span>
+              </div>
             </div>
-            <div className="mt-1 text-sm text-[#1E3A8A]">
-              <span className="font-bold">{myBet.scoreStake} {tc("chips")}</span> @{" "}
-              <span className="font-mono font-bold">
-                {Number(myBet.scoreOddsLocked).toFixed(2)}x
-              </span>{" "}
-              <span className="text-slate-500">
-                ({myBet.scoreOutcome === "pending" ? t("openOutcome") : myBet.scoreOutcome})
-              </span>
-            </div>
-          </div>
+          ) : null}
         </div>
         {myBet.status === "settled" && (
           <p className="mt-3 text-sm font-medium text-slate-600">

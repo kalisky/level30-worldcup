@@ -23,6 +23,14 @@ export const TEAM_NAMES: Record<string, TeamTranslations> = {
     en: "Bosnia and Herzegovina",
     he: "בוסניה והרצגובינה",
   },
+  "Bosnia & Herzegovina": {
+    en: "Bosnia and Herzegovina",
+    he: "בוסניה והרצגובינה",
+  },
+  "Bosnia & Herzogovina": {
+    en: "Bosnia and Herzegovina",
+    he: "בוסניה והרצגובינה",
+  },
   Qatar: { en: "Qatar", he: "קטאר" },
   Switzerland: { en: "Switzerland", he: "שווייץ" },
   // Group C

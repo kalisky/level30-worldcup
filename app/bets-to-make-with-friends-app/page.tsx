@@ -4,44 +4,49 @@ import { getTranslations } from "next-intl/server";
 import AppHeader from "@/components/AppHeader";
 import CreateRoomLauncher from "@/components/CreateRoomLauncher";
 import GoogleLoginButton from "@/components/GoogleLoginButton";
+import PublicSiteFooter from "@/components/PublicSiteFooter";
 import SubmitButton from "@/components/SubmitButton";
 import { joinRoomByCode } from "@/lib/actions/rooms";
 import { getAuthenticatedUser, profileRedirectPath } from "@/lib/auth";
-import { getPublicBaseUrl } from "@/lib/public-url";
+import { getServerBaseUrl } from "@/lib/server-url";
 
 const LP_PATH = "/bets-to-make-with-friends-app";
-const baseUrl = getPublicBaseUrl();
-const canonicalUrl = baseUrl ? new URL(LP_PATH, baseUrl).toString() : undefined;
 
-export const metadata: Metadata = {
-  title: "Bets to Make With Friends App | Buckeclub",
-  description:
-    "Buckeclub is a bets to make with friends app built for custom bets, with special World Cup 2026 support and match odds fetched from Polymarket.",
-  keywords: [
-    "bets to make with friends app",
-    "bet app for friends",
-    "custom bets with friends",
-    "friendly bets app",
-    "sports bets with friends",
-    "world cup prediction app",
-    "polymarket odds",
-    "world cup 2026 bets",
-  ],
-  alternates: canonicalUrl ? { canonical: canonicalUrl } : undefined,
-  openGraph: {
+export async function generateMetadata(): Promise<Metadata> {
+  const baseUrl = await getServerBaseUrl();
+  const canonicalUrl = baseUrl ? new URL(LP_PATH, baseUrl).toString() : undefined;
+
+  return {
     title: "Bets to Make With Friends App | Buckeclub",
     description:
-      "Create a private room for custom bets, use special World Cup 2026 support, and see supported match odds from Polymarket.",
-    type: "website",
-    url: canonicalUrl,
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Bets to Make With Friends App | Buckeclub",
-    description:
-      "Custom bets with friends, special World Cup 2026 support, and match odds sourced from Polymarket.",
-  },
-};
+      "Buckeclub is a bets to make with friends app built for custom bets, with special World Cup 2026 support and match odds fetched from Polymarket.",
+    keywords: [
+      "bets to make with friends app",
+      "bet app for friends",
+      "custom bets with friends",
+      "friendly bets app",
+      "sports bets with friends",
+      "world cup prediction app",
+      "polymarket odds",
+      "world cup 2026 bets",
+    ],
+    alternates: canonicalUrl ? { canonical: canonicalUrl } : undefined,
+    openGraph: {
+      title: "Bets to Make With Friends App | Buckeclub",
+      description:
+        "Create a private room for custom bets, use special World Cup 2026 support, and see supported match odds from Polymarket.",
+      siteName: "Buckeclub",
+      type: "website",
+      url: canonicalUrl,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "Bets to Make With Friends App | Buckeclub",
+      description:
+        "Custom bets with friends, special World Cup 2026 support, and match odds sourced from Polymarket.",
+    },
+  };
+}
 
 type ContentCard = {
   title: string;
@@ -147,6 +152,8 @@ function FriendsLandingPreview({
 }
 
 export default async function FriendsBetsLandingPage() {
+  const baseUrl = await getServerBaseUrl();
+  const canonicalUrl = baseUrl ? new URL(LP_PATH, baseUrl).toString() : undefined;
   const authUser = await getAuthenticatedUser();
   if (authUser && !authUser.displayName) {
     redirect(profileRedirectPath(LP_PATH));
@@ -439,6 +446,7 @@ export default async function FriendsBetsLandingPage() {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
       </main>
+      <PublicSiteFooter />
     </>
   );
 }

@@ -90,7 +90,7 @@ export default function BetForm({
     existingBet?.directionPick ?? null
   );
   const [directionStake, setDirectionStake] = useState<number>(
-    existingBet?.directionStake ?? 50
+    existingBet?.directionStake ?? 10
   );
   const [home, setHome] = useState<number | null>(
     existingBet && existingScoreStillAvailable ? existingBet.predictedHomeScore : null
@@ -99,7 +99,7 @@ export default function BetForm({
     existingBet && existingScoreStillAvailable ? existingBet.predictedAwayScore : null
   );
   const [scoreStake, setScoreStake] = useState<number>(
-    existingBet?.scoreStake ?? 50
+    existingBet?.scoreStake ?? 10
   );
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -469,6 +469,27 @@ function ScoreSelectField({
   placeholder: string;
   onPick: (score: number | null) => void;
 }) {
+  const selectedIndex =
+    selectedScore === null ? -1 : scores.indexOf(selectedScore);
+  const canDecrement = selectedIndex > 0;
+  const canIncrement =
+    scores.length > 0 &&
+    (selectedIndex === -1 || selectedIndex < scores.length - 1);
+
+  function decrement() {
+    if (!canDecrement) return;
+    onPick(scores[selectedIndex - 1] ?? null);
+  }
+
+  function increment() {
+    if (!canIncrement) return;
+    if (selectedIndex === -1) {
+      onPick(scores[0] ?? null);
+      return;
+    }
+    onPick(scores[selectedIndex + 1] ?? null);
+  }
+
   return (
     <section className="rounded-[22px] border border-[#dbe5f2] bg-[#F8FBFF] p-3">
       <div className="mb-3 flex items-center justify-between gap-3">
@@ -480,39 +501,36 @@ function ScoreSelectField({
           {selectedScore ?? "–"}
         </span>
       </div>
-      <div className="relative">
-        <select
-          value={selectedScore ?? ""}
-          onChange={(event) =>
-            onPick(
-              event.target.value === "" ? null : Number(event.target.value)
-            )
-          }
-          className="w-full appearance-none rounded-[18px] border border-[#dbe5f2] bg-white px-4 py-3.5 pr-14 font-mono text-lg font-black text-[#1E3A8A] focus:border-[#3B82F6] focus:outline-none sm:text-base"
+      <div className="grid grid-cols-[52px_minmax(0,1fr)_52px] items-center gap-2">
+        <button
+          type="button"
+          onClick={decrement}
+          disabled={!canDecrement}
+          aria-label={`Decrease ${title} score`}
+          className="flex h-[52px] w-[52px] items-center justify-center rounded-[18px] border border-[#dbe5f2] bg-white font-mono text-2xl font-black text-[#1E3A8A] transition hover:border-[#3B82F6] hover:bg-[#EFF6FF] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <option value="">{placeholder}</option>
-          {scores.map((score) => (
-            <option key={score} value={score}>
-              {score}
-            </option>
-          ))}
-        </select>
-        <span
-          className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[#1E3A8A]"
-          aria-hidden="true"
+          -
+        </button>
+        <div className="flex min-h-[52px] items-center justify-center rounded-[18px] border border-[#dbe5f2] bg-white px-4 text-center">
+          {selectedScore === null ? (
+            <span className="text-sm font-semibold text-slate-400">
+              {placeholder}
+            </span>
+          ) : (
+            <span className="font-mono text-2xl font-black text-[#1E3A8A]">
+              {selectedScore}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={increment}
+          disabled={!canIncrement}
+          aria-label={`Increase ${title} score`}
+          className="flex h-[52px] w-[52px] items-center justify-center rounded-[18px] border border-[#dbe5f2] bg-white font-mono text-2xl font-black text-[#1E3A8A] transition hover:border-[#3B82F6] hover:bg-[#EFF6FF] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <svg
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-4 w-4"
-          >
-            <path d="m6 8 4 4 4-4" />
-          </svg>
-        </span>
+          +
+        </button>
       </div>
     </section>
   );

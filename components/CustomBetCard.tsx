@@ -9,6 +9,7 @@ import {
   placeOpenWager,
   previewOpenAnswerOdds,
   removeCustomWager,
+  updateCustomBetLockTime,
   updateCustomWager,
   updateOpenWager,
 } from "@/lib/actions/custom-bets";
@@ -16,9 +17,28 @@ import { getCustomBetInvitePath } from "@/lib/share-links";
 import { customBetCopy } from "@/lib/custom-bet-copy";
 import LocalDateTime from "@/components/LocalDateTime";
 
+function formatDateTimeLocal(value: Date | string | number) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function toIsoFromLocalDateTime(value: string) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString();
+}
+
 export default function CustomBetCard({
   bet,
   proposerName,
+  viewerUserId,
   roomCode,
   matchId,
   contextLabel,
@@ -30,6 +50,7 @@ export default function CustomBetCard({
 }: {
   bet: CustomBet;
   proposerName: string;
+  viewerUserId: string;
   roomCode: string;
   matchId?: string;
   contextLabel?: string | null;
@@ -43,12 +64,17 @@ export default function CustomBetCard({
   const [stake, setStake] = useState<number>(25);
   const [pending, startTransition] = useTransition();
   const [removing, startRemove] = useTransition();
+  const [lockTimePending, startLockTimeTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [lockTimeError, setLockTimeError] = useState<string | null>(null);
   const [shareState, setShareState] = useState<"idle" | "copied" | "failed">(
     "idle"
   );
   const [now] = useState(() => Date.now());
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditingLockTime, setIsEditingLockTime] = useState(false);
+  const [lockEditNow, setLockEditNow] = useState(() => Date.now());
+  const [lockAtLocal, setLockAtLocal] = useState("");
 
   const t = useTranslations("customBet");
   const tc = useTranslations("common");
@@ -69,6 +95,11 @@ export default function CustomBetCard({
   const isLocked =
     bet.status !== "open" ||
     (bet.locksAt ? new Date(bet.locksAt).getTime() <= now : false);
+  const canEditLockTime =
+    viewerUserId === bet.proposerId && bet.status === "open";
+  const editedLockAtMs = lockAtLocal ? new Date(lockAtLocal).getTime() : NaN;
+  const editedLockAtIsPast =
+    Number.isFinite(editedLockAtMs) && editedLockAtMs <= lockEditNow;
   // While editing, the rest of the render treats the user as not-yet-wagered
   // so the picker / wager controls re-appear pre-filled.
   const wagerView = isEditing ? null : myWager;
@@ -129,6 +160,48 @@ export default function CustomBetCard({
       setAnswer("");
       setPreview(null);
     }
+  }
+
+  function startLockTimeEdit() {
+    setLockEditNow(Date.now());
+    setLockAtLocal(bet.locksAt ? formatDateTimeLocal(bet.locksAt) : "");
+    setLockTimeError(null);
+    setIsEditingLockTime(true);
+  }
+
+  function cancelLockTimeEdit() {
+    setIsEditingLockTime(false);
+    setLockAtLocal("");
+    setLockTimeError(null);
+  }
+
+  function submitLockTimeUpdate() {
+    const lockAtIso = toIsoFromLocalDateTime(lockAtLocal);
+    if (!lockAtIso) {
+      setLockTimeError("Pick a valid lock time.");
+      return;
+    }
+    if (new Date(lockAtIso).getTime() <= Date.now()) {
+      setLockTimeError("Lock time must be in the future.");
+      return;
+    }
+
+    setLockTimeError(null);
+    const fd = new FormData();
+    fd.set("roomCode", roomCode);
+    if (matchId) fd.set("matchId", matchId);
+    fd.set("customBetId", bet.id);
+    fd.set("locksAt", lockAtIso);
+    startLockTimeTransition(async () => {
+      try {
+        await updateCustomBetLockTime(fd);
+        cancelLockTimeEdit();
+      } catch (e) {
+        setLockTimeError(
+          e instanceof Error ? e.message : "Failed to update lock time."
+        );
+      }
+    });
   }
 
   function submitRemove() {
@@ -233,12 +306,23 @@ export default function CustomBetCard({
       <header className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[0.72rem] font-medium text-slate-400">
           <span>{t("byAuthor", { name: proposerName })}</span>
-          {bet.locksAt ? (
-            <span>
-              {t("closes")}{" "}
-              <LocalDateTime value={bet.locksAt!} preset="lockShort" />
-            </span>
-          ) : null}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {bet.locksAt ? (
+              <span>
+                {t("closes")}{" "}
+                <LocalDateTime value={bet.locksAt!} preset="lockShort" />
+              </span>
+            ) : null}
+            {canEditLockTime && !isEditingLockTime ? (
+              <button
+                type="button"
+                onClick={startLockTimeEdit}
+                className="rounded-full border border-[#dbe5f2] bg-white px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[#1E3A8A] transition hover:border-[#3B82F6] hover:bg-[#F8FBFF]"
+              >
+                {t("editLockTime")}
+              </button>
+            ) : null}
+          </div>
         </div>
         <div className="flex items-start justify-between gap-3">
           <h3 className="min-w-0 flex-1 text-lg font-black text-[#1E3A8A]">
@@ -304,6 +388,48 @@ export default function CustomBetCard({
             )}
           </button>
         </div>
+        {isEditingLockTime ? (
+          <div className="rounded-[22px] border border-[#dbe5f2] bg-[#F8FBFF] p-3">
+            <label className="block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+              {t("lockTime")}
+            </label>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <input
+                type="datetime-local"
+                value={lockAtLocal}
+                onChange={(e) => setLockAtLocal(e.target.value)}
+                className="min-w-[14rem] flex-1 rounded-2xl border border-[#cdd9ea] bg-white px-3 py-2 text-sm text-[#1E3A8A] focus:border-[#3B82F6] focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={cancelLockTimeEdit}
+                disabled={lockTimePending}
+                className="rounded-full border border-[#cdd9ea] bg-white px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+              >
+                {tc("cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={submitLockTimeUpdate}
+                disabled={!lockAtLocal || editedLockAtIsPast || lockTimePending}
+                className="rounded-full bg-[#1E3A8A] px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {lockTimePending ? tc("saving") : tc("save")}
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-slate-500">{t("lockTimeHint")}</p>
+            {editedLockAtIsPast ? (
+              <p className="mt-2 text-xs font-semibold text-[#C2410C]">
+                {t("lockTimePast")}
+              </p>
+            ) : null}
+            {lockTimeError ? (
+              <p className="mt-2 rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                {lockTimeError}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </header>
       {contextHref && contextLabel ? (
         <Link

@@ -305,6 +305,7 @@
     "tenMinutes": "10 minutes from now",
     "endOfTournament": "End of tournament",
     "useEnd": "Use",
+    "editLockTime": "Edit lock time",
     "submit": "Propose bet",
     "submitPending": "AI is rating this…",
     "submitOpen": "Creating…",

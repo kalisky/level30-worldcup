@@ -174,7 +174,6 @@ function ExactScoreDialog({
   sideStake,
   maxStake,
   choices,
-  directionPick,
 }: {
   open: boolean;
   onClose: () => void;
@@ -187,7 +186,6 @@ function ExactScoreDialog({
   sideStake: number;
   maxStake: number;
   choices: ExactScoreChoice[];
-  directionPick: DirectionGroup | null;
 }) {
   const tb = useTranslations("bet");
   const tm = useTranslations("match");
@@ -195,7 +193,6 @@ function ExactScoreDialog({
   const teamName = useTeamName();
   const localizedHome = teamName(homeTeam);
   const localizedAway = teamName(awayTeam);
-  const drawLabel = tm("draw");
   const [home, setHome] = useState<number | null>(initialHome);
   const [away, setAway] = useState<number | null>(initialAway);
   const [stake, setStake] = useState<number>(initialStake);
@@ -216,11 +213,6 @@ function ExactScoreDialog({
   const selectedScoreOdd = choices.find((choice) => choice.key === selectedKey)?.odd ?? 0;
   const stakeNum = Math.max(0, Math.floor(stake) || 0);
   const totalStake = sideStake + stakeNum;
-  const scoreImpliesDirection = impliedDirection(home, away);
-  const mismatched =
-    directionPick !== null &&
-    scoreImpliesDirection !== null &&
-    directionPick !== scoreImpliesDirection;
   const canSave =
     selectedKey !== null &&
     selectedScoreOdd > 0 &&
@@ -479,19 +471,13 @@ export default function DashboardQuickBet({
       : null;
   const fallbackChoice =
     directionPick != null ? pickDefaultScore(exactScoreChoices, directionPick) : null;
-  const scoreImpliesDirection = impliedDirection(home, away);
-  const mismatched =
-    directionPick !== null &&
-    scoreImpliesDirection !== null &&
-    directionPick !== scoreImpliesDirection &&
-    sideStakeNum > 0 &&
-    scoreStakeNum > 0;
   const canSubmit =
     directionPick !== null &&
     sideStakeNum >= 2 &&
     totalStake <= maxStake &&
     directionOdds > 0 &&
     (selectedKey !== null || fallbackChoice !== null);
+  const showDraftState = directionPick !== null;
 
   function applyDefaultScore(nextDirection: DirectionGroup) {
     const fallback = pickDefaultScore(exactScoreChoices, nextDirection);
@@ -635,7 +621,11 @@ export default function DashboardQuickBet({
         </div>
 
         {directionPick !== null ? (
-          <div className="mt-3 space-y-3">
+          <div className="mt-3 space-y-3 rounded-[26px] border border-[#F3D7B0] bg-[linear-gradient(180deg,#FFF9F0_0%,#FFF4E4_100%)] p-3 shadow-[0_16px_36px_rgba(194,101,19,0.10)]">
+            <div className="flex items-center gap-2 px-1">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#F59E0B]" />
+              <span className="h-1.5 w-14 rounded-full bg-[#F6C98A]" />
+            </div>
             <div className="rounded-[18px] border border-slate-200 bg-slate-100 px-3 py-2.5">
               <div className="flex flex-wrap items-center gap-2">
                 <label className="text-sm font-semibold text-slate-600">
@@ -647,6 +637,7 @@ export default function DashboardQuickBet({
                     min={0}
                     max={maxStake}
                     value={directionStake}
+                    onFocus={(e) => e.target.select()}
                     onChange={(event) => setDirectionStake(Number(event.target.value))}
                     className="w-16 border-0 bg-transparent text-right font-mono font-black text-[#1E3A8A] focus:outline-none"
                   />
@@ -758,7 +749,9 @@ export default function DashboardQuickBet({
                 type="button"
                 disabled={!canSubmit || pending}
                 onClick={submit}
-                className="flex-1 rounded-[20px] bg-[#1E3A8A] px-4 py-3.5 text-sm font-bold text-white shadow-[0_14px_30px_rgba(30,58,138,0.18)] disabled:cursor-not-allowed disabled:opacity-50"
+                className={
+                  "animate-nudge flex-1 rounded-[20px] bg-[#1E3A8A] px-4 py-3.5 text-sm font-bold text-white shadow-[0_14px_30px_rgba(30,58,138,0.18)] transition disabled:cursor-not-allowed disabled:opacity-50 "                  
+                }
               >
                 {pending ? tb("placePending") : tc("confirm")}
               </button>
@@ -792,8 +785,30 @@ export default function DashboardQuickBet({
         sideStake={sideStakeNum}
         maxStake={maxStake}
         choices={exactScoreChoices}
-        directionPick={directionPick}
       />
+      {showDraftState ? (
+        <style jsx>{`
+          @keyframes dashboardQuickBetConfirmReady {
+            0%,
+            100% {
+              transform: translateY(0) scale(1);
+              box-shadow:
+                0 14px 30px rgba(30, 58, 138, 0.18),
+                0 0 0 0 rgba(245, 158, 11, 0.14);
+            }
+            50% {
+              transform: translateY(-1px) scale(1.018);
+              box-shadow:
+                0 20px 38px rgba(30, 58, 138, 0.24),
+                0 0 0 7px rgba(245, 158, 11, 0.12);
+            }
+          }
+
+          .dashboard-quick-bet-confirm-ready {
+            animation: dashboardQuickBetConfirmReady 1.7s ease-in-out infinite;
+          }
+        `}</style>
+      ) : null}
     </>
   );
 }

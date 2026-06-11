@@ -15,9 +15,14 @@ import LocalDateTime from "@/components/LocalDateTime";
 
 export default async function AdminPage(props: {
   params: Promise<{ code: string }>;
+  searchParams: Promise<{ from?: string | string[] | undefined }>;
 }) {
   const { code } = await props.params;
+  const searchParams = await props.searchParams;
   const { room, user, dailyGrantApplied } = await requireRoomUser(code);
+  const preferDashboardBack = Array.isArray(searchParams.from)
+    ? searchParams.from[0] === "dashboard"
+    : searchParams.from === "dashboard";
   const locale = await getLocale();
   const t = await getTranslations("admin");
   const tm = await getTranslations("match");
@@ -85,6 +90,7 @@ export default async function AdminPage(props: {
           roomCode={room.code}
           dashboardLabel={tnav("dashboard")}
           currentLabel={tnav("settle")}
+          preferBack={preferDashboardBack}
         />
         <section>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">

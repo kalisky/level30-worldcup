@@ -48,7 +48,7 @@ export default function StickyDashboardHeader({
 
         <nav className="flex shrink-0 items-center gap-2">
           <Link
-            href={`/r/${roomCode}/history`}
+            href={`/r/${roomCode}/history?from=dashboard`}
             aria-label={historyLabel}
             className={
               "inline-flex items-center justify-center rounded-full border border-[#d7deea] bg-white text-slate-700 transition hover:border-[#c3cedd] hover:bg-[#F8FBFF] hover:text-[#1E3A8A] " +
@@ -72,7 +72,7 @@ export default function StickyDashboardHeader({
             <span className="sr-only">{historyLabel}</span>
           </Link>
           <Link
-            href={`/r/${roomCode}/leaderboard`}
+            href={`/r/${roomCode}/leaderboard?from=dashboard`}
             aria-label={leaderboardLabel}
             className={
               "inline-flex items-center justify-center rounded-full border border-[#d7deea] bg-white text-slate-700 transition hover:border-[#c3cedd] hover:bg-[#F8FBFF] hover:text-[#1E3A8A] " +

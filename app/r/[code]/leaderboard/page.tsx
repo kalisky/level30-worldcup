@@ -8,9 +8,14 @@ import Leaderboard from "@/components/Leaderboard";
 
 export default async function LeaderboardPage(props: {
   params: Promise<{ code: string }>;
+  searchParams: Promise<{ from?: string | string[] | undefined }>;
 }) {
   const { code } = await props.params;
+  const searchParams = await props.searchParams;
   const { room, user, dailyGrantApplied } = await requireRoomUser(code);
+  const preferDashboardBack = Array.isArray(searchParams.from)
+    ? searchParams.from[0] === "dashboard"
+    : searchParams.from === "dashboard";
 
   const [members, tnav] = await Promise.all([
     getRoomUsers(room.id),
@@ -26,6 +31,7 @@ export default async function LeaderboardPage(props: {
           roomCode={room.code}
           dashboardLabel={tnav("dashboard")}
           currentLabel={tnav("leaderboard")}
+          preferBack={preferDashboardBack}
         />
         <section className="rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.08)]">
           <p className="text-[0.72rem] font-bold uppercase tracking-[0.28em] text-slate-500">

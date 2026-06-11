@@ -265,6 +265,7 @@ export default async function MatchPage(props: {
       matchStatus={match.status}
       matchLabel={`${homeTeamLocalized} ${tm("vs")} ${awayTeamLocalized}`}
       matchKickoff={new Date(match.kickoff).toISOString()}
+      viewerUserId={user.id}
       myChips={user.chips}
       targetCustomBetId={targetCustomBetId}
       requestKey={trace.id}

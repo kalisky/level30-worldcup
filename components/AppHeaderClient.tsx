@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useRef, useState, type MouseEvent } from "react";
 import { useTranslations } from "next-intl";
 import type { Room, User } from "@/lib/db/schema";
 import ProfileDialog from "@/components/ProfileDialog";
@@ -37,7 +38,7 @@ function HeaderLink({
   href: string;
   label: string;
   tone?: "neutral" | "blue" | "coral";
-  onClick?: () => void;
+  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   const toneClass =
     tone === "blue"
@@ -66,7 +67,7 @@ function MobileMenuLink({
   href: string;
   label: string;
   tone?: "neutral" | "blue" | "coral";
-  onClick?: () => void;
+  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   const toneClass =
     tone === "blue"
@@ -171,6 +172,8 @@ export default function AppHeaderClient({
   const [showCreatedInvite, setShowCreatedInvite] =
     useState(initialRoomModalOpen);
   const mobileProfileTriggerRef = useRef<HTMLButtonElement>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   function clearCreatedFlag() {
     if (!showCreatedInvite) return;
@@ -207,12 +210,36 @@ export default function AppHeaderClient({
     setProfileMenuMode(null);
   }
 
+  function navigateBackToDashboard(event: MouseEvent<HTMLAnchorElement>) {
+    if (event.defaultPrevented) return;
+    if (event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (typeof window === "undefined" || window.history.length <= 1) return;
+
+    event.preventDefault();
+    router.back();
+  }
+
+  function handleMobileDashboardClick(event: MouseEvent<HTMLAnchorElement>) {
+    setMobileMenuOpen(false);
+    if (preferDashboardBack) {
+      navigateBackToDashboard(event);
+    }
+  }
+
   const t = useTranslations("nav");
   const pillName = user?.name ?? viewerName ?? null;
   const showProfilePill = !!pillName;
   const profileMenuOpen = profileMenuMode !== null;
   const showMobileOverlay =
     mobileMenuOpen || profileMenuMode === "mobile";
+  const preferDashboardBack = searchParams.get("from") === "dashboard";
+  const adminHref =
+    room && active === "dashboard"
+      ? `/r/${room.code}/admin?from=dashboard`
+      : room
+        ? `/r/${room.code}/admin`
+        : null;
   const mobileNavigationItems = room
     ? [
         {
@@ -221,7 +248,7 @@ export default function AppHeaderClient({
           tone: active === "dashboard" ? ("blue" as const) : ("neutral" as const),
         },
         {
-          href: `/r/${room.code}/admin`,
+          href: adminHref ?? `/r/${room.code}/admin`,
           label: t("settle"),
           tone: active === "admin" ? ("coral" as const) : ("neutral" as const),
         },
@@ -269,6 +296,7 @@ export default function AppHeaderClient({
             <div className="flex min-w-0 items-center gap-[9px]">
               <Link
                 href={room ? `/r/${room.code}/dashboard` : "/"}
+                onClick={preferDashboardBack ? navigateBackToDashboard : undefined}
                 className="flex min-w-0 flex-1 items-center gap-[9px]"
               >
                 <LogoMark />
@@ -376,10 +404,10 @@ export default function AppHeaderClient({
                               href={`/r/${room.code}/dashboard`}
                               label={t("dashboard")}
                               tone={active === "dashboard" ? "blue" : "neutral"}
-                              onClick={() => setMobileMenuOpen(false)}
+                              onClick={handleMobileDashboardClick}
                             />
                             <MobileMenuLink
-                              href={`/r/${room.code}/admin`}
+                              href={adminHref ?? `/r/${room.code}/admin`}
                               label={t("settle")}
                               tone={active === "admin" ? "coral" : "neutral"}
                               onClick={() => setMobileMenuOpen(false)}
@@ -411,9 +439,10 @@ export default function AppHeaderClient({
                     href={`/r/${room.code}/dashboard`}
                     label={t("dashboard")}
                     tone={active === "dashboard" ? "blue" : "neutral"}
+                    onClick={preferDashboardBack ? navigateBackToDashboard : undefined}
                   />
                   <HeaderLink
-                    href={`/r/${room.code}/admin`}
+                    href={adminHref ?? `/r/${room.code}/admin`}
                     label={t("settle")}
                     tone={active === "admin" ? "coral" : "neutral"}
                   />

@@ -171,6 +171,59 @@ export async function proposeCustomBet(formData: FormData) {
   return { customBetId: created.id };
 }
 
+const updateCustomBetLockTimeSchema = z.object({
+  customBetId: z.string().uuid(),
+  locksAtIso: z.string().trim().min(1),
+});
+
+export async function updateCustomBetLockTime(formData: FormData) {
+  const code = String(formData.get("roomCode") ?? "");
+  const { room, user } = await requireRoomUser(code);
+
+  const parsed = updateCustomBetLockTimeSchema.safeParse({
+    customBetId: String(formData.get("customBetId") ?? ""),
+    locksAtIso: String(formData.get("locksAt") ?? ""),
+  });
+  if (!parsed.success) {
+    throw new Error(
+      "Invalid lock time update: " +
+        parsed.error.issues.map((issue) => issue.message).join(", ")
+    );
+  }
+
+  const locksAt = new Date(parsed.data.locksAtIso);
+  if (Number.isNaN(locksAt.getTime())) throw new Error("Invalid lock time.");
+  if (locksAt.getTime() <= Date.now()) {
+    throw new Error("Lock time must be in the future.");
+  }
+
+  await db.transaction(async (tx) => {
+    const [bet] = await tx
+      .select()
+      .from(customBets)
+      .where(eq(customBets.id, parsed.data.customBetId))
+      .limit(1);
+    if (!bet) throw new Error("Custom bet not found.");
+    if (bet.roomId !== room.id) throw new Error("Not your room.");
+    if (bet.proposerId !== user.id) {
+      throw new Error("Only the bet creator can edit the lock time.");
+    }
+    if (bet.status !== "open") throw new Error("This bet is no longer open.");
+
+    await tx
+      .update(customBets)
+      .set({ locksAt })
+      .where(eq(customBets.id, bet.id));
+
+    await touchRoomLiveRevision(tx, room.id);
+  });
+
+  const matchId = String(formData.get("matchId") ?? "").trim();
+  if (matchId) revalidatePath(`/r/${room.code}/match/${matchId}`);
+  revalidatePath(`/r/${room.code}/dashboard`);
+  revalidatePath(`/r/${room.code}/admin`);
+}
+
 // --- Fixed-options wagering (existing flow) -------------------------------
 
 const wagerSchema = z.object({

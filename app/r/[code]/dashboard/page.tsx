@@ -167,13 +167,13 @@ export default async function DashboardPage(props: {
             </h1>
             <nav className="flex shrink-0 flex-wrap items-center gap-2">
               <Link
-                href={`/r/${room.code}/history`}
+                href={`/r/${room.code}/history?from=dashboard`}
                 className="rounded-full border border-[#d7deea] bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-[#c3cedd] hover:bg-[#F8FBFF] hover:text-[#1E3A8A]"
               >
                 {tnav("history")}
               </Link>
               <Link
-                href={`/r/${room.code}/leaderboard`}
+                href={`/r/${room.code}/leaderboard?from=dashboard`}
                 className="rounded-full border border-[#d7deea] bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-[#c3cedd] hover:bg-[#F8FBFF] hover:text-[#1E3A8A]"
               >
                 {tnav("leaderboard")}
@@ -371,6 +371,7 @@ async function DashboardCustomBetsPane({
                 key={bet.id}
                 bet={bet}
                 proposerName={proposerName}
+                viewerUserId={userId}
                 roomCode={roomCode}
                 matchId={bet.matchId ?? undefined}
                 contextLabel={

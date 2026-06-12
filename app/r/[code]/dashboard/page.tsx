@@ -107,10 +107,7 @@ export default async function DashboardPage(props: {
     <>
       <Suspense
         fallback={
-          <DashboardMatchesPaneSkeleton
-            heading={t("upcomingMatches")}
-            showCopyLauncher
-          />
+          <DashboardMatchesPaneSkeleton heading={t("upcomingMatches")} />
         }
       >
         <DashboardMatchesPane
@@ -388,22 +385,13 @@ async function DashboardCustomBetsPane({
   );
 }
 
-function DashboardMatchesPaneSkeleton({
-  heading,
-  showCopyLauncher = false,
-}: {
-  heading: string;
-  showCopyLauncher?: boolean;
-}) {
+function DashboardMatchesPaneSkeleton({ heading }: { heading: string }) {
   return (
     <section>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
           {heading}
         </h2>
-        {showCopyLauncher ? (
-          <div className="h-10 w-52 animate-pulse rounded-full bg-[#F3F7FD]" />
-        ) : null}
       </div>
       <div className="space-y-2">
         <DashboardMatchCardSkeleton />

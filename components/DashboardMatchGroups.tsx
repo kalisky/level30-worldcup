@@ -71,12 +71,16 @@ export default function DashboardMatchGroups({
   myBets,
   customBetCounts,
   maxStake,
+  defaultDirectionStake,
+  defaultScoreStake,
 }: {
   matches: MatchCardMatch[];
   roomCode: string;
   myBets: Record<string, DashboardQuickBetExisting | null | undefined>;
   customBetCounts?: Record<string, number>;
   maxStake: number;
+  defaultDirectionStake?: number | null;
+  defaultScoreStake?: number | null;
 }) {
   const t = useTranslations("dashboard");
   const hydrated = useSyncExternalStore(
@@ -102,6 +106,8 @@ export default function DashboardMatchGroups({
           customBetCount={customBetCounts?.[match.id] ?? 0}
           maxStake={maxStake}
           now={now}
+          defaultDirectionStake={defaultDirectionStake}
+          defaultScoreStake={defaultScoreStake}
         />
       ))}
     </div>

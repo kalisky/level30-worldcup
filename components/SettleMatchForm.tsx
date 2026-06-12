@@ -15,6 +15,7 @@ export default function SettleMatchForm({
 }) {
   const t = useTranslations("admin");
   const tm = useTranslations("match");
+  const [now] = useState(() => Date.now());
   const [homeTeam, setHomeTeam] = useState(match.homeTeam);
   const [awayTeam, setAwayTeam] = useState(match.awayTeam);
   const [pending, startTransition] = useTransition();
@@ -51,7 +52,7 @@ export default function SettleMatchForm({
   }
 
   const isFinal = match.status === "final";
-  const kickedOff = new Date(match.kickoff).getTime() <= Date.now();
+  const kickedOff = new Date(match.kickoff).getTime() <= now;
 
   return (
     <div className="rounded-[26px] border border-[#dbe5f2] bg-white p-4 shadow-[0_14px_32px_rgba(30,58,138,0.07)]">

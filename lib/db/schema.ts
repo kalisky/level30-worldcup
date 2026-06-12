@@ -149,6 +149,10 @@ export const users = pgTable(
     // Last time the user received their daily top-up. NULL means never; the
     // grant logic in requireRoomUser uses this to gate one credit per ~day.
     lastDailyGrantAt: timestamp("last_daily_grant_at", { withTimezone: true }),
+    // Quick-bet stake defaults: the last stake the user used for each bet
+    // part. NULL means they never staked that part (UI falls back to 10).
+    defaultDirectionStake: integer("default_direction_stake"),
+    defaultScoreStake: integer("default_score_stake"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

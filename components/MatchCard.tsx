@@ -40,6 +40,8 @@ export default function MatchCard({
   customBetCount = 0,
   maxStake,
   now,
+  defaultDirectionStake,
+  defaultScoreStake,
 }: {
   match: MatchCardMatch;
   roomCode: string;
@@ -47,6 +49,8 @@ export default function MatchCard({
   customBetCount?: number;
   maxStake: number;
   now: number;
+  defaultDirectionStake?: number | null;
+  defaultScoreStake?: number | null;
 }) {
   const tm = useTranslations("match");
   const teamName = useTeamName();
@@ -202,6 +206,8 @@ export default function MatchCard({
         oddsAway={match.oddsAway != null ? Number(match.oddsAway) : null}
         scoreOdds={match.scoreOdds ?? null}
         maxStake={maxStake}
+        defaultDirectionStake={defaultDirectionStake}
+        defaultScoreStake={defaultScoreStake}
         now={now}
         myBet={myBet}
       />

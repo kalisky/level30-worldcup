@@ -228,6 +228,8 @@ export default async function MatchPage(props: {
         oddsAway={match.oddsAway != null ? oddsAway : null}
         scoreOdds={match.scoreOdds ?? null}
         maxStake={user.chips}
+        defaultDirectionStake={user.defaultDirectionStake}
+        defaultScoreStake={user.defaultScoreStake}
       />
 
       {allBets.length > 0 && (

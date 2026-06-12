@@ -1,12 +1,20 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import TeamFlag from "@/components/TeamFlag";
+import { StakeRow } from "@/components/QuickBetForm";
 import { useTeamName } from "@/hooks/useTeamName";
-import { placeMatchBet } from "@/lib/actions/bets";
+import {
+  quickBetActiveParts,
+  quickBetTotal,
+  useQuickBet,
+  type QuickBetDirection,
+} from "@/hooks/useQuickBet";
 import { parseScoreKey, scoreKey, type ScoreOddsCache } from "@/lib/db/schema";
+
+const FALLBACK_STAKE = 10;
 
 export type DashboardQuickBetExisting = {
   directionPick: "HOME" | "DRAW" | "AWAY";
@@ -32,16 +40,6 @@ function compareChoices(a: ExactScoreChoice, b: ExactScoreChoice) {
   return a.away - b.away;
 }
 
-function impliedDirection(
-  home: number | null,
-  away: number | null
-): DirectionGroup | null {
-  if (home === null || away === null) return null;
-  if (home > away) return "HOME";
-  if (away > home) return "AWAY";
-  return "DRAW";
-}
-
 function uniqueSortedNumbers(values: number[]) {
   return Array.from(new Set(values)).sort((a, b) => a - b);
 }
@@ -55,17 +53,6 @@ function directionLabel(
   if (direction === "HOME") return homeLabel;
   if (direction === "AWAY") return awayLabel;
   return drawLabel;
-}
-
-function pickDefaultScore(
-  choices: ExactScoreChoice[],
-  direction: DirectionGroup
-) {
-  return (
-    choices.find((choice) => impliedDirection(choice.home, choice.away) === direction) ??
-    choices[0] ??
-    null
-  );
 }
 
 function scoreSummary(
@@ -387,6 +374,8 @@ export default function DashboardQuickBet({
   maxStake,
   now,
   myBet,
+  defaultDirectionStake,
+  defaultScoreStake,
 }: {
   roomCode: string;
   matchId: string;
@@ -401,6 +390,8 @@ export default function DashboardQuickBet({
   maxStake: number;
   now: number;
   myBet?: DashboardQuickBetExisting | null;
+  defaultDirectionStake?: number | null;
+  defaultScoreStake?: number | null;
 }) {
   const tb = useTranslations("bet");
   const td = useTranslations("dashboard");
@@ -410,22 +401,37 @@ export default function DashboardQuickBet({
   const localizedHome = teamName(homeTeam);
   const localizedAway = teamName(awayTeam);
   const drawLabel = tm("draw");
-  const [directionPick, setDirectionPick] = useState<DirectionGroup | null>(null);
-  const [directionStake, setDirectionStake] = useState<number>(
-    Math.min(10, Math.max(0, maxStake))
-  );
-  const [home, setHome] = useState<number | null>(null);
-  const [away, setAway] = useState<number | null>(null);
-  const [scoreStake, setScoreStake] = useState<number>(0);
-  const [scoreWasCustomized, setScoreWasCustomized] = useState(false);
   const [scoreDialogOpen, setScoreDialogOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
 
   const isLocked = matchStatus !== "scheduled" || new Date(kickoff).getTime() <= now;
   const hasDirectionOdds = oddsHome != null && oddsDraw != null && oddsAway != null;
   const hasScoreOdds = !!scoreOdds && Object.keys(scoreOdds).length > 0;
   const hasOdds = hasDirectionOdds && hasScoreOdds;
+
+  const existingHasDirection = !!myBet && myBet.directionStake > 0;
+  const existingHasScore = !!myBet && myBet.scoreStake > 0;
+  // Chips in hand plus the already-staked amount a change would re-spend.
+  // The server re-validates on every save regardless.
+  const budget = maxStake + (myBet?.totalStake ?? 0);
+
+  const { desired, apply, status, error } = useQuickBet({
+    roomCode,
+    matchId,
+    hasServerBet: !!myBet,
+    budget: budget,
+    overBudgetMessage: tb("notEnoughChips", { max: budget }),
+    initial: {
+      pick: existingHasDirection ? myBet!.directionPick : null,
+      sideStake: existingHasDirection
+        ? myBet!.directionStake
+        : (defaultDirectionStake ?? FALLBACK_STAKE),
+      home: existingHasScore ? myBet!.predictedHomeScore : null,
+      away: existingHasScore ? myBet!.predictedAwayScore : null,
+      scoreStake: existingHasScore
+        ? myBet!.scoreStake
+        : (defaultScoreStake ?? FALLBACK_STAKE),
+    },
+  });
 
   const exactScoreChoices = Object.entries(scoreOdds ?? {})
     .flatMap(([key, odd]) => {
@@ -444,110 +450,33 @@ export default function DashboardQuickBet({
     })
     .sort(compareChoices);
 
-  const selectedKey = home !== null && away !== null ? scoreKey(home, away) : null;
+  const { hasDirection, hasScore } = quickBetActiveParts(desired);
+  const selectedKey =
+    desired.home !== null && desired.away !== null
+      ? scoreKey(desired.home, desired.away)
+      : null;
   const selectedScoreOdd =
     selectedKey != null
       ? exactScoreChoices.find((choice) => choice.key === selectedKey)?.odd ?? 0
       : 0;
   const directionOdds =
-    directionPick === "HOME"
+    desired.pick === "HOME"
       ? oddsHome ?? 0
-      : directionPick === "DRAW"
+      : desired.pick === "DRAW"
         ? oddsDraw ?? 0
-        : directionPick === "AWAY"
+        : desired.pick === "AWAY"
           ? oddsAway ?? 0
           : 0;
-  const sideStakeNum = Math.max(0, Math.floor(directionStake) || 0);
-  const scoreStakeNum = Math.max(0, Math.floor(scoreStake) || 0);
-  const totalStake = sideStakeNum + scoreStakeNum;
-  const directionPayout = Math.floor(sideStakeNum * directionOdds);
-  const scorePayout = Math.floor(scoreStakeNum * selectedScoreOdd);
-  const bestCasePayout =
-    scoreStakeNum > 0 && selectedScoreOdd > 0
-      ? directionPayout + scorePayout
-      : directionPayout;
-  const directionSummary =
-    directionPick != null
-      ? directionLabel(directionPick, localizedHome, localizedAway, drawLabel)
-      : null;
-  const fallbackChoice =
-    directionPick != null ? pickDefaultScore(exactScoreChoices, directionPick) : null;
-  const canSubmit =
-    directionPick !== null &&
-    sideStakeNum >= 2 &&
-    totalStake <= maxStake &&
-    directionOdds > 0 &&
-    (selectedKey !== null || fallbackChoice !== null);
-  const showDraftState = directionPick !== null;
+  const directionPayout = Math.floor(desired.sideStake * directionOdds);
+  const totalStake = quickBetTotal(desired);
 
-  function applyDefaultScore(nextDirection: DirectionGroup) {
-    const fallback = pickDefaultScore(exactScoreChoices, nextDirection);
-    if (!fallback) return;
-    setHome(fallback.home);
-    setAway(fallback.away);
+  function togglePick(pick: QuickBetDirection) {
+    apply({ pick: desired.pick === pick ? null : pick }, 150);
   }
 
-  function handleSelectDirection(nextDirection: DirectionGroup) {
-    setDirectionPick(nextDirection);
-    setError(null);
-    if (!scoreWasCustomized || home === null || away === null) {
-      applyDefaultScore(nextDirection);
-    }
-  }
-
-  function handleCancel() {
-    setDirectionPick(null);
-    setHome(null);
-    setAway(null);
-    setScoreStake(0);
-    setScoreWasCustomized(false);
-    setError(null);
-    setDirectionStake(Math.min(10, Math.max(0, maxStake)));
-  }
-
-  function openScoreDialog() {
-    if (directionPick === null) return;
-    if (home === null || away === null) {
-      applyDefaultScore(directionPick);
-    }
-    setScoreDialogOpen(true);
-  }
-
-  async function submit() {
-    if (directionPick === null) return;
-
-    // Match bets always store a scoreline, even when the dashboard flow is
-    // placing a side-only bet with `scoreStake = 0`.
-    const scoreChoice =
-      selectedKey !== null
-        ? { home: home!, away: away! }
-        : fallbackChoice
-          ? { home: fallbackChoice.home, away: fallbackChoice.away }
-          : null;
-    if (!scoreChoice) return;
-
-    setError(null);
-    const fd = new FormData();
-    fd.set("roomCode", roomCode);
-    fd.set("matchId", matchId);
-    fd.set("directionPick", directionPick);
-    fd.set("directionStake", String(sideStakeNum));
-    fd.set("predictedHomeScore", String(scoreChoice.home));
-    fd.set("predictedAwayScore", String(scoreChoice.away));
-    fd.set("scoreStake", String(scoreStakeNum));
-
-    startTransition(async () => {
-      try {
-        await placeMatchBet(fd);
-      } catch (caughtError) {
-        setError(
-          caughtError instanceof Error ? caughtError.message : "Failed to place bet."
-        );
-      }
-    });
-  }
-
-  if (myBet) {
+  // Locked matches show what was bet, read-only.
+  if (isLocked || !hasOdds) {
+    if (!myBet) return null;
     const sideLabel = directionLabel(
       myBet.directionPick,
       localizedHome,
@@ -591,10 +520,6 @@ export default function DashboardQuickBet({
     );
   }
 
-  if (isLocked || !hasOdds) {
-    return null;
-  }
-
   return (
     <>
       <div className="mt-4 border-t border-[#e7eef8] pt-4">
@@ -603,55 +528,40 @@ export default function DashboardQuickBet({
             label={localizedHome}
             teamName={homeTeam}
             odds={oddsHome}
-            selected={directionPick === "HOME"}
-            onSelect={() => handleSelectDirection("HOME")}
+            selected={desired.pick === "HOME"}
+            onSelect={() => togglePick("HOME")}
           />
           <QuickSideButton
             label={drawLabel}
             odds={oddsDraw}
-            selected={directionPick === "DRAW"}
-            onSelect={() => handleSelectDirection("DRAW")}
+            selected={desired.pick === "DRAW"}
+            onSelect={() => togglePick("DRAW")}
           />
           <QuickSideButton
             label={localizedAway}
             teamName={awayTeam}
             odds={oddsAway}
-            selected={directionPick === "AWAY"}
-            onSelect={() => handleSelectDirection("AWAY")}
+            selected={desired.pick === "AWAY"}
+            onSelect={() => togglePick("AWAY")}
           />
         </div>
 
-        {directionPick !== null ? (
-          <div className="mt-3 space-y-3 rounded-[26px] border border-[#F3D7B0] bg-[linear-gradient(180deg,#FFF9F0_0%,#FFF4E4_100%)] p-3 shadow-[0_16px_36px_rgba(194,101,19,0.10)]">
-            <div className="flex items-center gap-2 px-1">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#F59E0B]" />
-              <span className="h-1.5 w-14 rounded-full bg-[#F6C98A]" />
-            </div>
-            <div className="rounded-[18px] border border-slate-200 bg-slate-100 px-3 py-2.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="text-sm font-semibold text-slate-600">
-                  {tb("sideStake")}
-                </label>
-                <div className="inline-flex items-center rounded-[12px] border border-[#d7deea] bg-white px-2.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
-                  <input
-                    type="number"
-                    min={0}
-                    max={maxStake}
-                    value={directionStake}
-                    onFocus={(e) => e.target.select()}
-                    onChange={(event) => setDirectionStake(Number(event.target.value))}
-                    className="w-16 border-0 bg-transparent text-right font-mono font-black text-[#1E3A8A] focus:outline-none"
-                  />
-                </div>
-                <span className="text-xs font-semibold text-slate-500">
-                  {tc("chips")}
-                </span>
-              </div>
-            </div>
+        {(hasDirection || hasScore) && (
+          <div className="mt-1 space-y-2">
+            {desired.pick !== null && (
+              <StakeRow
+                label={tb("sideStake")}
+                stake={desired.sideStake}
+                payout={directionPayout}
+                payoutLabel={tb("payIfWin", { amount: directionPayout })}
+                maxStake={budget}
+                onChange={(stake) => apply({ sideStake: stake })}
+              />
+            )}
 
             <button
               type="button"
-              onClick={openScoreDialog}
+              onClick={() => setScoreDialogOpen(true)}
               className="group flex w-full items-center justify-between gap-3 rounded-[20px] border border-[#bfdbfe] bg-white px-4 py-3 text-start shadow-[0_2px_8px_rgba(30,58,138,0.06)] transition hover:border-[#3B82F6] hover:bg-[#F8FBFF] hover:shadow-[0_6px_18px_rgba(30,58,138,0.10)] active:translate-y-px"
             >
               <div className="min-w-0">
@@ -662,8 +572,14 @@ export default function DashboardQuickBet({
                   </span>
                 </div>
                 <div className="mt-1 truncate text-xs text-slate-500">
-                  {scoreStakeNum > 0 && home !== null && away !== null && selectedScoreOdd > 0
-                    ? scoreSummary(home, away, scoreStakeNum, tc("chips"), selectedScoreOdd)
+                  {hasScore && selectedScoreOdd > 0
+                    ? scoreSummary(
+                        desired.home!,
+                        desired.away!,
+                        desired.scoreStake,
+                        tc("chips"),
+                        selectedScoreOdd
+                      )
                     : td("exactScoreHint")}
                 </div>
               </div>
@@ -681,135 +597,61 @@ export default function DashboardQuickBet({
               </svg>
             </button>
 
-            {/* {mismatched && (
-              <div className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                {tb("mismatchWarning", {
-                  side:
-                    directionPick === "HOME"
-                      ? localizedHome
-                      : directionPick === "AWAY"
-                        ? localizedAway
-                        : drawLabel,
-                  scoreSide:
-                    scoreImpliesDirection === "HOME"
-                      ? localizedHome
-                      : scoreImpliesDirection === "AWAY"
-                        ? localizedAway
-                        : drawLabel,
-                  home: home ?? 0,
-                  away: away ?? 0,
-                })}
-              </div>
-            )} */}
-
-            {totalStake > maxStake ? (
-              <p className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">
-                {tb("notEnoughChips", { max: maxStake })}
-              </p>
-            ) : null}
+            <div className="flex items-center justify-between gap-3 rounded-[18px] border border-[#dbe5f2] bg-[#F8FBFF] px-4 py-2.5 text-xs">
+              <span className="font-semibold text-slate-600">
+                {tb("totalStake")}:{" "}
+                <span className="font-mono font-black text-[#1E3A8A]">
+                  {totalStake} {tc("chips")}
+                </span>
+              </span>
+              <span
+                className={
+                  "font-bold uppercase tracking-[0.16em] " +
+                  (status === "error"
+                    ? "text-red-600"
+                    : status === "saving"
+                      ? "text-slate-400"
+                      : status === "saved"
+                        ? "text-emerald-600"
+                        : "text-slate-300")
+                }
+              >
+                {status === "saving"
+                  ? tb("saving")
+                  : status === "saved"
+                    ? tb("saved")
+                    : status === "error"
+                      ? tb("saveFailed")
+                      : tb("instantHint")}
+              </span>
+            </div>
 
             {error ? (
               <p className="rounded-2xl bg-red-50 px-3 py-3 text-sm font-medium text-red-700">
                 {error}
               </p>
             ) : null}
-
-            <div className="rounded-[18px] border border-[#dbe5f2] bg-[#F8FBFF] px-4 py-3">
-              <div className="flex items-center justify-between gap-3">
-                <span className="truncate text-sm font-semibold text-[#1E3A8A]">
-                  {directionSummary}
-                </span>
-                <span className="font-mono text-sm font-bold text-[#1E3A8A]">
-                  {totalStake} {tc("chips")}
-                </span>
-              </div>
-              <div className="mt-1 flex items-center justify-between gap-3 text-xs text-slate-500">
-                <span>
-                  {scoreStakeNum > 0 && selectedScoreOdd > 0
-                    ? tb("payIfBoth")
-                    : tb("payIfWin", { amount: directionPayout })}
-                </span>
-                {scoreStakeNum > 0 && selectedScoreOdd > 0 ? (
-                  <span className="font-mono font-semibold text-[#1E3A8A]">
-                    {bestCasePayout} {tc("chips")}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="flex items-stretch gap-2">
-              <button
-                type="button"
-                onClick={handleCancel}
-                disabled={pending}
-                className="rounded-full border border-[#cdd9ea] bg-white px-4 text-xs font-semibold text-slate-500 transition hover:bg-[#F8FBFF] hover:text-[#1E3A8A] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {tc("cancel")}
-              </button>
-              <button
-                type="button"
-                disabled={!canSubmit || pending}
-                onClick={submit}
-                className={
-                  "animate-nudge flex-1 rounded-[20px] bg-[#1E3A8A] px-4 py-3.5 text-sm font-bold text-white shadow-[0_14px_30px_rgba(30,58,138,0.18)] transition disabled:cursor-not-allowed disabled:opacity-50 "                  
-                }
-              >
-                {pending ? tb("placePending") : tc("confirm")}
-              </button>
-            </div>
           </div>
-        ) : null}
+        )}
       </div>
 
       <ExactScoreDialog
-        key={`${home ?? "x"}-${away ?? "x"}-${scoreStakeNum}-${sideStakeNum}-${maxStake}`}
+        key={`${desired.home ?? "x"}-${desired.away ?? "x"}-${desired.scoreStake}-${desired.sideStake}`}
         open={scoreDialogOpen}
         onClose={() => setScoreDialogOpen(false)}
         onSave={({ home: nextHome, away: nextAway, stake }) => {
-          setHome(nextHome);
-          setAway(nextAway);
-          setScoreStake(stake);
-          setScoreWasCustomized(true);
+          apply({ home: nextHome, away: nextAway, scoreStake: stake }, 150);
           setScoreDialogOpen(false);
         }}
         homeTeam={homeTeam}
         awayTeam={awayTeam}
-        initialHome={home}
-        initialAway={away}
-        initialStake={
-          scoreWasCustomized
-            ? scoreStakeNum
-            : scoreStakeNum > 0
-              ? scoreStakeNum
-              : Math.min(sideStakeNum, Math.max(0, maxStake - sideStakeNum))
-        }
-        sideStake={sideStakeNum}
-        maxStake={maxStake}
+        initialHome={desired.home}
+        initialAway={desired.away}
+        initialStake={desired.scoreStake}
+        sideStake={hasDirection ? desired.sideStake : 0}
+        maxStake={budget}
         choices={exactScoreChoices}
       />
-      {showDraftState ? (
-        <style jsx>{`
-          @keyframes dashboardQuickBetConfirmReady {
-            0%,
-            100% {
-              transform: translateY(0) scale(1);
-              box-shadow:
-                0 14px 30px rgba(30, 58, 138, 0.18),
-                0 0 0 0 rgba(245, 158, 11, 0.14);
-            }
-            50% {
-              transform: translateY(-1px) scale(1.018);
-              box-shadow:
-                0 20px 38px rgba(30, 58, 138, 0.24),
-                0 0 0 7px rgba(245, 158, 11, 0.12);
-            }
-          }
-
-          .dashboard-quick-bet-confirm-ready {
-            animation: dashboardQuickBetConfirmReady 1.7s ease-in-out infinite;
-          }
-        `}</style>
-      ) : null}
     </>
   );
 }

@@ -122,6 +122,8 @@ export default async function DashboardPage(props: {
           userId={user.id}
           authUserId={user.authUserId}
           myChips={user.chips}
+          defaultDirectionStake={user.defaultDirectionStake}
+          defaultScoreStake={user.defaultScoreStake}
           heading={t("upcomingMatches")}
           emptyLabel={t("noMatches")}
         />
@@ -201,6 +203,8 @@ async function DashboardMatchesPane({
   userId,
   authUserId,
   myChips,
+  defaultDirectionStake,
+  defaultScoreStake,
   heading,
   emptyLabel,
 }: {
@@ -210,6 +214,8 @@ async function DashboardMatchesPane({
   userId: string;
   authUserId: string | null;
   myChips: number;
+  defaultDirectionStake: number | null;
+  defaultScoreStake: number | null;
   heading: string;
   emptyLabel: string;
 }) {
@@ -291,6 +297,8 @@ async function DashboardMatchesPane({
           myBets={myBetByMatch}
           customBetCounts={customBetCounts}
           maxStake={myChips}
+          defaultDirectionStake={defaultDirectionStake}
+          defaultScoreStake={defaultScoreStake}
         />
       )}
     </section>

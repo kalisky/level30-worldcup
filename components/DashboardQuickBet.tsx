@@ -14,8 +14,6 @@ import {
 } from "@/hooks/useQuickBet";
 import { parseScoreKey, scoreKey, type ScoreOddsCache } from "@/lib/db/schema";
 
-const FALLBACK_STAKE = 10;
-
 export type DashboardQuickBetExisting = {
   directionPick: "HOME" | "DRAW" | "AWAY";
   directionStake: number;
@@ -408,8 +406,6 @@ export default function DashboardQuickBet({
   const hasScoreOdds = !!scoreOdds && Object.keys(scoreOdds).length > 0;
   const hasOdds = hasDirectionOdds && hasScoreOdds;
 
-  const existingHasDirection = !!myBet && myBet.directionStake > 0;
-  const existingHasScore = !!myBet && myBet.scoreStake > 0;
   // Chips in hand plus the already-staked amount a change would re-spend.
   // The server re-validates on every save regardless.
   const budget = maxStake + (myBet?.totalStake ?? 0);
@@ -417,20 +413,11 @@ export default function DashboardQuickBet({
   const { desired, apply, status, error } = useQuickBet({
     roomCode,
     matchId,
-    hasServerBet: !!myBet,
-    budget: budget,
+    existing: myBet ?? null,
+    defaultDirectionStake: defaultDirectionStake ?? null,
+    defaultScoreStake: defaultScoreStake ?? null,
+    budget,
     overBudgetMessage: tb("notEnoughChips", { max: budget }),
-    initial: {
-      pick: existingHasDirection ? myBet!.directionPick : null,
-      sideStake: existingHasDirection
-        ? myBet!.directionStake
-        : (defaultDirectionStake ?? FALLBACK_STAKE),
-      home: existingHasScore ? myBet!.predictedHomeScore : null,
-      away: existingHasScore ? myBet!.predictedAwayScore : null,
-      scoreStake: existingHasScore
-        ? myBet!.scoreStake
-        : (defaultScoreStake ?? FALLBACK_STAKE),
-    },
   });
 
   const exactScoreChoices = Object.entries(scoreOdds ?? {})

@@ -22,7 +22,6 @@ type ExactScoreChoice = {
 };
 
 const STAKE_PRESETS = [2, 5, 10, 25, 50];
-const FALLBACK_STAKE = 10;
 
 function compareChoices(a: ExactScoreChoice, b: ExactScoreChoice) {
   if (a.odd !== b.odd) return a.odd - b.odd;
@@ -79,9 +78,6 @@ export default function QuickBetForm({
   const localizedHome = teamName(homeTeam);
   const localizedAway = teamName(awayTeam);
 
-  const existingHasDirection = !!existingBet && existingBet.directionStake > 0;
-  const existingHasScore = !!existingBet && existingBet.scoreStake > 0;
-
   // Chips in hand plus the already-staked amount a change would re-spend.
   // The server re-validates on every save regardless.
   const budget = maxStake + (existingBet?.totalStake ?? 0);
@@ -89,20 +85,11 @@ export default function QuickBetForm({
   const { desired, apply, status, error } = useQuickBet({
     roomCode,
     matchId,
-    hasServerBet: !!existingBet,
-    budget: budget,
+    existing: existingBet,
+    defaultDirectionStake,
+    defaultScoreStake,
+    budget,
     overBudgetMessage: tb("notEnoughChips", { max: budget }),
-    initial: {
-      pick: existingHasDirection ? existingBet!.directionPick : null,
-      sideStake: existingHasDirection
-        ? existingBet!.directionStake
-        : (defaultDirectionStake ?? FALLBACK_STAKE),
-      home: existingHasScore ? existingBet!.predictedHomeScore : null,
-      away: existingHasScore ? existingBet!.predictedAwayScore : null,
-      scoreStake: existingHasScore
-        ? existingBet!.scoreStake
-        : (defaultScoreStake ?? FALLBACK_STAKE),
-    },
   });
 
   const exactScoreChoices = Object.entries(scoreOdds)

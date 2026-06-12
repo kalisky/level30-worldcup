@@ -561,14 +561,8 @@ export default function DashboardQuickBet({
               className="group flex w-full items-center justify-between gap-3 rounded-[20px] border border-[#bfdbfe] bg-white px-4 py-3 text-start shadow-[0_2px_8px_rgba(30,58,138,0.06)] transition hover:border-[#3B82F6] hover:bg-[#F8FBFF] hover:shadow-[0_6px_18px_rgba(30,58,138,0.10)] active:translate-y-px"
             >
               <div className="min-w-0">
-                <div className="flex items-center gap-2 text-sm font-semibold text-[#1E3A8A]">
-                  {tb("predictScore")}
-                  <span className="rounded-full bg-[#E0EEFF] px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.16em] text-[#1D4ED8]">
-                    {td("optional")}
-                  </span>
-                </div>
                 {hasScore && selectedScoreOdd > 0 ? (
-                  <div className="mt-1 flex items-baseline gap-2 truncate">
+                  <div className="flex items-baseline gap-2 truncate">
                     <span className="font-mono text-2xl font-black leading-none text-[#1E3A8A]">
                       {desired.home}–{desired.away}
                     </span>
@@ -577,9 +571,17 @@ export default function DashboardQuickBet({
                     </span>
                   </div>
                 ) : (
-                  <div className="mt-1 truncate text-xs text-slate-500">
-                    {td("exactScoreHint")}
-                  </div>
+                  <>
+                    <div className="flex items-center gap-2 text-sm font-semibold text-[#1E3A8A]">
+                      {tb("predictScore")}
+                      <span className="rounded-full bg-[#E0EEFF] px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.16em] text-[#1D4ED8]">
+                        {td("optional")}
+                      </span>
+                    </div>
+                    <div className="mt-1 truncate text-xs text-slate-500">
+                      {td("exactScoreHint")}
+                    </div>
+                  </>
                 )}
               </div>
               <svg

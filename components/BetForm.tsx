@@ -321,6 +321,7 @@ export default function BetForm({
             min={0}
             max={maxStake}
             value={scoreStake}
+            onFocus={(e) => e.target.select()}
             onChange={(e) => setScoreStake(Number(e.target.value))}
             className="w-24 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-right font-mono font-bold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
           />

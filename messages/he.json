@@ -217,6 +217,11 @@
   "dashboard": {
     "leaderboard": "טבלת דירוג",
     "myHistory": "ההיסטוריה שלי ←",
+    "leaderboardModeAll": "כל האסימונים",
+    "leaderboardModeAllHint": "כולל אסימונים שמושקעים בהימורים שעדיין לא הוכרעו.",
+    "leaderboardModeAvailable": "זמינים בלבד",
+    "leaderboardModeAvailableHint": "ללא אסימונים שמושקעים בהימורים שעדיין לא הוכרעו.",
+    "leaderboardUnsettledBets": "{amount} בהימורים שעדיין לא הוכרעו",
     "upcomingMatches": "משחקים קרובים ובהווה",
     "noMatches": "אין משחקים בלוח הזמנים.",
     "customBets": "הימורים מותאמים אישית",

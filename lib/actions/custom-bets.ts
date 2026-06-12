@@ -24,6 +24,7 @@ import {
 } from "@/lib/custom-bet-odds";
 import { recordLedger } from "@/lib/ledger";
 import { touchRoomLiveRevision } from "@/lib/live-updates";
+import { revalidateRoomChipPaths } from "@/lib/revalidate-room-chip-paths";
 
 const baseProposeSchema = z.object({
   matchId: z.string().uuid().optional(),
@@ -318,7 +319,7 @@ export async function placeCustomWager(formData: FormData) {
   if (formData.get("matchId")) {
     revalidatePath(`/r/${room.code}/match/${String(formData.get("matchId"))}`);
   }
-  revalidatePath(`/r/${room.code}/dashboard`);
+  revalidateRoomChipPaths(room.code);
 }
 
 const updateWagerSchema = z.object({
@@ -430,7 +431,7 @@ export async function updateCustomWager(formData: FormData) {
   if (formData.get("matchId")) {
     revalidatePath(`/r/${room.code}/match/${String(formData.get("matchId"))}`);
   }
-  revalidatePath(`/r/${room.code}/dashboard`);
+  revalidateRoomChipPaths(room.code);
 }
 
 const removeWagerSchema = z.object({
@@ -501,7 +502,7 @@ export async function removeCustomWager(formData: FormData) {
   if (formData.get("matchId")) {
     revalidatePath(`/r/${room.code}/match/${String(formData.get("matchId"))}`);
   }
-  revalidatePath(`/r/${room.code}/dashboard`);
+  revalidateRoomChipPaths(room.code);
 }
 
 // --- Open-question helpers ------------------------------------------------
@@ -708,7 +709,7 @@ export async function placeOpenWager(formData: FormData) {
   if (formData.get("matchId")) {
     revalidatePath(`/r/${room.code}/match/${String(formData.get("matchId"))}`);
   }
-  revalidatePath(`/r/${room.code}/dashboard`);
+  revalidateRoomChipPaths(room.code);
 }
 
 const updateOpenWagerSchema = z.object({
@@ -855,5 +856,5 @@ export async function updateOpenWager(formData: FormData) {
   if (formData.get("matchId")) {
     revalidatePath(`/r/${room.code}/match/${String(formData.get("matchId"))}`);
   }
-  revalidatePath(`/r/${room.code}/dashboard`);
+  revalidateRoomChipPaths(room.code);
 }

@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -9,6 +8,7 @@ import { requireRoomUser } from "@/lib/auth-context";
 import { normalizeRoomCode } from "@/lib/code";
 import { recordLedger } from "@/lib/ledger";
 import { touchRoomLiveRevision } from "@/lib/live-updates";
+import { revalidateRoomChipPaths } from "@/lib/revalidate-room-chip-paths";
 
 /**
  * Result for a single source bet considered for copying. `status` says what
@@ -329,6 +329,6 @@ export async function copyMatchBets(formData: FormData): Promise<CopyBetsResult>
     await touchRoomLiveRevision(db, targetRoom.id);
   }
 
-  revalidatePath(`/r/${targetRoom.code}/dashboard`);
+  revalidateRoomChipPaths(targetRoom.code);
   return result;
 }

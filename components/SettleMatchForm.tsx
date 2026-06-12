@@ -149,6 +149,7 @@ export default function SettleMatchForm({
           max={99}
           value={homeScore}
           onChange={(e) => setHomeScore(Number(e.target.value))}
+          onFocus={(e) => e.target.select()}
           className="w-14 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-2 py-2 text-right font-mono font-bold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
           disabled={isFinal}
         />
@@ -159,6 +160,7 @@ export default function SettleMatchForm({
           max={99}
           value={awayScore}
           onChange={(e) => setAwayScore(Number(e.target.value))}
+          onFocus={(e) => e.target.select()}
           className="w-14 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-2 py-2 text-right font-mono font-bold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
           disabled={isFinal}
         />

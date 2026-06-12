@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
-import type { User } from "@/lib/db/schema";
+import type { RoomLeaderboardEntry } from "@/lib/db/queries";
 
 const podiumStyles = [
   "border-l-4 border-[#EAB308] bg-[#FFF9DB]",
@@ -8,17 +11,35 @@ const podiumStyles = [
   "border-l-4 border-[#C2410C] bg-[#FFF1E8]",
 ];
 
+// I'm currently showing only "includingOpenBets" mode, but keeping the code for "availableOnly" mode in case we want to bring it back in the future.
+type LeaderboardMode = "includingOpenBets" | "availableOnly";
+
 export default function Leaderboard({
   users,
   meId,
   roomCode,
 }: {
-  users: User[];
+  users: RoomLeaderboardEntry[];
   meId: string;
   roomCode: string;
 }) {
   const t = useTranslations("dashboard");
   const tc = useTranslations("common");
+  const [mode, setMode] = useState<LeaderboardMode>("includingOpenBets");
+  const sortedUsers = [...users].sort((a, b) => {
+    const displayedDiff =
+      (mode === "includingOpenBets"
+        ? b.chipsIncludingOpenBets
+        : b.availableChips) -
+      (mode === "includingOpenBets"
+        ? a.chipsIncludingOpenBets
+        : a.availableChips);
+    if (displayedDiff !== 0) return displayedDiff;
+    const totalDiff = b.chipsIncludingOpenBets - a.chipsIncludingOpenBets;
+    if (totalDiff !== 0) return totalDiff;
+    return a.name.localeCompare(b.name);
+  });
+
   return (
     <section className="rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.08)]">
       <div className="mb-4 flex items-baseline justify-between">
@@ -32,8 +53,41 @@ export default function Leaderboard({
           {t("myHistory")}
         </Link>
       </div>
+      <div className="mb-4 flex flex-col gap-3">
+        {/* <div className="inline-flex w-full rounded-full border border-[#dbe5f2] bg-[#F8FBFF] p-1 sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setMode("includingOpenBets")}
+            className={
+              "flex-1 rounded-full px-3 py-2 text-sm font-bold transition sm:flex-none " +
+              (mode === "includingOpenBets"
+                ? "bg-[#1E3A8A] text-white shadow-[0_10px_24px_rgba(30,58,138,0.18)]"
+                : "text-slate-600 hover:text-[#1E3A8A]")
+            }
+          >
+            {t("leaderboardModeAll")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("availableOnly")}
+            className={
+              "flex-1 rounded-full px-3 py-2 text-sm font-bold transition sm:flex-none " +
+              (mode === "availableOnly"
+                ? "bg-[#1E3A8A] text-white shadow-[0_10px_24px_rgba(30,58,138,0.18)]"
+                : "text-slate-600 hover:text-[#1E3A8A]")
+            }
+          >
+            {t("leaderboardModeAvailable")}
+          </button>
+        </div> */}
+        <p className="text-sm text-slate-500">
+          {mode === "includingOpenBets"
+            ? t("leaderboardModeAllHint")
+            : t("leaderboardModeAvailableHint")}
+        </p>
+      </div>
       <ol className="space-y-2">
-        {users.map((u, i) => (
+        {sortedUsers.map((u, i) => (
           <Link
             key={u.id}
             href={`/r/${roomCode}/history${u.id === meId ? "" : `?user=${u.id}`}`}
@@ -77,11 +131,18 @@ export default function Leaderboard({
             </span>
             <span className="text-right">
               <span className="block font-mono text-xl font-black text-[#1E3A8A]">
-                {u.chips}
+                {mode === "includingOpenBets"
+                  ? u.chipsIncludingOpenBets
+                  : u.availableChips}
               </span>
               <span className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {tc("chips")}
               </span>
+              {u.openBetChips > 0 && (
+                <span className="mt-1 block text-[0.76rem] font-medium text-slate-500">
+                  {t("leaderboardUnsettledBets", { amount: u.openBetChips })}
+                </span>
+              )}
             </span>
           </Link>
         ))}

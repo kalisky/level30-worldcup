@@ -617,6 +617,7 @@ export default function CustomBetCard({
             min={1}
             max={stakeMax}
             value={stake}
+            onFocus={(e) => e.target.select()}
             onChange={(e) => setStake(Number(e.target.value))}
             className="w-20 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-right font-mono text-sm font-bold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
           />
@@ -651,6 +652,7 @@ export default function CustomBetCard({
             min={1}
             max={stakeMax}
             value={stake}
+            onFocus={(e) => e.target.select()}
             onChange={(e) => setStake(Number(e.target.value))}
             className="w-20 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-3 py-2 text-right font-mono text-sm font-bold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
           />

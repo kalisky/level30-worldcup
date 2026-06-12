@@ -296,6 +296,7 @@ function ExactScoreDialog({
                 max={Math.max(0, maxStake - sideStake)}
                 value={stake}
                 onChange={(event) => setStake(Number(event.target.value))}
+                onFocus={(e) => e.target.select()}
                 className="w-24 rounded-2xl border border-[#cdd9ea] bg-white px-3 py-2 text-right font-mono font-bold text-[#1E3A8A] focus:border-[#3B82F6] focus:outline-none"
               />
               <span className="text-xs font-semibold text-slate-500">

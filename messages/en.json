@@ -217,6 +217,11 @@
   "dashboard": {
     "leaderboard": "Leaderboard",
     "myHistory": "My history →",
+    "leaderboardModeAll": "All chips",
+    "leaderboardModeAllHint": "Includes chips currently tied up in unsettled bets.",
+    "leaderboardModeAvailable": "Available only",
+    "leaderboardModeAvailableHint": "Excludes chips currently tied up in unsettled bets.",
+    "leaderboardUnsettledBets": "{amount} in unsettled bets",
     "upcomingMatches": "Upcoming & live matches",
     "noMatches": "No matches scheduled.",
     "customBets": "Custom bets",

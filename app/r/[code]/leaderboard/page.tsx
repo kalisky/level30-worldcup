@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { requireRoomUser } from "@/lib/auth-context";
-import { getRoomUsers } from "@/lib/db/queries";
+import { getRoomLeaderboard } from "@/lib/db/queries";
 import RoomHeader from "@/components/RoomHeader";
 import RoomBreadcrumb from "@/components/RoomBreadcrumb";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
@@ -18,7 +18,7 @@ export default async function LeaderboardPage(props: {
     : searchParams.from === "dashboard";
 
   const [members, tnav] = await Promise.all([
-    getRoomUsers(room.id),
+    getRoomLeaderboard(room.id),
     getTranslations("nav"),
   ]);
 

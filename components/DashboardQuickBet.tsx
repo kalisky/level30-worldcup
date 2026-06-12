@@ -567,17 +567,20 @@ export default function DashboardQuickBet({
                     {td("optional")}
                   </span>
                 </div>
-                <div className="mt-1 truncate text-xs text-slate-500">
-                  {hasScore && selectedScoreOdd > 0
-                    ? scoreSummary(
-                        desired.home!,
-                        desired.away!,
-                        desired.scoreStake,
-                        tc("chips"),
-                        selectedScoreOdd
-                      )
-                    : td("exactScoreHint")}
-                </div>
+                {hasScore && selectedScoreOdd > 0 ? (
+                  <div className="mt-1 flex items-baseline gap-2 truncate">
+                    <span className="font-mono text-2xl font-black leading-none text-[#1E3A8A]">
+                      {desired.home}–{desired.away}
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      {desired.scoreStake} {tc("chips")} · {selectedScoreOdd.toFixed(2)}x
+                    </span>
+                  </div>
+                ) : (
+                  <div className="mt-1 truncate text-xs text-slate-500">
+                    {td("exactScoreHint")}
+                  </div>
+                )}
               </div>
               <svg
                 viewBox="0 0 20 20"

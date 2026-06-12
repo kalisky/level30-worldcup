@@ -370,13 +370,16 @@ export function StakeRow({
         <span className="font-mono font-black text-[#1E3A8A]">
           {stake} {tc("chips")}
         </span>
+        {payout > 0 && (
+          <span className="text-xs text-slate-500">{payoutLabel}</span>
+        )}
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-label={`${label} — edit`}
           aria-expanded={open}
           className={
-            "-my-2 flex h-11 w-11 items-center justify-center rounded-full border text-3xl transition " +
+            "-my-2 ms-auto flex h-11 w-11 items-center justify-center rounded-full border text-3xl transition " +
             (open
               ? "border-[#3B82F6] bg-[#E0EEFF] text-[#1D4ED8]"
               : "border-[#cdd9ea] bg-white text-slate-500 hover:border-[#3B82F6] hover:text-[#1D4ED8]")
@@ -384,9 +387,6 @@ export function StakeRow({
         >
           ⚙
         </button>
-        {payout > 0 && (
-          <span className="ml-auto text-xs text-slate-500">{payoutLabel}</span>
-        )}
       </div>
       {open && (
         <div className="mt-3 flex flex-wrap items-center gap-2">

@@ -373,7 +373,12 @@
     "chips": "אסימונים",
     "viewSomeoneElse": "צפה בהיסטוריה של מישהו אחר",
     "noHistory": "אין עדיין היסטוריה.",
+    "noFilteredHistory": "אין רשומות שמתאימות לסינון הזה.",
     "balance": "יתרה",
+    "filterTitle": "הצג",
+    "filterAllBets": "כל ההימורים",
+    "filterSettledOnly": "רק הימורים שהוכרעו",
+    "filterWinsOnly": "רק הימורים מצליחים שהוכרעו",
     "reason": {
       "opening_balance": "יתרה התחלתית",
       "initial": "הצטרפות לחדר",

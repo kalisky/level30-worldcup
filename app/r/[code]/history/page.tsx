@@ -3,48 +3,49 @@ import { and, desc, eq } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { requireRoomUser } from "@/lib/auth-context";
 import { db } from "@/lib/db";
-import { chipLedger, matches, customBets } from "@/lib/db/schema";
-import { getRoomUsers } from "@/lib/db/queries";
+import {
+  chipLedger,
+  matches,
+  customBets,
+  matchBets,
+  customWagers,
+} from "@/lib/db/schema";
+import { getRoomLeaderboard, getRoomUsers } from "@/lib/db/queries";
 import { translateTeam } from "@/lib/team-i18n";
 import { customBetCopy } from "@/lib/custom-bet-copy";
 import RoomHeader from "@/components/RoomHeader";
 import RoomBreadcrumb from "@/components/RoomBreadcrumb";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
-import LocalDateTime from "@/components/LocalDateTime";
+import HistoryEntries, {
+  type HistoryEntryItem,
+} from "@/components/HistoryEntries";
 
-const REASON_ICONS: Record<string, string> = {
-  opening_balance: "📜",
-  initial: "🎟️",
-  daily_grant: "🎁",
-  match_bet_placed: "⚽",
-  match_bet_payout: "🏆",
-  custom_wager_placed: "🎲",
-  custom_wager_payout: "🏆",
-  custom_wager_refund: "↩️",
-};
+function classifyEntryState(args: {
+  reason: string;
+  matchBetStatus: string | null;
+  matchBetPayout: number | null;
+  customWagerStatus: string | null;
+}): HistoryEntryItem["state"] {
+  if (args.reason === "match_bet_payout" || args.reason === "custom_wager_payout") {
+    return "won";
+  }
 
-type RelativeStrings = {
-  justNow: string;
-  minutesAgo: (n: number) => string;
-  hoursAgo: (n: number) => string;
-  daysAgo: (n: number) => string;
-};
+  if (args.reason === "match_bet_placed") {
+    if (args.matchBetStatus === "open") return "open";
+    if (args.matchBetStatus === "settled") {
+      return (args.matchBetPayout ?? 0) > 0 ? "won" : "lost";
+    }
+    return "neutral";
+  }
 
-/**
- * Returns either a localized relative-time string (e.g., "3h ago") or a
- * <LocalDateTime> element for older entries — the latter formats on the
- * client to use the viewer's timezone instead of the server's.
- */
-function relativeOrAbsolute(d: Date, s: RelativeStrings) {
-  const diff = Date.now() - d.getTime();
-  const m = Math.floor(diff / 60_000);
-  if (m < 1) return s.justNow;
-  if (m < 60) return s.minutesAgo(m);
-  const h = Math.floor(m / 60);
-  if (h < 24) return s.hoursAgo(h);
-  const days = Math.floor(h / 24);
-  if (days < 7) return s.daysAgo(days);
-  return <LocalDateTime value={d} preset="lockShort" />;
+  if (args.reason === "custom_wager_placed") {
+    if (args.customWagerStatus === "open") return "open";
+    if (args.customWagerStatus === "won") return "won";
+    if (args.customWagerStatus === "lost") return "lost";
+    return "neutral";
+  }
+
+  return "neutral";
 }
 
 export default async function HistoryPage(props: {
@@ -63,22 +64,18 @@ export default async function HistoryPage(props: {
     : searchParams.from === "dashboard";
 
   const targetUserId = (Array.isArray(query) ? query[0] : query) ?? user.id;
-  const members = await getRoomUsers(room.id);
+  const [members, leaderboard] = await Promise.all([
+    getRoomUsers(room.id),
+    getRoomLeaderboard(room.id),
+  ]);
   const target = members.find((m) => m.id === targetUserId) ?? user;
+  const leaderboardTarget = leaderboard.find((m) => m.id === target.id) ?? null;
 
   const locale = await getLocale();
   const t = await getTranslations("history");
   const tc = await getTranslations("common");
-  const tr = await getTranslations("history.reason");
   const tnav = await getTranslations("nav");
   const tDefaults = await getTranslations("customBet.defaults");
-
-  const relativeStrings: RelativeStrings = {
-    justNow: tc("justNow"),
-    minutesAgo: (n) => `${n}m ${tc("ago")}`,
-    hoursAgo: (n) => `${n}h ${tc("ago")}`,
-    daysAgo: (n) => `${n}d ${tc("ago")}`,
-  };
 
   const entries = await db
     .select({
@@ -88,10 +85,28 @@ export default async function HistoryPage(props: {
       customBetTitle: customBets.title,
       customBetDescription: customBets.description,
       customBetDefaultKey: customBets.defaultKey,
+      matchBetStatus: matchBets.status,
+      matchBetPayout: matchBets.payout,
+      customWagerStatus: customWagers.status,
     })
     .from(chipLedger)
     .leftJoin(matches, eq(matches.id, chipLedger.refMatchId))
     .leftJoin(customBets, eq(customBets.id, chipLedger.refCustomBetId))
+    .leftJoin(
+      matchBets,
+      and(
+        eq(matchBets.roomId, chipLedger.roomId),
+        eq(matchBets.userId, chipLedger.userId),
+        eq(matchBets.matchId, chipLedger.refMatchId)
+      )
+    )
+    .leftJoin(
+      customWagers,
+      and(
+        eq(customWagers.userId, chipLedger.userId),
+        eq(customWagers.customBetId, chipLedger.refCustomBetId)
+      )
+    )
     .where(
       and(
         eq(chipLedger.roomId, room.id),
@@ -99,6 +114,51 @@ export default async function HistoryPage(props: {
       )
     )
     .orderBy(desc(chipLedger.createdAt));
+
+  const historyEntries: HistoryEntryItem[] = entries.map(
+    ({
+      entry,
+      matchHome,
+      matchAway,
+      customBetTitle,
+      customBetDescription,
+      customBetDefaultKey,
+      matchBetStatus,
+      matchBetPayout,
+      customWagerStatus,
+    }) => {
+      const matchLabel =
+        matchHome && matchAway
+          ? `${translateTeam(matchHome, locale)} vs ${translateTeam(matchAway, locale)}`
+          : null;
+      const localizedBetTitle =
+        customBetTitle != null
+          ? customBetCopy(
+              {
+                title: customBetTitle,
+                description: customBetDescription ?? "",
+                defaultKey: customBetDefaultKey,
+              },
+              tDefaults
+            ).title
+          : null;
+
+      return {
+        id: entry.id,
+        reason: entry.reason,
+        delta: entry.delta,
+        balanceAfter: entry.balanceAfter,
+        createdAt: new Date(entry.createdAt).toISOString(),
+        subtitle: entry.note || matchLabel || localizedBetTitle,
+        state: classifyEntryState({
+          reason: entry.reason,
+          matchBetStatus,
+          matchBetPayout,
+          customWagerStatus,
+        }),
+      };
+    }
+  );
 
   return (
     <>
@@ -124,7 +184,9 @@ export default async function HistoryPage(props: {
             )}
           </h1>
           <p className="mt-2 text-3xl font-black text-[#1E3A8A]">
-            <span className="font-mono">{target.chips}</span>{" "}
+            <span className="font-mono">
+              {leaderboardTarget?.chipsIncludingOpenBets ?? target.chips}
+            </span>{" "}
             <span className="text-sm font-bold uppercase tracking-[0.18em] text-slate-500">{t("chips")}</span>
           </p>
         </header>
@@ -155,79 +217,7 @@ export default async function HistoryPage(props: {
           </div>
         </nav>
 
-        {entries.length === 0 ? (
-          <p className="rounded-[22px] border border-dashed border-[#cfdced] bg-[#F8FBFF] p-6 text-center text-sm text-slate-500">
-            {t("noHistory")}
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {entries.map(({ entry, matchHome, matchAway, customBetTitle, customBetDescription, customBetDefaultKey }) => {
-              const positive = entry.delta >= 0;
-              const reasonLabel = tr(entry.reason);
-              const icon = REASON_ICONS[entry.reason] ?? "•";
-              const matchLabel =
-                matchHome && matchAway
-                  ? `${translateTeam(matchHome, locale)} vs ${translateTeam(matchAway, locale)}`
-                  : null;
-              const localizedBetTitle =
-                customBetTitle != null
-                  ? customBetCopy(
-                      {
-                        title: customBetTitle,
-                        description: customBetDescription ?? "",
-                        defaultKey: customBetDefaultKey,
-                      },
-                      tDefaults
-                    ).title
-                  : null;
-              const subtitle =
-                entry.note ||
-                matchLabel ||
-                localizedBetTitle;
-              const ts = new Date(entry.createdAt);
-              return (
-                <li
-                  key={entry.id}
-                  className="flex items-start gap-3 rounded-2xl border border-[#dbe5f2] bg-white p-4"
-                >
-                  <span className="text-2xl" aria-hidden>
-                    {icon}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="font-bold text-[#1E3A8A]">{reasonLabel}</span>
-                      <span
-                        className={
-                          "font-mono text-lg font-black " +
-                          (positive ? "text-emerald-600" : "text-rose-600")
-                        }
-                      >
-                        {positive ? "+" : ""}
-                        {entry.delta}
-                      </span>
-                    </div>
-                    {subtitle && (
-                      <p className="mt-0.5 truncate text-sm text-slate-600">
-                        {subtitle}
-                      </p>
-                    )}
-                    <div className="mt-1 flex items-baseline justify-between gap-2 text-xs text-slate-500">
-                      <span>
-                        {relativeOrAbsolute(ts, relativeStrings)}
-                      </span>
-                      <span>
-                        {t("balance")}{" "}
-                        <span className="font-mono font-semibold text-[#1E3A8A]">
-                          {entry.balanceAfter}
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <HistoryEntries entries={historyEntries} />
       </main>
     </>
   );

@@ -373,7 +373,12 @@
     "chips": "chips",
     "viewSomeoneElse": "View someone else's history",
     "noHistory": "No chip history yet.",
+    "noFilteredHistory": "No history entries match this filter.",
     "balance": "balance",
+    "filterTitle": "Show",
+    "filterAllBets": "All bets",
+    "filterSettledOnly": "Only settled bets",
+    "filterWinsOnly": "Only successful settled bets",
     "reason": {
       "opening_balance": "Opening balance",
       "initial": "Joined room",

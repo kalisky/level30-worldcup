@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import LocalDateTime from "@/components/LocalDateTime";
 import MatchCard, {
@@ -95,20 +95,38 @@ export default function DashboardMatchGroups({
   );
   const now = useSyncExternalStore(subscribeToNow, getNowSnapshot, () => 0);
 
+  // Played matches stay in the list, so land the first paint on the next
+  // game instead of making users scroll past everything already finished.
+  const nextMatchId = matches.find((m) => m.status !== "final")?.id ?? null;
+  const didScrollRef = useRef(false);
+  useEffect(() => {
+    if (didScrollRef.current || !hydrated || !nextMatchId) return;
+    if (matches[0]?.id === nextMatchId) return; // nothing played above it
+    didScrollRef.current = true;
+    document
+      .getElementById(`match-card-${nextMatchId}`)
+      ?.scrollIntoView({ block: "start" });
+  }, [hydrated, nextMatchId, matches]);
+
   const renderMatchCards = (items: MatchCardMatch[]) => (
     <div className="space-y-2">
       {items.map((match) => (
-        <MatchCard
+        <div
           key={match.id}
-          match={match}
-          roomCode={roomCode}
-          myBet={myBets[match.id] ?? null}
-          customBetCount={customBetCounts?.[match.id] ?? 0}
-          maxStake={maxStake}
-          now={now}
-          defaultDirectionStake={defaultDirectionStake}
-          defaultScoreStake={defaultScoreStake}
-        />
+          id={`match-card-${match.id}`}
+          className="scroll-mt-[12.5rem] lg:scroll-mt-[6.5rem]"
+        >
+          <MatchCard
+            match={match}
+            roomCode={roomCode}
+            myBet={myBets[match.id] ?? null}
+            customBetCount={customBetCounts?.[match.id] ?? 0}
+            maxStake={maxStake}
+            now={now}
+            defaultDirectionStake={defaultDirectionStake}
+            defaultScoreStake={defaultScoreStake}
+          />
+        </div>
       ))}
     </div>
   );

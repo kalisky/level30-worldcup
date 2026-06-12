@@ -9,7 +9,7 @@ import {
   hydrateCustomBetRowsWithWagers,
   listOpenCustomBets,
   listRoomsForAuthUser,
-  listUpcomingMatches,
+  listAllMatches,
 } from "@/lib/db/queries";
 import { getCustomBetShareMetadata } from "@/lib/share-metadata";
 import RoomHeader from "@/components/RoomHeader";
@@ -220,8 +220,8 @@ async function DashboardMatchesPane({
   emptyLabel: string;
 }) {
   const [upcoming, myBets, allRoomMemberships, customBetCounts] = await Promise.all([
-    trace.step("listUpcomingMatches", () => listUpcomingMatches(100), (rows) => ({
-      upcomingMatchCount: rows.length,
+    trace.step("listAllMatches", () => listAllMatches(), (rows) => ({
+      matchCount: rows.length,
     })),
     trace.step("getMyMatchBets", () => getMyMatchBets(roomId, userId), (rows) => ({
       myBetCount: rows.length,
@@ -260,6 +260,10 @@ async function DashboardMatchesPane({
         predictedAwayScore: bet.predictedAwayScore,
         scoreStake: bet.scoreStake,
         totalStake: bet.totalStake,
+        status: bet.status,
+        directionOutcome: bet.directionOutcome,
+        scoreOutcome: bet.scoreOutcome,
+        payout: bet.payout,
       },
     ])
   );

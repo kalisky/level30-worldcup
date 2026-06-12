@@ -272,7 +272,9 @@
     "saving": "Saving…",
     "saved": "Saved",
     "saveFailed": "Save failed",
-    "clearScore": "Clear score"
+    "clearScore": "Clear score",
+    "wonAmount": "Won {amount}",
+    "lostAmount": "Lost {amount}"
   },
   "customBet": {
     "propose": "Propose a custom bet",

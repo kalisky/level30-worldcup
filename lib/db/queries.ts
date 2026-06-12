@@ -210,6 +210,12 @@ export async function listUpcomingMatches(limit = 12) {
     .limit(limit);
 }
 
+/** Every fixture, played and upcoming, in kickoff order — the dashboard
+ *  shows finished matches (with the user's result) instead of hiding them. */
+export async function listAllMatches() {
+  return db.select().from(matches).orderBy(matches.kickoff);
+}
+
 export async function getMatch(matchId: string) {
   const [m] = await db.select().from(matches).where(eq(matches.id, matchId)).limit(1);
   return m ?? null;

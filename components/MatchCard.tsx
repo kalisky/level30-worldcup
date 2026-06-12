@@ -90,7 +90,13 @@ export default function MatchCard({
   const matchHref = `/r/${roomCode}/match/${match.id}?from=dashboard`;
 
   return (
-    <article className="group rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.08)] transition hover:-translate-y-0.5 hover:border-[#c4d6ec] hover:shadow-[0_24px_50px_rgba(30,58,138,0.14)]">
+    <article
+      className={
+        isFinal
+          ? "group rounded-[28px] border border-[#e3eaf4] bg-[#F6F9FD] p-5 opacity-90 transition"
+          : "group rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.08)] transition hover:-translate-y-0.5 hover:border-[#c4d6ec] hover:shadow-[0_24px_50px_rgba(30,58,138,0.14)]"
+      }
+    >
       <Link href={matchHref} className="block">
         <div className="flex items-center justify-between gap-3 text-slate-500">
           <div className="flex items-center gap-2">

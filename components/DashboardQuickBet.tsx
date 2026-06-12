@@ -21,6 +21,10 @@ export type DashboardQuickBetExisting = {
   predictedAwayScore: number;
   scoreStake: number;
   totalStake: number;
+  status?: "open" | "settled" | "void";
+  directionOutcome?: "pending" | "won" | "lost";
+  scoreOutcome?: "pending" | "won" | "lost";
+  payout?: number | null;
 };
 
 type DirectionGroup = "HOME" | "DRAW" | "AWAY";
@@ -480,6 +484,8 @@ export default function DashboardQuickBet({
       drawLabel
     );
     const hasScoreBet = myBet.scoreStake > 0;
+    const isSettled = myBet.status === "settled";
+    const net = isSettled ? (myBet.payout ?? 0) - myBet.totalStake : 0;
 
     return (
       <div className="mt-4 rounded-[22px] border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-3">
@@ -487,9 +493,24 @@ export default function DashboardQuickBet({
           <span className="text-[0.7rem] font-bold uppercase tracking-[0.18em] text-[#1D4ED8]">
             {tm("yourBet")}
           </span>
-          <span className="font-mono text-xs font-bold text-[#1D4ED8]">
-            {myBet.totalStake} {tc("chips")}
-          </span>
+          {isSettled ? (
+            <span
+              className={
+                "rounded-full px-2.5 py-0.5 font-mono text-sm font-black " +
+                (net >= 0
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-red-100 text-red-600")
+              }
+            >
+              {net >= 0
+                ? tb("wonAmount", { amount: `+${net}` })
+                : tb("lostAmount", { amount: net })}
+            </span>
+          ) : (
+            <span className="font-mono text-xs font-bold text-[#1D4ED8]">
+              {myBet.totalStake} {tc("chips")}
+            </span>
+          )}
         </div>
         <p className="mt-2 text-sm font-bold text-[#1E3A8A]">
           {hasScoreBet

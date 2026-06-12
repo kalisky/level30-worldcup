@@ -272,7 +272,9 @@
     "saving": "שומר…",
     "saved": "נשמר",
     "saveFailed": "השמירה נכשלה",
-    "clearScore": "נקה תוצאה"
+    "clearScore": "נקה תוצאה",
+    "wonAmount": "זכית {amount}",
+    "lostAmount": "הפסדת {amount}"
   },
   "customBet": {
     "propose": "הצע הימור מותאם אישית",

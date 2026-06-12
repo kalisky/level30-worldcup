@@ -8,11 +8,22 @@ import { revalidateRoomChipPaths } from "@/lib/revalidate-room-chip-paths";
 
 // A match can't be over before kickoff + 90' + half-time + stoppage.
 const MIN_MATCH_DURATION_MS = 105 * 60 * 1000;
-// Re-ask the AI for an unconfirmed result at most this often.
+// Re-ask the AI for an unconfirmed result at most this often, escalating the
+// interval the longer the result stays unconfirmed so a match the AI can
+// never resolve doesn't burn grounded-search quota forever:
+//   first hour → every 10 min, first day → hourly, after that → daily.
 const CHECK_INTERVAL_MS = 10 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
 // Bound AI lookups per run for when several matches end together; the next
 // run picks up whatever this one didn't get to.
 const MAX_CHECKS_PER_RUN = 3;
+
+function requiredCheckIntervalMs(checkableForMs: number) {
+  if (checkableForMs < HOUR_MS) return CHECK_INTERVAL_MS;
+  if (checkableForMs < DAY_MS) return HOUR_MS;
+  return DAY_MS;
+}
 
 export type AutoSettleCheck = {
   matchId: string;
@@ -47,7 +58,11 @@ export async function autoSettleFinishedMatches(options?: {
   const finishedBy = new Date(now.getTime() - MIN_MATCH_DURATION_MS);
   const staleCheck = new Date(now.getTime() - CHECK_INTERVAL_MS);
 
-  const candidates = await db
+  // Select with the loosest throttle (10 min) and apply the escalating
+  // per-match backoff in JS — the interval depends on how long each match
+  // has been checkable. Over-fetch so long-stuck matches can't crowd
+  // fresher ones out of the per-run cap.
+  const rawCandidates = await db
     .select()
     .from(matches)
     .where(
@@ -63,7 +78,19 @@ export async function autoSettleFinishedMatches(options?: {
       )
     )
     .orderBy(matches.kickoff)
-    .limit(MAX_CHECKS_PER_RUN);
+    .limit(MAX_CHECKS_PER_RUN * 4);
+
+  const candidates = rawCandidates
+    .filter((m) => {
+      if (force || !m.resultLastCheckedAt) return true;
+      const checkableForMs =
+        now.getTime() -
+        (new Date(m.kickoff).getTime() + MIN_MATCH_DURATION_MS);
+      const sinceLastCheckMs =
+        now.getTime() - new Date(m.resultLastCheckedAt).getTime();
+      return sinceLastCheckMs >= requiredCheckIntervalMs(checkableForMs);
+    })
+    .slice(0, MAX_CHECKS_PER_RUN);
 
   if (candidates.length === 0) {
     return { status: "noop", checked: [] };

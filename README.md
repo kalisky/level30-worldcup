@@ -56,7 +56,7 @@ Open [http://localhost:3000](http://localhost:3000), sign in with Google, create
 2. **Before group stage starts**: any room member goes to `/r/<code>/admin` and renames the placeholder team names to the actual qualified teams. Saving names clears the odds source metadata for that match; click "Sync odds" to refresh them from Polymarket and regenerate the Poisson exact-score grid.
 3. **Before each kickoff**: friends visit the match page and place their score prediction (locks at kickoff).
 4. **During the match**: anyone can propose a custom bet from the match page. Claude scores it and others can wager until the lock time.
-5. **At the final whistle**: nothing to do — the server auto-settles. About 105 minutes after kickoff it starts checking for the official result (AI + web search, re-checked every ~10 minutes until confirmed) and pays out all bets in every room. The check runs piggybacked on live-poll traffic plus a daily Vercel Cron backstop (`/api/internal/settle/sync`).
+5. **At the final whistle**: nothing to do — the server auto-settles. About 105 minutes after kickoff it starts checking for the official result (AI + web search) and pays out all bets in every room. Unconfirmed results are re-checked every 10 minutes for the first hour, then hourly, then daily — so a result the AI can't confirm never drains the Gemini quota. The check runs piggybacked on live-poll traffic plus a daily Vercel Cron backstop (`/api/internal/settle/sync`).
 6. **Custom bets**: anyone goes to `/r/<code>/admin` → "Suggest with AI" for any open custom bet, confirm, "Mark winner".
 
 ## Deploy to Vercel

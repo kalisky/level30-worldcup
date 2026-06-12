@@ -351,8 +351,8 @@
     }
   },
   "admin": {
-    "needsSettlement": "Needs settlement ({count})",
-    "nothingPending": "Nothing pending.",
+    "needsSettlement": "Awaiting result ({count})",
+    "nothingPending": "Nothing pending. Finished matches settle automatically.",
     "openCustomBets": "Open custom bets ({count})",
     "noCustomBets": "No custom bets to resolve.",
     "upcomingMatches": "Upcoming matches ({count})",
@@ -367,15 +367,15 @@
     "generateOdds": "Sync odds",
     "regenerateOdds": "Re-sync odds",
     "finalScore": "Final score:",
-    "settle": "Settle",
-    "settleRoomBets": "Pay out {count} open bets",
     "suggestWithAi": "Suggest with AI",
     "markWinner": "Mark winner",
     "voidAndRefund": "Void & refund",
     "wagerers": "{count} wagerers",
     "wagerer": "{count} wagerer",
     "needsTwo": "needs 2+ to settle",
-    "needsTwoWarning": "This bet only has {count} {label}. Custom bets need at least 2 different players for a winner to be declared — use Void & refund if no one else is going to wager."
+    "needsTwoWarning": "This bet only has {count} {label}. Custom bets need at least 2 different players for a winner to be declared — use Void & refund if no one else is going to wager.",
+    "awaitingAutoSettle": "Auto-settling soon",
+    "autoActor": "Auto"
   },
   "history": {
     "title": "Chip history",

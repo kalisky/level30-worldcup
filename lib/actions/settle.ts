@@ -7,7 +7,6 @@ import { db } from "@/lib/db";
 import {
   customBets,
   customWagers,
-  matchBets,
   matches,
   settlements,
   users,
@@ -21,83 +20,14 @@ import {
 } from "@/lib/live-updates";
 import { revalidateOddsSyncPaths } from "@/lib/odds-sync/revalidate";
 import { syncMatchOdds } from "@/lib/odds-sync/service";
-import { settleMatchBetsForRoom } from "@/lib/settle-match-core";
 import {
-  suggestMatchResult as aiSuggestMatchResult,
   suggestCustomBetWinner as aiSuggestCustomBetWinner,
-  type SuggestedMatchResult,
   type SuggestedCustomBetWinner,
 } from "@/lib/ai/suggest";
 import { revalidateRoomChipPaths } from "@/lib/revalidate-room-chip-paths";
 
-const settleMatchSchema = z.object({
-  matchId: z.string().uuid(),
-  homeScore: z.number().int().nonnegative().max(99),
-  awayScore: z.number().int().nonnegative().max(99),
-});
-
-export async function settleMatch(formData: FormData) {
-  const code = String(formData.get("roomCode") ?? "");
-  const { room, user } = await requireRoomUser(code);
-
-  const parsed = settleMatchSchema.safeParse({
-    matchId: String(formData.get("matchId") ?? ""),
-    homeScore: Number(formData.get("homeScore") ?? -1),
-    awayScore: Number(formData.get("awayScore") ?? -1),
-  });
-  if (!parsed.success) throw new Error("Invalid scores.");
-  const { matchId } = parsed.data;
-
-  await db.transaction(async (tx) => {
-    const [match] = await tx
-      .select()
-      .from(matches)
-      .where(eq(matches.id, matchId))
-      .limit(1);
-    if (!match) throw new Error("Match not found.");
-
-    // Matches are shared across rooms: the first room to settle records the
-    // final score; later rooms settle their own open bets against it.
-    let { homeScore, awayScore } = parsed.data;
-    if (match.status === "final") {
-      if (match.homeScore == null || match.awayScore == null) {
-        throw new Error("Match is final but has no recorded score.");
-      }
-      homeScore = match.homeScore;
-      awayScore = match.awayScore;
-
-      const [openBet] = await tx
-        .select({ id: matchBets.id })
-        .from(matchBets)
-        .where(
-          and(
-            eq(matchBets.roomId, room.id),
-            eq(matchBets.matchId, matchId),
-            eq(matchBets.status, "open")
-          )
-        )
-        .limit(1);
-      if (!openBet) throw new Error("Match already settled.");
-    } else {
-      await tx
-        .update(matches)
-        .set({ homeScore, awayScore, status: "final" })
-        .where(eq(matches.id, matchId));
-    }
-
-    await settleMatchBetsForRoom(tx, {
-      roomId: room.id,
-      actorId: user.id,
-      match,
-      homeScore,
-      awayScore,
-    });
-  });
-
-  revalidatePath(`/r/${room.code}/match/${matchId}`);
-  revalidateRoomChipPaths(room.code);
-  revalidatePath(`/r/${room.code}/admin`);
-}
+// Match settlement is server-side only — see lib/auto-settle.ts. Users
+// never settle matches; they only resolve custom bets below.
 
 const settleCustomSchema = z.object({
   customBetId: z.string().uuid(),
@@ -307,17 +237,6 @@ export async function renameMatchTeams(formData: FormData) {
 
   revalidatePath(`/r/${code}/admin`);
   revalidatePath(`/r/${code}/match/${matchId}`);
-}
-
-export async function suggestMatchResult(formData: FormData): Promise<SuggestedMatchResult> {
-  const code = String(formData.get("roomCode") ?? "");
-  await requireRoomUser(code);
-  const matchId = String(formData.get("matchId") ?? "");
-  if (!matchId) throw new Error("Missing match id.");
-
-  const [m] = await db.select().from(matches).where(eq(matches.id, matchId)).limit(1);
-  if (!m) throw new Error("Match not found.");
-  return aiSuggestMatchResult(m);
 }
 
 export async function suggestCustomBetWinner(formData: FormData): Promise<SuggestedCustomBetWinner> {

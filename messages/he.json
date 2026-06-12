@@ -351,8 +351,8 @@
     }
   },
   "admin": {
-    "needsSettlement": "ממתינים לסגירה ({count})",
-    "nothingPending": "אין מה לסגור.",
+    "needsSettlement": "ממתינים לתוצאה ({count})",
+    "nothingPending": "אין מה לסגור. משחקים שהסתיימו נסגרים אוטומטית.",
     "openCustomBets": "הימורים פתוחים ({count})",
     "noCustomBets": "אין הימורים מותאמים אישית לסגור.",
     "upcomingMatches": "משחקים קרובים ({count})",
@@ -367,15 +367,15 @@
     "generateOdds": "סנכרן יחסים",
     "regenerateOdds": "סנכרן יחסים מחדש",
     "finalScore": "תוצאה סופית:",
-    "settle": "סגור",
-    "settleRoomBets": "שלם {count} הימורים פתוחים",
     "suggestWithAi": "הצעה מ-AI",
     "markWinner": "סמן מנצח",
     "voidAndRefund": "בטל והחזר",
     "wagerers": "{count} מהמרים",
     "wagerer": "{count} מהמר",
     "needsTwo": "צריך 2 ומעלה כדי לסגור",
-    "needsTwoWarning": "להימור הזה יש רק {count} {label}. הימורים מותאמים אישית צריכים לפחות 2 שחקנים שונים כדי שייקבע מנצח — השתמש ב”בטל והחזר” אם אף אחד לא מתכוון להמר."
+    "needsTwoWarning": "להימור הזה יש רק {count} {label}. הימורים מותאמים אישית צריכים לפחות 2 שחקנים שונים כדי שייקבע מנצח — השתמש ב”בטל והחזר” אם אף אחד לא מתכוון להמר.",
+    "awaitingAutoSettle": "ייסגר אוטומטית בקרוב",
+    "autoActor": "אוטומטית"
   },
   "history": {
     "title": "היסטוריית אסימונים",

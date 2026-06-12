@@ -3,7 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { requireRoomUser } from "@/lib/auth-context";
 import { ensureFreshCustomBetOdds } from "@/lib/custom-bet-odds";
 import { db } from "@/lib/db";
-import { customBets, customWagers, matchBets, matches, users } from "@/lib/db/schema";
+import { customBets, customWagers, matches, users } from "@/lib/db/schema";
 import { getCustomWagersForBets, listRecentSettlements } from "@/lib/db/queries";
 import { translateTeam } from "@/lib/team-i18n";
 import RoomHeader from "@/components/RoomHeader";
@@ -28,7 +28,7 @@ export default async function AdminPage(props: {
   const tm = await getTranslations("match");
   const tnav = await getTranslations("nav");
 
-  const [allMatches, openBetsRaw, recent, openMatchBetRows] = await Promise.all([
+  const [allMatches, openBetsRaw, recent] = await Promise.all([
     db.select().from(matches).orderBy(matches.kickoff),
     db
       .select({
@@ -50,18 +50,7 @@ export default async function AdminPage(props: {
       )
       .orderBy(desc(customBets.createdAt)),
     listRecentSettlements(room.id, 30),
-    db
-      .select({
-        matchId: matchBets.matchId,
-        count: sql<number>`count(*)::int`,
-      })
-      .from(matchBets)
-      .where(and(eq(matchBets.roomId, room.id), eq(matchBets.status, "open")))
-      .groupBy(matchBets.matchId),
   ]);
-  const openBetsByMatch = new Map(
-    openMatchBetRows.map((r) => [r.matchId, r.count])
-  );
   const openBets = await Promise.all(
     openBetsRaw.map(async (entry) => ({
       ...entry,
@@ -82,20 +71,16 @@ export default async function AdminPage(props: {
     else wagersByBet.set(row.wager.customBetId, [row]);
   }
 
-  // Split matches into 'needs attention' (past kickoff, not final — or final
-  // elsewhere while this room still has open bets to pay out) and rest.
+  // Split matches into 'awaiting result' (past kickoff, not yet auto-settled)
+  // and rest. Settlement itself is server-side — see lib/auto-settle.ts.
   const now = new Date();
   const needsAttention = allMatches.filter(
-    (m) =>
-      (m.status !== "final" && new Date(m.kickoff) <= now) ||
-      (m.status === "final" && openBetsByMatch.has(m.id))
+    (m) => m.status !== "final" && new Date(m.kickoff) <= now
   );
   const upcoming = allMatches.filter(
     (m) => m.status !== "final" && new Date(m.kickoff) > now
   );
-  const completed = allMatches.filter(
-    (m) => m.status === "final" && !openBetsByMatch.has(m.id)
-  );
+  const completed = allMatches.filter((m) => m.status === "final");
 
   return (
     <>
@@ -117,12 +102,7 @@ export default async function AdminPage(props: {
           ) : (
             <div className="space-y-2">
               {needsAttention.map((m) => (
-                <SettleMatchForm
-                  key={m.id}
-                  match={m}
-                  roomCode={room.code}
-                  openBetCount={openBetsByMatch.get(m.id) ?? 0}
-                />
+                <SettleMatchForm key={m.id} match={m} roomCode={room.code} />
               ))}
             </div>
           )}
@@ -206,7 +186,7 @@ export default async function AdminPage(props: {
                           : t("customBetVoided")}
                     </span>
                     <span className="text-xs text-zinc-500">
-                      {t("by")} {actorName} ·{" "}
+                      {t("by")} {actorName ?? t("autoActor")} ·{" "}
                       <LocalDateTime value={settlement.createdAt} preset="datetime" />
                     </span>
                   </div>

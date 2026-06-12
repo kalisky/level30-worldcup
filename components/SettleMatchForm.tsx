@@ -1,30 +1,20 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import type { Match } from "@/lib/db/schema";
 import LocalDateTime from "@/components/LocalDateTime";
-import {
-  settleMatch,
-  renameMatchTeams,
-  regenerateMatchOdds,
-  suggestMatchResult,
-} from "@/lib/actions/settle";
+import { renameMatchTeams, regenerateMatchOdds } from "@/lib/actions/settle";
 
 export default function SettleMatchForm({
   match,
   roomCode,
-  openBetCount = 0,
 }: {
   match: Match;
   roomCode: string;
-  openBetCount?: number;
 }) {
   const t = useTranslations("admin");
   const tm = useTranslations("match");
-  const locale = useLocale();
-  const [homeScore, setHomeScore] = useState<number>(match.homeScore ?? 0);
-  const [awayScore, setAwayScore] = useState<number>(match.awayScore ?? 0);
   const [homeTeam, setHomeTeam] = useState(match.homeTeam);
   const [awayTeam, setAwayTeam] = useState(match.awayTeam);
   const [pending, startTransition] = useTransition();
@@ -44,15 +34,6 @@ export default function SettleMatchForm({
     });
   }
 
-  function submitSettle() {
-    const fd = new FormData();
-    fd.set("roomCode", roomCode);
-    fd.set("matchId", match.id);
-    fd.set("homeScore", String(homeScore));
-    fd.set("awayScore", String(awayScore));
-    runAction(settleMatch, fd, "Settled.");
-  }
-
   function submitRename() {
     const fd = new FormData();
     fd.set("roomCode", roomCode);
@@ -69,29 +50,8 @@ export default function SettleMatchForm({
     runAction(regenerateMatchOdds, fd, "Odds synced.");
   }
 
-  function submitSuggest() {
-    setError(null);
-    setInfo(null);
-    const fd = new FormData();
-    fd.set("roomCode", roomCode);
-    fd.set("matchId", match.id);
-    startTransition(async () => {
-      try {
-        const result = await suggestMatchResult(fd);
-        if (result.found && result.homeScore != null && result.awayScore != null) {
-          setHomeScore(result.homeScore);
-          setAwayScore(result.awayScore);
-          setInfo(`AI suggests ${result.homeScore} – ${result.awayScore}. ${result.reasoning}`);
-        } else {
-          setError(`AI couldn't determine the score. ${result.reasoning}`);
-        }
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Suggest failed.");
-      }
-    });
-  }
-
   const isFinal = match.status === "final";
+  const kickedOff = new Date(match.kickoff).getTime() <= Date.now();
 
   return (
     <div className="rounded-[26px] border border-[#dbe5f2] bg-white p-4 shadow-[0_14px_32px_rgba(30,58,138,0.07)]">
@@ -144,65 +104,21 @@ export default function SettleMatchForm({
       </div>
 
       <div className="mt-3 flex items-center gap-2">
-        <span className="text-sm font-semibold text-slate-600">{t("finalScore")}</span>
-        <input
-          type="number"
-          min={0}
-          max={99}
-          value={homeScore}
-          onChange={(e) => setHomeScore(Number(e.target.value))}
-          onFocus={(e) => e.target.select()}
-          className="w-14 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-2 py-2 text-right font-mono font-bold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
-          disabled={isFinal}
-        />
-        <span>:</span>
-        <input
-          type="number"
-          min={0}
-          max={99}
-          value={awayScore}
-          onChange={(e) => setAwayScore(Number(e.target.value))}
-          onFocus={(e) => e.target.select()}
-          className="w-14 rounded-2xl border border-[#cdd9ea] bg-[#F8FBFF] px-2 py-2 text-right font-mono font-bold text-[#1E3A8A] focus:border-[#3B82F6] focus:bg-white focus:outline-none"
-          disabled={isFinal}
-        />
         {isFinal ? (
-          <div className="ml-auto flex items-center gap-2">
-            <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-700">
+          <>
+            <span className="text-sm font-semibold text-slate-600">{t("finalScore")}</span>
+            <span className="font-mono font-bold text-[#1E3A8A]">
+              {match.homeScore} : {match.awayScore}
+            </span>
+            <span className="ml-auto rounded-full bg-slate-200 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-700">
               {tm("final")}
             </span>
-            {openBetCount > 0 && (
-              <button
-                type="button"
-                onClick={submitSettle}
-                disabled={pending}
-                className="rounded-full bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-2 text-sm font-bold text-white shadow-[0_14px_26px_rgba(249,115,22,0.24)] disabled:opacity-50"
-              >
-                {t("settleRoomBets", { count: openBetCount })}
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="ml-auto flex gap-2">
-            <button
-              type="button"
-              onClick={submitSuggest}
-              disabled={pending}
-              title="Use AI + web search to look up the score"
-              className="rounded-full border border-[#cdd9ea] px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-[#3B82F6] hover:bg-[#F8FBFF] disabled:opacity-50"
-            >
-              {t("suggestWithAi")}
-            </button>
-            <button
-              type="button"
-              onClick={submitSettle}
-              disabled={pending}
-              className="rounded-full bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-2 text-sm font-bold text-white shadow-[0_14px_26px_rgba(249,115,22,0.24)] disabled:opacity-50"
-            >
-              {t("settle")}
-            </button>
-          </div>
-        )}
+          </>
+        ) : kickedOff ? (
+          <span className="ml-auto rounded-full bg-[#EFF6FF] px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[#1D4ED8]">
+            {t("awaitingAutoSettle")}
+          </span>
+        ) : null}
       </div>
 
       {error && (

@@ -25,7 +25,8 @@ export async function settleMatchBetsForRoom(
   tx: Db | Tx,
   args: {
     roomId: string;
-    actorId: string;
+    /** NULL when settled by the server-side auto-settler. */
+    actorId: string | null;
     match: Match;
     homeScore: number;
     awayScore: number;

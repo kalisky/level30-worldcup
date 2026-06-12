@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useTransition, type RefObject } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import CopyBetsDialog from "@/components/CopyBetsDialog";
 import CreateRoomLauncher from "@/components/CreateRoomLauncher";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { signOut } from "@/lib/actions/auth";
@@ -43,6 +44,7 @@ export default function ProfileDialog({
   triggerRef?: RefObject<HTMLElement | null>;
 }) {
   const t = useTranslations("profile");
+  const tcb = useTranslations("copyBets");
   const router = useRouter();
   const searchParams = useSearchParams();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -51,6 +53,13 @@ export default function ProfileDialog({
   const [joinError, setJoinError] = useState<string | null>(null);
   const [signOutError, setSignOutError] = useState<string | null>(null);
   const [signOutPending, startSignOutTransition] = useTransition();
+  const [copyBetsOpen, setCopyBetsOpen] = useState(false);
+
+  const otherRooms = currentRoomCode
+    ? rooms
+        .filter((room) => room.code !== currentRoomCode)
+        .map((room) => ({ code: room.code, name: room.name }))
+    : [];
 
   useEffect(() => {
     if (!open) return;
@@ -75,7 +84,7 @@ export default function ProfileDialog({
     }
 
     function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !copyBetsOpen) {
         onClose();
       }
     }
@@ -86,7 +95,7 @@ export default function ProfileDialog({
       document.removeEventListener("mousedown", handlePointerDown);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [onClose, open, triggerRef]);
+  }, [copyBetsOpen, onClose, open, triggerRef]);
 
   if (!open) return null;
 
@@ -349,6 +358,33 @@ export default function ProfileDialog({
         )}
       </section>
 
+      {otherRooms.length > 0 && (
+        <section className="mt-1">
+          <button
+            type="button"
+            onClick={() => setCopyBetsOpen(true)}
+            className="flex w-full items-center gap-3 rounded-[20px] px-3 py-3 text-left text-sm font-semibold text-[#1E3A8A] transition hover:bg-[#F8FBFF]"
+          >
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#E0EEFF] text-[#1D4ED8]">
+              <svg
+                viewBox="0 0 20 20"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="7" y="7" width="9" height="9" rx="2" />
+                <path d="M13 7V5.5A1.5 1.5 0 0 0 11.5 4h-6A1.5 1.5 0 0 0 4 5.5v6A1.5 1.5 0 0 0 5.5 13H7" />
+              </svg>
+            </span>
+            <span>{tcb("button")}</span>
+          </button>
+        </section>
+      )}
+
       <div className="my-3 h-px bg-[#e4edf8]" />
 
       <section>
@@ -380,6 +416,15 @@ export default function ProfileDialog({
           </p>
         )}
       </section>
+
+      {currentRoomCode && (
+        <CopyBetsDialog
+          open={copyBetsOpen}
+          onClose={() => setCopyBetsOpen(false)}
+          targetRoomCode={currentRoomCode}
+          otherRooms={otherRooms}
+        />
+      )}
     </div>
   );
 }

@@ -8,7 +8,6 @@ import {
   getMyMatchBets,
   hydrateCustomBetRowsWithWagers,
   listOpenCustomBets,
-  listRoomsForAuthUser,
   listAllMatches,
 } from "@/lib/db/queries";
 import { getCustomBetShareMetadata } from "@/lib/share-metadata";
@@ -18,7 +17,6 @@ import CustomBetCard from "@/components/CustomBetCard";
 import ProposeBetModal from "@/components/ProposeBetModal";
 import MatchScreenLayout from "@/components/MatchScreenLayout";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
-import CopyBetsLauncher from "@/components/CopyBetsLauncher";
 import DashboardMatchGroups from "@/components/DashboardMatchGroups";
 import StickyDashboardHeader from "@/components/StickyDashboardHeader";
 import type { DashboardTrace } from "@/lib/dashboard-trace";
@@ -120,7 +118,6 @@ export default async function DashboardPage(props: {
           roomId={room.id}
           roomCode={room.code}
           userId={user.id}
-          authUserId={user.authUserId}
           myChips={user.chips}
           defaultDirectionStake={user.defaultDirectionStake}
           defaultScoreStake={user.defaultScoreStake}
@@ -201,7 +198,6 @@ async function DashboardMatchesPane({
   roomId,
   roomCode,
   userId,
-  authUserId,
   myChips,
   defaultDirectionStake,
   defaultScoreStake,
@@ -212,28 +208,19 @@ async function DashboardMatchesPane({
   roomId: string;
   roomCode: string;
   userId: string;
-  authUserId: string | null;
   myChips: number;
   defaultDirectionStake: number | null;
   defaultScoreStake: number | null;
   heading: string;
   emptyLabel: string;
 }) {
-  const [upcoming, myBets, allRoomMemberships, customBetCounts] = await Promise.all([
+  const [upcoming, myBets, customBetCounts] = await Promise.all([
     trace.step("listAllMatches", () => listAllMatches(), (rows) => ({
       matchCount: rows.length,
     })),
     trace.step("getMyMatchBets", () => getMyMatchBets(roomId, userId), (rows) => ({
       myBetCount: rows.length,
     })),
-    trace.step(
-      "listRoomsForAuthUser",
-      () => (authUserId ? listRoomsForAuthUser(authUserId) : Promise.resolve([])),
-      (rows) => ({
-        membershipCount: rows.length,
-        hasAuthUserId: Boolean(authUserId),
-      })
-    ),
     trace.step(
       "countOpenCustomBetsByMatch",
       () => countOpenCustomBetsByMatch(roomId),
@@ -242,13 +229,6 @@ async function DashboardMatchesPane({
       })
     ),
   ]);
-
-  const otherRooms = allRoomMemberships
-    .filter((membership) => membership.room.id !== roomId)
-    .map((membership) => ({
-      code: membership.room.code,
-      name: membership.room.name,
-    }));
 
   const myBetByMatch = Object.fromEntries(
     myBets.map((bet) => [
@@ -288,7 +268,6 @@ async function DashboardMatchesPane({
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
           {heading}
         </h2>
-        <CopyBetsLauncher targetRoomCode={roomCode} otherRooms={otherRooms} />
       </div>
       {upcoming.length === 0 ? (
         <p className="rounded-xl border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 dark:border-zinc-700">

@@ -427,7 +427,7 @@ export async function listRecentSettlements(roomId: string, limit = 20) {
       actorName: users.name,
     })
     .from(settlements)
-    .innerJoin(users, eq(users.id, settlements.actorId))
+    .leftJoin(users, eq(users.id, settlements.actorId))
     .where(eq(settlements.roomId, roomId))
     .orderBy(desc(settlements.createdAt))
     .limit(limit);

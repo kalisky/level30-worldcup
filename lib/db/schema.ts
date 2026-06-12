@@ -188,6 +188,11 @@ export const matches = pgTable(
     oddsLastSyncedAt: timestamp("odds_last_synced_at", { withTimezone: true }),
     oddsLastSyncStatus: oddsSyncStatus("odds_last_sync_status"),
     oddsLastSyncError: text("odds_last_sync_error"),
+    // Throttle for the server-side auto-settler: when we last asked the AI
+    // for this match's final score. NULL means never checked.
+    resultLastCheckedAt: timestamp("result_last_checked_at", {
+      withTimezone: true,
+    }),
   },
   (t) => [
     index("matches_kickoff_idx").on(t.kickoff),
@@ -370,9 +375,10 @@ export const settlements = pgTable(
     roomId: uuid("room_id")
       .notNull()
       .references(() => rooms.id, { onDelete: "cascade" }),
-    actorId: uuid("actor_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    // NULL when the server auto-settler resolved the match (no human actor).
+    actorId: uuid("actor_id").references(() => users.id, {
+      onDelete: "cascade",
+    }),
     kind: settlementKind("kind").notNull(),
     targetId: uuid("target_id").notNull(), // match.id or custom_bet.id
     payload: jsonb("payload").notNull().default(sql`'{}'::jsonb`),

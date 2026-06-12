@@ -71,7 +71,8 @@ export default async function AdminPage(props: {
     else wagersByBet.set(row.wager.customBetId, [row]);
   }
 
-  // Split matches into 'needs attention' (past kickoff, not final) and rest.
+  // Split matches into 'awaiting result' (past kickoff, not yet auto-settled)
+  // and rest. Settlement itself is server-side — see lib/auto-settle.ts.
   const now = new Date();
   const needsAttention = allMatches.filter(
     (m) => m.status !== "final" && new Date(m.kickoff) <= now
@@ -185,7 +186,7 @@ export default async function AdminPage(props: {
                           : t("customBetVoided")}
                     </span>
                     <span className="text-xs text-zinc-500">
-                      {t("by")} {actorName} ·{" "}
+                      {t("by")} {actorName ?? t("autoActor")} ·{" "}
                       <LocalDateTime value={settlement.createdAt} preset="datetime" />
                     </span>
                   </div>

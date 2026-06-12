@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+import { autoSettleFinishedMatches } from "@/lib/auto-settle";
 import {
   getLivePollMatchAccess,
   getMatchLiveToken,
@@ -21,6 +22,10 @@ export async function GET(
   if (!access.ok) {
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
+
+  // Piggyback on live-poll traffic to settle finished matches server-side.
+  // Cheap when there's nothing to do; throttled in the DB per match.
+  after(() => autoSettleFinishedMatches().catch(() => {}));
 
   const token = await getMatchLiveToken({
     roomId: access.room.id,

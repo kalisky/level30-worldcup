@@ -151,6 +151,7 @@ function ExactScoreDialog({
   open,
   onClose,
   onSave,
+  onClear,
   homeTeam,
   awayTeam,
   initialHome,
@@ -163,6 +164,8 @@ function ExactScoreDialog({
   open: boolean;
   onClose: () => void;
   onSave: (value: { home: number; away: number; stake: number }) => void;
+  /** Present when there's a committed score bet that can be removed. */
+  onClear?: () => void;
   homeTeam: string;
   awayTeam: string;
   initialHome: number | null;
@@ -270,38 +273,21 @@ function ExactScoreDialog({
             onPick={updateAwayScore}
           />
 
-          <div className="rounded-[22px] border border-[#dbe5f2] bg-[#F8FBFF] p-4">
-            <div className="flex items-center gap-3">
-              <label className="text-sm font-semibold text-slate-600">
-                {tb("scoreStakeLabel")}
-              </label>
-              <input
-                type="number"
-                min={0}
-                max={Math.max(0, maxStake - sideStake)}
-                value={stake}
-                onChange={(event) => setStake(Number(event.target.value))}
-                onFocus={(e) => e.target.select()}
-                className="w-24 rounded-2xl border border-[#cdd9ea] bg-white px-3 py-2 text-right font-mono font-bold text-[#1E3A8A] focus:border-[#3B82F6] focus:outline-none"
-              />
-              <span className="text-xs font-semibold text-slate-500">
-                {tc("chips")}
-              </span>
-              {selectedKey !== null && selectedScoreOdd > 0 ? (
-                <span className="ml-auto flex items-center gap-2 text-xs text-slate-500">
-                  <span className="font-mono font-black text-[#1D4ED8]">
-                    {selectedScoreOdd.toFixed(2)}x
-                  </span>
-                </span>
-              ) : null}
-            </div>
-            {stakeNum > 0 ? (
-              <span className="text-xs text-slate-500">
-                {tb("payIfExact", {
-                  amount: Math.floor(stakeNum * selectedScoreOdd),
-                })}
-              </span>
-            ) : null}
+          <div>
+            <StakeRow
+              label={tb("scoreStakeLabel")}
+              stake={stakeNum}
+              payout={Math.floor(stakeNum * selectedScoreOdd)}
+              payoutLabel={
+                selectedScoreOdd > 0
+                  ? `${selectedScoreOdd.toFixed(2)}x · ${tb("payIfExact", {
+                      amount: Math.floor(stakeNum * selectedScoreOdd),
+                    })}`
+                  : ""
+              }
+              maxStake={Math.max(2, maxStake - sideStake)}
+              onChange={setStake}
+            />
 
             {totalStake > maxStake ? (
               <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">
@@ -340,6 +326,15 @@ function ExactScoreDialog({
           >
             {tc("cancel")}
           </button>
+          {onClear && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="rounded-[24px] border border-red-200 bg-white px-4 py-3 font-bold text-red-600 transition hover:bg-red-50"
+            >
+              {tb("clearScore")}
+            </button>
+          )}
           <button
             type="button"
             disabled={!canSave}
@@ -630,6 +625,14 @@ export default function DashboardQuickBet({
           apply({ home: nextHome, away: nextAway, scoreStake: stake }, 150);
           setScoreDialogOpen(false);
         }}
+        onClear={
+          hasScore
+            ? () => {
+                apply({ home: null, away: null }, 150);
+                setScoreDialogOpen(false);
+              }
+            : undefined
+        }
         homeTeam={homeTeam}
         awayTeam={awayTeam}
         initialHome={desired.home}

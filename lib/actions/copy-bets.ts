@@ -96,12 +96,14 @@ async function buildPreview(
   const items: CopyBetItem[] = [];
   const now = Date.now();
   for (const { bet, match } of sourceBets) {
+    // Played games can never be copied — leave them out of the preview
+    // entirely instead of listing them as skipped noise.
+    if (match.status === "final" || new Date(match.kickoff).getTime() <= now) {
+      continue;
+    }
+
     let status: CopyBetItem["status"] = "copy";
-    if (match.status === "final") {
-      status = "skip_match_settled";
-    } else if (new Date(match.kickoff).getTime() <= now) {
-      status = "skip_kickoff_past";
-    } else if (!match.oddsHome || !match.oddsDraw || !match.oddsAway || !match.scoreOdds) {
+    if (!match.oddsHome || !match.oddsDraw || !match.oddsAway || !match.scoreOdds) {
       status = "skip_no_odds";
     } else {
       // Check existing bet in target.

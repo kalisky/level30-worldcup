@@ -123,6 +123,75 @@ export async function getRoomUsers(roomId: string) {
     .orderBy(desc(users.chips), users.name);
 }
 
+export type RoomLeaderboardEntry = {
+  id: string;
+  name: string;
+  availableChips: number;
+  chipsIncludingOpenBets: number;
+  openBetChips: number;
+};
+
+export async function getRoomLeaderboard(
+  roomId: string
+): Promise<RoomLeaderboardEntry[]> {
+  const [members, openMatchRows, openWagerRows] = await Promise.all([
+    db
+      .select({
+        id: users.id,
+        name: users.name,
+        availableChips: users.chips,
+      })
+      .from(users)
+      .where(eq(users.roomId, roomId)),
+    db
+      .select({
+        userId: matchBets.userId,
+        openBetChips: sql<number>`coalesce(sum(${matchBets.totalStake}), 0)::int`,
+      })
+      .from(matchBets)
+      .where(and(eq(matchBets.roomId, roomId), eq(matchBets.status, "open")))
+      .groupBy(matchBets.userId),
+    db
+      .select({
+        userId: customWagers.userId,
+        openBetChips: sql<number>`coalesce(sum(${customWagers.stake}), 0)::int`,
+      })
+      .from(customWagers)
+      .innerJoin(customBets, eq(customBets.id, customWagers.customBetId))
+      .where(and(eq(customBets.roomId, roomId), eq(customWagers.status, "open")))
+      .groupBy(customWagers.userId),
+  ]);
+
+  const openBetChipsByUser = new Map<string, number>();
+
+  for (const row of openMatchRows) {
+    openBetChipsByUser.set(row.userId, row.openBetChips);
+  }
+  for (const row of openWagerRows) {
+    openBetChipsByUser.set(
+      row.userId,
+      (openBetChipsByUser.get(row.userId) ?? 0) + row.openBetChips
+    );
+  }
+
+  return members
+    .map((member) => {
+      const openBetChips = openBetChipsByUser.get(member.id) ?? 0;
+      return {
+        ...member,
+        openBetChips,
+        chipsIncludingOpenBets: member.availableChips + openBetChips,
+      };
+    })
+    .sort((a, b) => {
+      const totalDiff = b.chipsIncludingOpenBets - a.chipsIncludingOpenBets;
+      if (totalDiff !== 0) return totalDiff;
+      const availableDiff = b.availableChips - a.availableChips;
+      if (availableDiff !== 0) return availableDiff;
+      return a.name.localeCompare(b.name);
+    });
+}
+
 export async function getUser(userId: string) {
   const [u] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   return u ?? null;

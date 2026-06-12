@@ -49,11 +49,18 @@ function relativeOrAbsolute(d: Date, s: RelativeStrings) {
 
 export default async function HistoryPage(props: {
   params: Promise<{ code: string }>;
-  searchParams: Promise<{ user?: string | string[] }>;
+  searchParams: Promise<{
+    user?: string | string[];
+    from?: string | string[] | undefined;
+  }>;
 }) {
   const { code } = await props.params;
-  const { user: query } = await props.searchParams;
+  const searchParams = await props.searchParams;
+  const query = searchParams.user;
   const { room, user, dailyGrantApplied } = await requireRoomUser(code);
+  const preferDashboardBack = Array.isArray(searchParams.from)
+    ? searchParams.from[0] === "dashboard"
+    : searchParams.from === "dashboard";
 
   const targetUserId = (Array.isArray(query) ? query[0] : query) ?? user.id;
   const members = await getRoomUsers(room.id);
@@ -102,6 +109,7 @@ export default async function HistoryPage(props: {
           roomCode={room.code}
           dashboardLabel={tnav("dashboard")}
           currentLabel={tnav("history")}
+          preferBack={preferDashboardBack}
         />
         <header className="rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.08)]">
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">

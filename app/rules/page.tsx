@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import AppHeader from "@/components/AppHeader";
+import PublicSiteFooter from "@/components/PublicSiteFooter";
 
 export const metadata: Metadata = {
   title: "Rules | Buckeclub",
@@ -54,6 +55,7 @@ export default async function RulesPage() {
           </ol>
         </div>
       </main>
+      <PublicSiteFooter />
     </>
   );
 }

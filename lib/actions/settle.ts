@@ -27,6 +27,7 @@ import {
   type SuggestedMatchResult,
   type SuggestedCustomBetWinner,
 } from "@/lib/ai/suggest";
+import { revalidateRoomChipPaths } from "@/lib/revalidate-room-chip-paths";
 
 const settleMatchSchema = z.object({
   matchId: z.string().uuid(),
@@ -146,7 +147,7 @@ export async function settleMatch(formData: FormData) {
   });
 
   revalidatePath(`/r/${room.code}/match/${matchId}`);
-  revalidatePath(`/r/${room.code}/dashboard`);
+  revalidateRoomChipPaths(room.code);
   revalidatePath(`/r/${room.code}/admin`);
 }
 
@@ -250,7 +251,7 @@ export async function settleCustomBet(formData: FormData) {
     revalidatePath(`/r/${room.code}/match/${String(formData.get("matchId"))}`);
   }
   revalidatePath(`/r/${room.code}/admin`);
-  revalidatePath(`/r/${room.code}/dashboard`);
+  revalidateRoomChipPaths(room.code);
 }
 
 export async function voidCustomBet(formData: FormData) {
@@ -316,7 +317,7 @@ export async function voidCustomBet(formData: FormData) {
   });
 
   revalidatePath(`/r/${room.code}/admin`);
-  revalidatePath(`/r/${room.code}/dashboard`);
+  revalidateRoomChipPaths(room.code);
 }
 
 const renameSchema = z.object({

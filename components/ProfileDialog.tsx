@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition, type RefObject } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import CreateRoomLauncher from "@/components/CreateRoomLauncher";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -44,6 +44,7 @@ export default function ProfileDialog({
 }) {
   const t = useTranslations("profile");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const rootRef = useRef<HTMLDivElement>(null);
   const [joinCode, setJoinCode] = useState("");
   const [joinOpen, setJoinOpen] = useState(false);
@@ -127,6 +128,31 @@ export default function ProfileDialog({
     return name.trim().charAt(0).toUpperCase() || "?";
   }
 
+  function handleNavigationItemClick(
+    event: React.MouseEvent<HTMLAnchorElement>,
+    href: string
+  ) {
+    onClose();
+
+    const shouldPreferDashboardBack =
+      currentRoomCode != null &&
+      href === `/r/${currentRoomCode}/dashboard` &&
+      searchParams.get("from") === "dashboard" &&
+      typeof window !== "undefined" &&
+      window.history.length > 1 &&
+      !event.defaultPrevented &&
+      event.button === 0 &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.shiftKey &&
+      !event.altKey;
+
+    if (!shouldPreferDashboardBack) return;
+
+    event.preventDefault();
+    router.back();
+  }
+
   return (
     <div
       ref={rootRef}
@@ -163,7 +189,7 @@ export default function ProfileDialog({
                 <Link
                   key={item.href + item.label}
                   href={item.href}
-                  onClick={onClose}
+                  onClick={(event) => handleNavigationItemClick(event, item.href)}
                   className={`block rounded-[20px] px-3 py-3 text-sm font-semibold transition ${toneClass}`}
                 >
                   {item.label}

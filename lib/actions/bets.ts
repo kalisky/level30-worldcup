@@ -13,6 +13,7 @@ import {
 import { requireRoomUser } from "@/lib/auth-context";
 import { recordLedger } from "@/lib/ledger";
 import { touchRoomLiveRevision } from "@/lib/live-updates";
+import { revalidateRoomChipPaths } from "@/lib/revalidate-room-chip-paths";
 
 // Direction pick and score prediction are now independent inputs from the
 // UI — a user can bet HOME on the side but predict 2-1 South Africa for the
@@ -147,7 +148,7 @@ export async function placeMatchBet(formData: FormData) {
   });
 
   revalidatePath(`/r/${room.code}/match/${matchId}`);
-  revalidatePath(`/r/${room.code}/dashboard`);
+  revalidateRoomChipPaths(room.code);
 }
 
 const removeBetSchema = z.object({
@@ -224,7 +225,7 @@ export async function removeMatchBet(formData: FormData) {
   });
 
   revalidatePath(`/r/${room.code}/match/${matchId}`);
-  revalidatePath(`/r/${room.code}/dashboard`);
+  revalidateRoomChipPaths(room.code);
 }
 
 export async function updateMatchBet(formData: FormData) {
@@ -352,5 +353,5 @@ export async function updateMatchBet(formData: FormData) {
   });
 
   revalidatePath(`/r/${room.code}/match/${matchId}`);
-  revalidatePath(`/r/${room.code}/dashboard`);
+  revalidateRoomChipPaths(room.code);
 }

@@ -73,7 +73,9 @@ export function buildPolymarketTeamKey(homeTeam: string, awayTeam: string) {
     .join("|");
 }
 
-export function normalizePolymarketProbabilities(pricesInCents: [number, number, number]) {
+export function normalizePolymarketProbabilities(
+  pricesInCents: readonly [number, number, number]
+) {
   const raw = pricesInCents.map((price) => Math.max(0.001, price / 100));
   const sum = raw.reduce((total, value) => total + value, 0);
   if (sum <= 0) {

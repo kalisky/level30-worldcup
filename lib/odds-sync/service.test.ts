@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  alignWinnerPricesToMatchOrder,
   getOddsSyncCooldownHours,
   shouldSkipOddsSync,
 } from "@/lib/odds-sync/service";
@@ -33,4 +34,30 @@ test("cooldown env parsing falls back safely", () => {
   } else {
     process.env.ODDS_SYNC_MIN_INTERVAL_HOURS = previous;
   }
+});
+
+test("aligns Polymarket winner prices to local match order when the fixture is reversed", () => {
+  const aligned = alignWinnerPricesToMatchOrder("Netherlands", "Tunisia", {
+    homeTeam: "Tunisia",
+    awayTeam: "Netherlands",
+    homePriceCents: 14,
+    drawPriceCents: 22,
+    awayPriceCents: 67,
+  });
+
+  assert.equal(aligned.reversed, true);
+  assert.deepEqual(aligned.winnerPrices, [67, 22, 14]);
+});
+
+test("keeps Polymarket winner prices as-is when the local match order already matches", () => {
+  const aligned = alignWinnerPricesToMatchOrder("Tunisia", "Netherlands", {
+    homeTeam: "Tunisia",
+    awayTeam: "Netherlands",
+    homePriceCents: 14,
+    drawPriceCents: 22,
+    awayPriceCents: 67,
+  });
+
+  assert.equal(aligned.reversed, false);
+  assert.deepEqual(aligned.winnerPrices, [14, 22, 67]);
 });

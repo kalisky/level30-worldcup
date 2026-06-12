@@ -193,16 +193,34 @@ export function getTeamFlagCode(teamName: string): string | null {
 }
 
 function getFlagEmojiFromCode(code: string): string | null {
-  if (!/^[a-z]{2}$/i.test(code)) {
-    return null;
+  // 1. Standard 2-letter sovereign nations (e.g., "US", "FR", "BR")
+  if (/^[a-z]{2}$/i.test(code)) {
+    const codePoints = code
+      .toUpperCase()
+      .split("")
+      .map((letter) => 0x1f1e6 + letter.charCodeAt(0) - 65);
+
+    return String.fromCodePoint(...codePoints);
   }
 
-  const codePoints = code
-    .toUpperCase()
-    .split("")
-    .map((letter) => 0x1f1e6 + letter.charCodeAt(0) - 65);
+  // 2. Subdivision flags (e.g., "gb-eng", "gb-sct", "gb-wls")
+  if (/^[a-z]{2}-[a-z0-9]+$/i.test(code)) {
+    // Remove the hyphen and force lowercase for the tag sequence
+    const cleanCode = code.toLowerCase().replace("-", "");
+    
+    // Map each character to its specific Unicode Tag Character (starts at 0xE0000)
+    const tagSequence = cleanCode
+      .split("")
+      .map((char) => 0xe0000 + char.charCodeAt(0));
 
-  return String.fromCodePoint(...codePoints);
+    return String.fromCodePoint(
+      0x1f3f4,       // Waving black flag base
+      ...tagSequence, // The spelled-out code (e.g., g, b, e, n, g)
+      0xe007f        // Cancel tag (terminator)
+    );
+  }
+
+  return null;
 }
 
 export function getTeamFlagEmoji(teamName: string): string | null {

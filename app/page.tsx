@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import AppHeader from "@/components/AppHeader";
 import CreateRoomLauncher from "@/components/CreateRoomLauncher";
 import GoogleLoginButton from "@/components/GoogleLoginButton";
+import PublicSiteFooter from "@/components/PublicSiteFooter";
 import SubmitButton from "@/components/SubmitButton";
 import { joinRoomByCode } from "@/lib/actions/rooms";
 import {
@@ -358,6 +359,7 @@ export default async function Home(props: {
           </section>
         </div>
       </main>
+      <PublicSiteFooter />
     </>
   );
 }

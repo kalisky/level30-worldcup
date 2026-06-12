@@ -9,8 +9,10 @@ import {
 } from "@/lib/db/schema";
 import {
   buildPolymarketTeamKey,
+  canonicalizePolymarketTeamName,
   normalizePolymarketProbabilities,
   priceCentsToDecimalOdds,
+  type PolymarketWorldCupMoneyline,
 } from "@/lib/polymarket/world-cup";
 import { fitPoissonOddsFromMarketInputs } from "@/lib/odds-sync/poisson";
 import {
@@ -51,6 +53,32 @@ export type OddsSyncOptions = {
 };
 
 type TargetMatch = Match;
+
+function buildOrderedPolymarketTeamKey(homeTeam: string, awayTeam: string) {
+  return `${canonicalizePolymarketTeamName(homeTeam)}::${canonicalizePolymarketTeamName(
+    awayTeam
+  )}`;
+}
+
+export function alignWinnerPricesToMatchOrder(
+  matchHomeTeam: string,
+  matchAwayTeam: string,
+  market: Pick<
+    PolymarketWorldCupMoneyline,
+    "homeTeam" | "awayTeam" | "homePriceCents" | "drawPriceCents" | "awayPriceCents"
+  >
+) {
+  const reversed =
+    buildOrderedPolymarketTeamKey(market.homeTeam, market.awayTeam) !==
+    buildOrderedPolymarketTeamKey(matchHomeTeam, matchAwayTeam);
+
+  return {
+    reversed,
+    winnerPrices: reversed
+      ? ([market.awayPriceCents, market.drawPriceCents, market.homePriceCents] as const)
+      : ([market.homePriceCents, market.drawPriceCents, market.awayPriceCents] as const),
+  };
+}
 
 function normalizeBinaryProbabilities(yesPriceCents: number, noPriceCents: number) {
   const yes = Math.max(0.001, yesPriceCents / 100);
@@ -260,11 +288,11 @@ export async function syncMatchOdds(
       }
 
       try {
-        const winnerPrices: [number, number, number] = [
-          market.homePriceCents,
-          market.drawPriceCents,
-          market.awayPriceCents,
-        ];
+        const { reversed, winnerPrices } = alignWinnerPricesToMatchOrder(
+          match.homeTeam,
+          match.awayTeam,
+          market
+        );
 
         const direction = normalizePolymarketProbabilities(winnerPrices);
         const totals = normalizeBinaryProbabilities(
@@ -308,6 +336,7 @@ export async function syncMatchOdds(
                 source: "polymarket_gamma_api",
                 homeTeam: market.homeTeam,
                 awayTeam: market.awayTeam,
+                reversedToMatchOrder: reversed,
                 homePriceCents: market.homePriceCents,
                 drawPriceCents: market.drawPriceCents,
                 awayPriceCents: market.awayPriceCents,

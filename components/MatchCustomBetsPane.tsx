@@ -57,6 +57,7 @@ export default function MatchCustomBetsPane({
   matchStatus,
   matchLabel,
   matchKickoff,
+  viewerUserId,
   myChips,
   targetCustomBetId,
   requestKey,
@@ -66,6 +67,7 @@ export default function MatchCustomBetsPane({
   matchStatus: "scheduled" | "live" | "final";
   matchLabel: string;
   matchKickoff: string;
+  viewerUserId: string;
   myChips: number;
   targetCustomBetId?: string | null;
   requestKey: string;
@@ -200,6 +202,7 @@ export default function MatchCustomBetsPane({
               key={bet.id}
               bet={bet}
               proposerName={proposerName}
+              viewerUserId={viewerUserId}
               roomCode={roomCode}
               matchId={matchId}
               highlighted={targetCustomBetId === bet.id}

@@ -97,16 +97,39 @@ export default function DashboardMatchGroups({
 
   // Played matches stay in the list, so land the first paint on the next
   // game instead of making users scroll past everything already finished.
+  // Retries like the custom-bet deep-link scroll: with streamed/hydrating
+  // content a one-shot scrollIntoView can fire before the card is in the DOM.
   const nextMatchId = matches.find((m) => m.status !== "final")?.id ?? null;
   const didScrollRef = useRef(false);
   useEffect(() => {
-    if (didScrollRef.current || !hydrated || !nextMatchId) return;
+    if (didScrollRef.current || !nextMatchId) return;
     if (matches[0]?.id === nextMatchId) return; // nothing played above it
-    didScrollRef.current = true;
-    document
-      .getElementById(`match-card-${nextMatchId}`)
-      ?.scrollIntoView({ block: "start" });
-  }, [hydrated, nextMatchId, matches]);
+
+    let cancelled = false;
+    let attempts = 0;
+
+    const scrollToNext = () => {
+      if (cancelled || didScrollRef.current) return;
+
+      const element = document.getElementById(`match-card-${nextMatchId}`);
+      if (element) {
+        didScrollRef.current = true;
+        element.scrollIntoView({ block: "start" });
+        return;
+      }
+
+      if (attempts < 8) {
+        attempts += 1;
+        window.setTimeout(scrollToNext, 120);
+      }
+    };
+
+    window.setTimeout(scrollToNext, 120);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [nextMatchId, matches]);
 
   const renderMatchCards = (items: MatchCardMatch[]) => (
     <div className="space-y-2">

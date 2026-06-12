@@ -69,7 +69,8 @@ export default function ProfileDialog({
 
       if (
         target instanceof Element &&
-        target.closest("[data-create-room-dialog]")
+        (target.closest("[data-create-room-dialog]") ||
+          target.closest("[data-copy-bets-dialog]"))
       ) {
         return;
       }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import {
   copyMatchBets,
@@ -96,7 +97,8 @@ export default function CopyBetsDialog({
     return () => clearTimeout(id);
   }, [result, open, onClose]);
 
-  if (!open) return null;
+  const portalTarget = typeof document === "undefined" ? null : document.body;
+  if (!open || !portalTarget) return null;
 
   function toggleSelected(matchId: string) {
     setSelectedMatchIds((prev) => {
@@ -136,8 +138,11 @@ export default function CopyBetsDialog({
   const notEnoughChips =
     preview && selectedCount > 0 && selectedStakeTotal > preview.targetChips;
 
-  return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-2 sm:items-center sm:p-4">
+  return createPortal(
+    <div
+      data-copy-bets-dialog
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-2 sm:items-center sm:p-4"
+    >
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-[30px] border border-[#dbe5f2] bg-white p-6 shadow-[0_28px_80px_rgba(15,23,42,0.28)]">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -311,6 +316,7 @@ export default function CopyBetsDialog({
           </>
         )}
       </div>
-    </div>
+    </div>,
+    portalTarget
   );
 }

@@ -368,6 +368,7 @@
     "regenerateOdds": "Re-sync odds",
     "finalScore": "Final score:",
     "settle": "Settle",
+    "settleRoomBets": "Pay out {count} open bets",
     "suggestWithAi": "Suggest with AI",
     "markWinner": "Mark winner",
     "voidAndRefund": "Void & refund",

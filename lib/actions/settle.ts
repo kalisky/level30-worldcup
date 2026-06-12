@@ -21,6 +21,7 @@ import {
 } from "@/lib/live-updates";
 import { revalidateOddsSyncPaths } from "@/lib/odds-sync/revalidate";
 import { syncMatchOdds } from "@/lib/odds-sync/service";
+import { settleMatchBetsForRoom } from "@/lib/settle-match-core";
 import {
   suggestMatchResult as aiSuggestMatchResult,
   suggestCustomBetWinner as aiSuggestCustomBetWinner,
@@ -45,10 +46,7 @@ export async function settleMatch(formData: FormData) {
     awayScore: Number(formData.get("awayScore") ?? -1),
   });
   if (!parsed.success) throw new Error("Invalid scores.");
-  const { matchId, homeScore, awayScore } = parsed.data;
-
-  const actualDirection: "HOME" | "DRAW" | "AWAY" =
-    homeScore > awayScore ? "HOME" : awayScore > homeScore ? "AWAY" : "DRAW";
+  const { matchId } = parsed.data;
 
   await db.transaction(async (tx) => {
     const [match] = await tx
@@ -57,93 +55,43 @@ export async function settleMatch(formData: FormData) {
       .where(eq(matches.id, matchId))
       .limit(1);
     if (!match) throw new Error("Match not found.");
+
+    // Matches are shared across rooms: the first room to settle records the
+    // final score; later rooms settle their own open bets against it.
+    let { homeScore, awayScore } = parsed.data;
     if (match.status === "final") {
-      throw new Error("Match already settled.");
-    }
-
-    await tx
-      .update(matches)
-      .set({ homeScore, awayScore, status: "final" })
-      .where(eq(matches.id, matchId));
-
-    const openBets = await tx
-      .select()
-      .from(matchBets)
-      .where(
-        and(
-          eq(matchBets.roomId, room.id),
-          eq(matchBets.matchId, matchId),
-          eq(matchBets.status, "open")
-        )
-      );
-
-    let totalPaidOut = 0;
-    for (const bet of openBets) {
-      // Direction is settled by the user's explicit side pick, which is
-      // recorded independently of the predicted score (they can disagree).
-      const directionWon = bet.directionPick === actualDirection;
-      const scoreWon =
-        bet.predictedHomeScore === homeScore && bet.predictedAwayScore === awayScore;
-
-      const directionPayout = directionWon
-        ? Math.floor(bet.directionStake * Number(bet.directionOddsLocked))
-        : 0;
-      const scorePayout = scoreWon
-        ? Math.floor(bet.scoreStake * Number(bet.scoreOddsLocked))
-        : 0;
-      const payout = directionPayout + scorePayout;
-      totalPaidOut += payout;
-
-      if (payout > 0) {
-        const [updatedUser] = await tx
-          .update(users)
-          .set({ chips: sql`${users.chips} + ${payout}` })
-          .where(eq(users.id, bet.userId))
-          .returning({ chips: users.chips });
-        await recordLedger(tx, {
-          roomId: room.id,
-          userId: bet.userId,
-          delta: payout,
-          balanceAfter: updatedUser.chips,
-          reason: "match_bet_payout",
-          refMatchId: matchId,
-          note: `${match.homeTeam} ${homeScore}–${awayScore} ${match.awayTeam}: ${directionWon ? "direction" : ""}${directionWon && scoreWon ? " + " : ""}${scoreWon ? "exact" : ""} hit`,
-        });
+      if (match.homeScore == null || match.awayScore == null) {
+        throw new Error("Match is final but has no recorded score.");
       }
+      homeScore = match.homeScore;
+      awayScore = match.awayScore;
+
+      const [openBet] = await tx
+        .select({ id: matchBets.id })
+        .from(matchBets)
+        .where(
+          and(
+            eq(matchBets.roomId, room.id),
+            eq(matchBets.matchId, matchId),
+            eq(matchBets.status, "open")
+          )
+        )
+        .limit(1);
+      if (!openBet) throw new Error("Match already settled.");
+    } else {
       await tx
-        .update(matchBets)
-        .set({
-          status: "settled",
-          directionOutcome: directionWon ? "won" : "lost",
-          scoreOutcome: scoreWon ? "won" : "lost",
-          payout,
-        })
-        .where(eq(matchBets.id, bet.id));
+        .update(matches)
+        .set({ homeScore, awayScore, status: "final" })
+        .where(eq(matches.id, matchId));
     }
 
-    await tx
-      .update(customBets)
-      .set({ status: "locked" })
-      .where(
-        and(eq(customBets.matchId, matchId), eq(customBets.status, "open"))
-      );
-
-    await tx.insert(settlements).values({
+    await settleMatchBetsForRoom(tx, {
       roomId: room.id,
       actorId: user.id,
-      kind: "match",
-      targetId: matchId,
-      payload: {
-        homeScore,
-        awayScore,
-        direction: actualDirection,
-        betsSettled: openBets.length,
-        totalPaidOut,
-      },
+      match,
+      homeScore,
+      awayScore,
     });
-
-    await touchRoomLiveRevision(tx, room.id);
-    await touchMatchLiveRevisions(tx, matchId);
   });
 
   revalidatePath(`/r/${room.code}/match/${matchId}`);

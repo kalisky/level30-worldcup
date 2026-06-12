@@ -14,9 +14,11 @@ import {
 export default function SettleMatchForm({
   match,
   roomCode,
+  openBetCount = 0,
 }: {
   match: Match;
   roomCode: string;
+  openBetCount?: number;
 }) {
   const t = useTranslations("admin");
   const tm = useTranslations("match");
@@ -165,9 +167,21 @@ export default function SettleMatchForm({
           disabled={isFinal}
         />
         {isFinal ? (
-          <span className="ml-auto rounded-full bg-slate-200 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-700">
-            {tm("final")}
-          </span>
+          <div className="ml-auto flex items-center gap-2">
+            <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-700">
+              {tm("final")}
+            </span>
+            {openBetCount > 0 && (
+              <button
+                type="button"
+                onClick={submitSettle}
+                disabled={pending}
+                className="rounded-full bg-[linear-gradient(135deg,#F97316_0%,#FB923C_100%)] px-4 py-2 text-sm font-bold text-white shadow-[0_14px_26px_rgba(249,115,22,0.24)] disabled:opacity-50"
+              >
+                {t("settleRoomBets", { count: openBetCount })}
+              </button>
+            )}
+          </div>
         ) : (
           <div className="ml-auto flex gap-2">
             <button

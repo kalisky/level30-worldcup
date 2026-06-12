@@ -368,6 +368,7 @@
     "regenerateOdds": "סנכרן יחסים מחדש",
     "finalScore": "תוצאה סופית:",
     "settle": "סגור",
+    "settleRoomBets": "שלם {count} הימורים פתוחים",
     "suggestWithAi": "הצעה מ-AI",
     "markWinner": "סמן מנצח",
     "voidAndRefund": "בטל והחזר",

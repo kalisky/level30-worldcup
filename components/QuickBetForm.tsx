@@ -376,7 +376,7 @@ export function StakeRow({
           aria-label={`${label} — edit`}
           aria-expanded={open}
           className={
-            "flex h-11 w-11 items-center justify-center rounded-full border text-2xl transition " +
+            "-my-2 flex h-11 w-11 items-center justify-center rounded-full border text-xl transition " +
             (open
               ? "border-[#3B82F6] bg-[#E0EEFF] text-[#1D4ED8]"
               : "border-[#cdd9ea] bg-white text-slate-500 hover:border-[#3B82F6] hover:text-[#1D4ED8]")

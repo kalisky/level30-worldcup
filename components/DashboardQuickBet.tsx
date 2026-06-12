@@ -452,6 +452,20 @@ export default function DashboardQuickBet({
   const directionPayout = Math.floor(desired.sideStake * directionOdds);
   const totalStake = quickBetTotal(desired);
 
+  // Popup default when no score is picked yet, matching the side bet:
+  // HOME → 1-0, AWAY → 0-1, DRAW or no pick → 0-0 (when that line exists).
+  const preferredDefault =
+    desired.pick === "HOME"
+      ? { home: 1, away: 0 }
+      : desired.pick === "AWAY"
+        ? { home: 0, away: 1 }
+        : { home: 0, away: 0 };
+  const suggestedScore = exactScoreChoices.some(
+    (c) => c.home === preferredDefault.home && c.away === preferredDefault.away
+  )
+    ? preferredDefault
+    : null;
+
   function togglePick(pick: QuickBetDirection) {
     apply({ pick: desired.pick === pick ? null : pick }, 150);
   }
@@ -618,7 +632,7 @@ export default function DashboardQuickBet({
       </div>
 
       <ExactScoreDialog
-        key={`${desired.home ?? "x"}-${desired.away ?? "x"}-${desired.scoreStake}-${desired.sideStake}`}
+        key={`${desired.home ?? "x"}-${desired.away ?? "x"}-${desired.scoreStake}-${desired.sideStake}-${desired.pick ?? "x"}`}
         open={scoreDialogOpen}
         onClose={() => setScoreDialogOpen(false)}
         onSave={({ home: nextHome, away: nextAway, stake }) => {
@@ -635,8 +649,8 @@ export default function DashboardQuickBet({
         }
         homeTeam={homeTeam}
         awayTeam={awayTeam}
-        initialHome={desired.home}
-        initialAway={desired.away}
+        initialHome={desired.home ?? suggestedScore?.home ?? null}
+        initialAway={desired.away ?? suggestedScore?.away ?? null}
         initialStake={desired.scoreStake}
         sideStake={hasDirection ? desired.sideStake : 0}
         maxStake={budget}

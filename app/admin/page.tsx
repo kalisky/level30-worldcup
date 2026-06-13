@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { desc, eq, gt, isNotNull, sql } from "drizzle-orm";
 import { getAuthenticatedUser } from "@/lib/auth";
@@ -299,7 +300,14 @@ export default async function AdminPage() {
                 const level = activityLevel(activity.recent);
                 return (
                   <tr key={r.id} className="border-b border-[#f1f5fb] last:border-0">
-                    <td className="px-4 py-3 font-bold text-[#1E3A8A]">{r.name}</td>
+                    <td className="px-4 py-3 font-bold text-[#1E3A8A]">
+                      <Link
+                        href={`/admin/room/${r.code}`}
+                        className="underline-offset-2 hover:text-[#1D4ED8] hover:underline"
+                      >
+                        {r.name}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3 font-mono text-slate-500">{r.code}</td>
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center gap-1.5">

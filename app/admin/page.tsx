@@ -20,12 +20,53 @@ async function scalar(query: Promise<{ value: number }[]>) {
   return row?.value ?? 0;
 }
 
+type RoomActivity = { recent: number; lastAt: Date | null };
+
+function mergeActivity(
+  map: Map<string, RoomActivity>,
+  rows: { roomId: string; recent: number; lastAt: Date | null }[]
+) {
+  for (const row of rows) {
+    const prev = map.get(row.roomId) ?? { recent: 0, lastAt: null };
+    map.set(row.roomId, {
+      recent: prev.recent + row.recent,
+      lastAt:
+        prev.lastAt && row.lastAt
+          ? prev.lastAt > row.lastAt
+            ? prev.lastAt
+            : row.lastAt
+          : prev.lastAt ?? row.lastAt,
+    });
+  }
+}
+
+// Activity score = user-initiated actions (match bets, custom bets, custom
+// wagers) in the last 7 days. Tiers give an at-a-glance health label.
+function activityLevel(score: number) {
+  if (score >= 20) return { label: "Hot", cls: "bg-[#FFE4E0] text-[#DC2626]" };
+  if (score >= 5) return { label: "Active", cls: "bg-emerald-100 text-emerald-700" };
+  if (score >= 1) return { label: "Quiet", cls: "bg-amber-100 text-amber-700" };
+  return { label: "Dormant", cls: "bg-slate-100 text-slate-500" };
+}
+
+function relativeAge(d: Date | null) {
+  if (!d) return "never";
+  const ms = Date.now() - new Date(d).getTime();
+  const h = Math.floor(ms / 3.6e6);
+  if (h < 1) return "just now";
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
 export default async function AdminPage() {
   const authUser = await getAuthenticatedUser();
   // Hide the page entirely from anyone who isn't an app admin.
   if (!isAppAdmin(authUser?.email)) notFound();
 
   const now = new Date();
+  // ISO string, not a Date: raw `sql` template params bypass the column type
+  // encoder, and postgres-js can't bind a Date object directly.
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const [
     totalAuthUsers,
@@ -39,6 +80,10 @@ export default async function AdminPage() {
     activeSessions,
     roomRows,
     userRows,
+    matchBetActivity,
+    customBetActivity,
+    customWagerActivity,
+    customBetsByRoomRows,
   ] = await Promise.all([
     scalar(db.select({ value: sql<number>`count(*)::int` }).from(authUsers)),
     scalar(db.select({ value: sql<number>`count(*)::int` }).from(rooms)),
@@ -90,7 +135,65 @@ export default async function AdminPage() {
       .leftJoin(users, eq(users.authUserId, authUsers.id))
       .groupBy(authUsers.id)
       .orderBy(desc(sql`coalesce(sum(${users.chips}), 0)`)),
+    // Per-room activity: recent (7d) action counts + last-action time, from
+    // each user-initiated source. Merged together below.
+    db
+      .select({
+        roomId: matchBets.roomId,
+        recent: sql<number>`count(*) filter (where ${matchBets.createdAt} > ${sevenDaysAgo})::int`,
+        lastAt: sql<Date | null>`max(${matchBets.createdAt})`,
+      })
+      .from(matchBets)
+      .groupBy(matchBets.roomId),
+    db
+      .select({
+        roomId: customBets.roomId,
+        recent: sql<number>`count(*) filter (where ${customBets.createdAt} > ${sevenDaysAgo})::int`,
+        lastAt: sql<Date | null>`max(${customBets.createdAt})`,
+      })
+      .from(customBets)
+      .groupBy(customBets.roomId),
+    db
+      .select({
+        roomId: customBets.roomId,
+        recent: sql<number>`count(*) filter (where ${customWagers.createdAt} > ${sevenDaysAgo})::int`,
+        lastAt: sql<Date | null>`max(${customWagers.createdAt})`,
+      })
+      .from(customWagers)
+      .innerJoin(customBets, eq(customBets.id, customWagers.customBetId))
+      .groupBy(customBets.roomId),
+    // Custom bets per room, split by whether they're tied to a match
+    // (in-game) or free-standing room bets (in-room).
+    db
+      .select({
+        roomId: customBets.roomId,
+        inRoom: sql<number>`count(*) filter (where ${customBets.matchId} is null)::int`,
+        inGame: sql<number>`count(*) filter (where ${customBets.matchId} is not null)::int`,
+      })
+      .from(customBets)
+      .groupBy(customBets.roomId),
   ]);
+
+  const customBetsByRoom = new Map(
+    customBetsByRoomRows.map((r) => [r.roomId, { inRoom: r.inRoom, inGame: r.inGame }])
+  );
+
+  const activityByRoom = new Map<string, RoomActivity>();
+  mergeActivity(activityByRoom, matchBetActivity);
+  mergeActivity(activityByRoom, customBetActivity);
+  mergeActivity(activityByRoom, customWagerActivity);
+
+  // Most active rooms first: by 7-day action count, then by recency of the
+  // last action, then by size.
+  const sortedRooms = [...roomRows].sort((a, b) => {
+    const aa = activityByRoom.get(a.id) ?? { recent: 0, lastAt: null };
+    const bb = activityByRoom.get(b.id) ?? { recent: 0, lastAt: null };
+    if (bb.recent !== aa.recent) return bb.recent - aa.recent;
+    const at = aa.lastAt ? new Date(aa.lastAt).getTime() : 0;
+    const bt = bb.lastAt ? new Date(bb.lastAt).getTime() : 0;
+    if (bt !== at) return bt - at;
+    return b.members - a.members;
+  });
 
   const stats: { label: string; value: string }[] = [
     { label: "Signed-up accounts", value: totalAuthUsers.toLocaleString() },
@@ -149,25 +252,64 @@ export default async function AdminPage() {
               <tr className="border-b border-[#e7eef8] text-left text-xs uppercase tracking-[0.12em] text-slate-500">
                 <th className="px-4 py-3 font-semibold">Room</th>
                 <th className="px-4 py-3 font-semibold">Code</th>
+                <th className="px-4 py-3 font-semibold">Activity</th>
+                <th className="px-4 py-3 text-right font-semibold">Last active</th>
+                <th className="px-4 py-3 font-semibold">Custom bets</th>
                 <th className="px-4 py-3 text-right font-semibold">Members</th>
                 <th className="px-4 py-3 text-right font-semibold">Total chips</th>
                 <th className="px-4 py-3 text-right font-semibold">Created</th>
               </tr>
             </thead>
             <tbody>
-              {roomRows.map((r) => (
-                <tr key={r.id} className="border-b border-[#f1f5fb] last:border-0">
-                  <td className="px-4 py-3 font-bold text-[#1E3A8A]">{r.name}</td>
-                  <td className="px-4 py-3 font-mono text-slate-500">{r.code}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{r.members}</td>
-                  <td className="px-4 py-3 text-right font-mono tabular-nums text-[#1E3A8A]">
-                    {r.totalChips.toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3 text-right text-xs text-slate-500">
-                    {fmtDate(r.createdAt)}
-                  </td>
-                </tr>
-              ))}
+              {sortedRooms.map((r) => {
+                const activity = activityByRoom.get(r.id) ?? { recent: 0, lastAt: null };
+                const level = activityLevel(activity.recent);
+                return (
+                  <tr key={r.id} className="border-b border-[#f1f5fb] last:border-0">
+                    <td className="px-4 py-3 font-bold text-[#1E3A8A]">{r.name}</td>
+                    <td className="px-4 py-3 font-mono text-slate-500">{r.code}</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-bold ${level.cls}`}
+                        >
+                          {level.label}
+                        </span>
+                        <span className="text-xs text-slate-400">
+                          {activity.recent}/wk
+                        </span>
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right text-xs text-slate-500">
+                      {relativeAge(activity.lastAt)}
+                    </td>
+                    <td className="px-4 py-3 text-xs">
+                      {(() => {
+                        const cb = customBetsByRoom.get(r.id) ?? { inRoom: 0, inGame: 0 };
+                        return (
+                          <span className="whitespace-nowrap text-slate-600">
+                            <span className="font-mono font-bold text-[#1E3A8A]">
+                              {cb.inRoom}
+                            </span>{" "}
+                            room ·{" "}
+                            <span className="font-mono font-bold text-[#1E3A8A]">
+                              {cb.inGame}
+                            </span>{" "}
+                            game
+                          </span>
+                        );
+                      })()}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">{r.members}</td>
+                    <td className="px-4 py-3 text-right font-mono tabular-nums text-[#1E3A8A]">
+                      {r.totalChips.toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 text-right text-xs text-slate-500">
+                      {fmtDate(r.createdAt)}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -372,18 +372,20 @@ export default function CustomBetCard({
               </svg>
             ) : (
               <svg
-                viewBox="0 0 20 20"
+                viewBox="0 0 24 24"
                 className="h-4 w-4"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="1.9"
+                strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 aria-hidden="true"
               >
-                <path d="M10 12V3.5" />
-                <path d="m6.5 7 3.5-3.5L13.5 7" />
-                <path d="M5 11.5v3A1.5 1.5 0 0 0 6.5 16h7a1.5 1.5 0 0 0 1.5-1.5v-3" />
+                <circle cx="18" cy="5" r="3" />
+                <circle cx="6" cy="12" r="3" />
+                <circle cx="18" cy="19" r="3" />
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
               </svg>
             )}
           </button>

@@ -74,7 +74,11 @@ export default function MatchCard({
 
   const kickoff = new Date(match.kickoff);
   const isFinal = match.status === "final";
-  const isLive = match.status === "live";
+  // A match is "in progress" once kickoff passes and before it's settled —
+  // nothing flips the status to "live", so derive it from the clock. (now is
+  // 0 until hydration; treat that as not-yet-live to avoid an SSR flash.)
+  const isLive =
+    !isFinal && (match.status === "live" || (now > 0 && kickoff.getTime() <= now));
   const homeTeamAbbreviation = getTeamAbbreviation(match.homeTeam);
   const awayTeamAbbreviation = getTeamAbbreviation(match.awayTeam);
   const centerLabel =
@@ -217,6 +221,42 @@ export default function MatchCard({
         now={now}
         myBet={myBet}
       />
+
+      {isLive && (
+        <Link
+          href={`${matchHref}&tab=custom`}
+          className="mt-3 flex items-center justify-between gap-3 rounded-[20px] border border-[#FBD9C0] bg-[linear-gradient(135deg,#FFF7ED_0%,#FFF1E8_100%)] px-4 py-3 transition hover:border-[#F97316] hover:shadow-[0_8px_20px_rgba(249,115,22,0.14)]"
+        >
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="text-xl" aria-hidden>
+              🎲
+            </span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 text-sm font-black text-[#EA580C]">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
+                {tm("liveBetsTitle")}
+              </div>
+              <p className="mt-0.5 truncate text-xs text-[#9A3412]">
+                {customBetCount > 0
+                  ? tm("liveBetsJoin", { count: customBetCount })
+                  : tm("liveBetsPropose")}
+              </p>
+            </div>
+          </div>
+          <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            className="h-5 w-5 shrink-0 text-[#EA580C] rtl:rotate-180"
+          >
+            <path d="m7 5 5 5-5 5" />
+          </svg>
+        </Link>
+      )}
     </article>
   );
 }

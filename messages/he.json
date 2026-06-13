@@ -248,7 +248,12 @@
     "settled": "נסגר. רווח:",
     "openOutcome": "פתוח",
     "customBetCount": "{count, plural, one {הימור מותאם #} other {# הימורים מותאמים}}",
-    "customBetTooltip": "הימורים מותאמים שחברים יצרו על המשחק. הקש על הכרטיס כדי לראות."
+    "customBetTooltip": "הימורים מותאמים שחברים יצרו על המשחק. הקש על הכרטיס כדי לראות.",
+    "winner": "מנצח",
+    "voided": "בוטל",
+    "liveBetsTitle": "משחק חי",
+    "liveBetsJoin": "{count} הימורים חיים פתוחים — הקש להצטרף",
+    "liveBetsPropose": "המר על מה שקורה — הצע הימור"
   },
   "bet": {
     "predictScore": "נחש את התוצאה",
@@ -274,7 +279,8 @@
     "saveFailed": "השמירה נכשלה",
     "clearScore": "נקה תוצאה",
     "wonAmount": "זכית {amount}",
-    "lostAmount": "הפסדת {amount}"
+    "lostAmount": "הפסדת {amount}",
+    "pick": "בחירה"
   },
   "customBet": {
     "propose": "הצע הימור מותאם אישית",

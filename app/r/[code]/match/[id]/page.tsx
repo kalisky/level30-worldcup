@@ -43,6 +43,7 @@ export default async function MatchPage(props: {
   searchParams: Promise<{
     bet?: string | string[] | undefined;
     from?: string | string[] | undefined;
+    tab?: string | string[] | undefined;
   }>;
 }) {
   const { code, id } = await props.params;
@@ -53,6 +54,11 @@ export default async function MatchPage(props: {
   const preferDashboardBack = Array.isArray(searchParams.from)
     ? searchParams.from[0] === "dashboard"
     : searchParams.from === "dashboard";
+  const initialTab =
+    (Array.isArray(searchParams.tab) ? searchParams.tab[0] : searchParams.tab) ===
+    "custom"
+      ? "custom"
+      : "match";
   const trace = createMatchTrace(`/r/${code}/match/${id}`, {
     hasTargetCustomBet: Boolean(targetCustomBetId),
     preferDashboardBack,
@@ -292,6 +298,7 @@ export default async function MatchPage(props: {
         <MatchScreenLayout
           matchPane={matchPane}
           customBetsPane={customBetsPane}
+          initialTab={initialTab}
           targetCustomBetId={targetCustomBetId}
         />
       </main>

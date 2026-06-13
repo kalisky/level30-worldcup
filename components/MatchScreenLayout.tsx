@@ -8,15 +8,17 @@ export default function MatchScreenLayout({
   matchTabLabel = "Match & Odds",
   customBetsTabLabel = "Custom Bets",
   targetCustomBetId,
+  initialTab = "match",
 }: {
   matchPane: React.ReactNode;
   customBetsPane: React.ReactNode;
   matchTabLabel?: string;
   customBetsTabLabel?: string;
   targetCustomBetId?: string | null;
+  initialTab?: "match" | "custom";
 }) {
   const [activeTab, setActiveTab] = useState<"match" | "custom">(() =>
-    targetCustomBetId ? "custom" : "match"
+    targetCustomBetId ? "custom" : initialTab
   );
 
   useEffect(() => {

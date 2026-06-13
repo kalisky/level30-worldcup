@@ -9,6 +9,8 @@ import {
   customBets,
   matchBets,
   customWagers,
+  settlements,
+  type CustomBetOption,
 } from "@/lib/db/schema";
 import { getRoomLeaderboard, getRoomUsers } from "@/lib/db/queries";
 import { translateTeam } from "@/lib/team-i18n";
@@ -17,36 +19,22 @@ import RoomHeader from "@/components/RoomHeader";
 import RoomBreadcrumb from "@/components/RoomBreadcrumb";
 import DailyGrantBanner from "@/components/DailyGrantBanner";
 import HistoryEntries, {
-  type HistoryEntryItem,
+  type HistoryItem,
+  type HistoryBetLeg,
 } from "@/components/HistoryEntries";
 
-function classifyEntryState(args: {
-  reason: string;
-  matchBetStatus: string | null;
-  matchBetPayout: number | null;
-  customWagerStatus: string | null;
-}): HistoryEntryItem["state"] {
-  if (args.reason === "match_bet_payout" || args.reason === "custom_wager_payout") {
-    return "won";
-  }
-
-  if (args.reason === "match_bet_placed") {
-    if (args.matchBetStatus === "open") return "open";
-    if (args.matchBetStatus === "settled") {
-      return (args.matchBetPayout ?? 0) > 0 ? "won" : "lost";
-    }
-    return "neutral";
-  }
-
-  if (args.reason === "custom_wager_placed") {
-    if (args.customWagerStatus === "open") return "open";
-    if (args.customWagerStatus === "won") return "won";
-    if (args.customWagerStatus === "lost") return "lost";
-    return "neutral";
-  }
-
-  return "neutral";
-}
+// Ledger reasons that belong to a bet — folded into the per-bet summary rows
+// instead of listed individually. Everything else (grants, opening balance,
+// joining the room) stays as its own ledger row.
+const BET_LEDGER_REASONS = new Set([
+  "match_bet_placed",
+  "match_bet_payout",
+  "match_bet_refund",
+  "custom_wager_placed",
+  "custom_wager_payout",
+  "custom_wager_refund",
+  "custom_wager_canceled",
+]);
 
 export default async function HistoryPage(props: {
   params: Promise<{ code: string }>;
@@ -77,88 +65,152 @@ export default async function HistoryPage(props: {
   const tnav = await getTranslations("nav");
   const tDefaults = await getTranslations("customBet.defaults");
 
-  const entries = await db
-    .select({
-      entry: chipLedger,
-      matchHome: matches.homeTeam,
-      matchAway: matches.awayTeam,
-      customBetTitle: customBets.title,
-      customBetDescription: customBets.description,
-      customBetDefaultKey: customBets.defaultKey,
-      matchBetStatus: matchBets.status,
-      matchBetPayout: matchBets.payout,
-      customWagerStatus: customWagers.status,
-    })
-    .from(chipLedger)
-    .leftJoin(matches, eq(matches.id, chipLedger.refMatchId))
-    .leftJoin(customBets, eq(customBets.id, chipLedger.refCustomBetId))
-    .leftJoin(
-      matchBets,
-      and(
-        eq(matchBets.roomId, chipLedger.roomId),
-        eq(matchBets.userId, chipLedger.userId),
-        eq(matchBets.matchId, chipLedger.refMatchId)
-      )
-    )
-    .leftJoin(
-      customWagers,
-      and(
-        eq(customWagers.userId, chipLedger.userId),
-        eq(customWagers.customBetId, chipLedger.refCustomBetId)
-      )
-    )
-    .where(
-      and(
-        eq(chipLedger.roomId, room.id),
-        eq(chipLedger.userId, target.id)
-      )
-    )
-    .orderBy(desc(chipLedger.createdAt));
+  const tm = await getTranslations("match");
 
-  const historyEntries: HistoryEntryItem[] = entries.map(
-    ({
-      entry,
-      matchHome,
-      matchAway,
-      customBetTitle,
-      customBetDescription,
-      customBetDefaultKey,
-      matchBetStatus,
-      matchBetPayout,
-      customWagerStatus,
-    }) => {
-      const matchLabel =
-        matchHome && matchAway
-          ? `${translateTeam(matchHome, locale)} vs ${translateTeam(matchAway, locale)}`
-          : null;
-      const localizedBetTitle =
-        customBetTitle != null
-          ? customBetCopy(
-              {
-                title: customBetTitle,
-                description: customBetDescription ?? "",
-                defaultKey: customBetDefaultKey,
-              },
-              tDefaults
-            ).title
-          : null;
+  const [ledgerRows, matchBetRows, customWagerRows, settlementRows] = await Promise.all([
+    // Non-bet ledger entries — grants, opening balance, joining the room.
+    db
+      .select()
+      .from(chipLedger)
+      .where(and(eq(chipLedger.roomId, room.id), eq(chipLedger.userId, target.id)))
+      .orderBy(desc(chipLedger.createdAt)),
+    // One row per match the user bet on, with the match result.
+    db
+      .select({ bet: matchBets, match: matches })
+      .from(matchBets)
+      .innerJoin(matches, eq(matches.id, matchBets.matchId))
+      .where(and(eq(matchBets.roomId, room.id), eq(matchBets.userId, target.id))),
+    // One row per custom wager the user placed, with the bet definition.
+    db
+      .select({ wager: customWagers, bet: customBets })
+      .from(customWagers)
+      .innerJoin(customBets, eq(customBets.id, customWagers.customBetId))
+      .where(and(eq(customBets.roomId, room.id), eq(customWagers.userId, target.id))),
+    // Settlement events give the "closed" time for each match / custom bet.
+    db
+      .select({
+        kind: settlements.kind,
+        targetId: settlements.targetId,
+        createdAt: settlements.createdAt,
+      })
+      .from(settlements)
+      .where(eq(settlements.roomId, room.id)),
+  ]);
 
-      return {
-        id: entry.id,
-        reason: entry.reason,
-        delta: entry.delta,
-        balanceAfter: entry.balanceAfter,
-        createdAt: new Date(entry.createdAt).toISOString(),
-        subtitle: entry.note || matchLabel || localizedBetTitle,
-        state: classifyEntryState({
-          reason: entry.reason,
-          matchBetStatus,
-          matchBetPayout,
-          customWagerStatus,
-        }),
-      };
+  // Latest settlement timestamp per target — when the bet actually closed.
+  const settledAtByTarget = new Map<string, Date>();
+  for (const row of settlementRows) {
+    const existing = settledAtByTarget.get(row.targetId);
+    if (!existing || row.createdAt > existing) {
+      settledAtByTarget.set(row.targetId, row.createdAt);
     }
-  );
+  }
+
+  const sideLabel = (pick: "HOME" | "DRAW" | "AWAY", home: string, away: string) =>
+    pick === "HOME"
+      ? translateTeam(home, locale)
+      : pick === "AWAY"
+        ? translateTeam(away, locale)
+        : tm("draw");
+
+  const matchBetItems: HistoryItem[] = matchBetRows.map(({ bet, match }) => {
+    const settled = bet.status === "settled";
+    const legs: HistoryBetLeg[] = [];
+    if (bet.directionStake > 0) {
+      const odds = Number(bet.directionOddsLocked);
+      legs.push({
+        type: "direction",
+        pick: sideLabel(bet.directionPick, match.homeTeam, match.awayTeam),
+        stake: bet.directionStake,
+        odds,
+        outcome: settled ? bet.directionOutcome : "pending",
+        returned: bet.directionOutcome === "won" ? Math.floor(bet.directionStake * odds) : 0,
+      });
+    }
+    if (bet.scoreStake > 0) {
+      const odds = Number(bet.scoreOddsLocked);
+      legs.push({
+        type: "score",
+        pick: `${bet.predictedHomeScore}–${bet.predictedAwayScore}`,
+        stake: bet.scoreStake,
+        odds,
+        outcome: settled ? bet.scoreOutcome : "pending",
+        returned: bet.scoreOutcome === "won" ? Math.floor(bet.scoreStake * odds) : 0,
+      });
+    }
+    const net = settled ? (bet.payout ?? 0) - bet.totalStake : null;
+    return {
+      kind: "bet",
+      id: `match-${bet.id}`,
+      title: `${translateTeam(match.homeTeam, locale)} ${tm("vs")} ${translateTeam(match.awayTeam, locale)}`,
+      resultLine:
+        match.status === "final" && match.homeScore != null && match.awayScore != null
+          ? `${tm("final")} ${match.homeScore}–${match.awayScore}`
+          : null,
+      legs,
+      totalStake: bet.totalStake,
+      state: settled ? (net! >= 0 ? "won" : "lost") : "open",
+      net,
+      // Sort/display by when the match closed; fall back to placement time.
+      createdAt: (settledAtByTarget.get(match.id) ?? new Date(bet.createdAt)).toISOString(),
+    };
+  });
+
+  const customBetItems: HistoryItem[] = customWagerRows.map(({ wager, bet }) => {
+    const options = bet.options as CustomBetOption[];
+    const localized = customBetCopy(
+      { title: bet.title, description: bet.description ?? "", defaultKey: bet.defaultKey },
+      tDefaults
+    );
+    const odds = Number(wager.oddsLocked);
+    const won = wager.status === "won";
+    const settled = wager.status === "won" || wager.status === "lost";
+    const voided = wager.status === "void";
+    const net = voided ? 0 : settled ? (won ? Math.floor(wager.stake * odds) : 0) - wager.stake : null;
+    return {
+      kind: "bet",
+      id: `custom-${wager.id}`,
+      title: localized.title,
+      resultLine:
+        bet.winningOptionIdx != null
+          ? `${tm("winner")}: ${options[bet.winningOptionIdx]?.label ?? "?"}`
+          : voided
+            ? tm("voided")
+            : null,
+      legs: [
+        {
+          type: "custom",
+          pick: options[wager.optionIdx]?.label ?? "?",
+          stake: wager.stake,
+          odds,
+          outcome: voided ? "void" : settled ? (won ? "won" : "lost") : "pending",
+          returned: won ? Math.floor(wager.stake * odds) : 0,
+        },
+      ],
+      totalStake: wager.stake,
+      state: voided ? "void" : settled ? (net! >= 0 ? "won" : "lost") : "open",
+      net,
+      createdAt: (settledAtByTarget.get(bet.id) ?? new Date(wager.createdAt)).toISOString(),
+    };
+  });
+
+  const ledgerItems: HistoryItem[] = ledgerRows
+    .filter((entry) => !BET_LEDGER_REASONS.has(entry.reason))
+    .map((entry) => ({
+      kind: "ledger",
+      id: `ledger-${entry.id}`,
+      reason: entry.reason,
+      delta: entry.delta,
+      balanceAfter: entry.balanceAfter,
+      subtitle: entry.note || null,
+      createdAt: new Date(entry.createdAt).toISOString(),
+    }));
+
+  const historyEntries: HistoryItem[] = [
+    ...matchBetItems,
+    ...customBetItems,
+    ...ledgerItems,
+  ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   return (
     <>

@@ -248,7 +248,12 @@
     "settled": "Settled. Payout:",
     "openOutcome": "open",
     "customBetCount": "{count, plural, one {# custom bet} other {# custom bets}}",
-    "customBetTooltip": "Custom bets your friends created on this match. Tap the card to see them."
+    "customBetTooltip": "Custom bets your friends created on this match. Tap the card to see them.",
+    "winner": "Winner",
+    "voided": "Voided",
+    "liveBetsTitle": "Live now",
+    "liveBetsJoin": "{count} live bets open — tap to join",
+    "liveBetsPropose": "Bet on what happens — propose one"
   },
   "bet": {
     "predictScore": "Predict the score",
@@ -274,7 +279,8 @@
     "saveFailed": "Save failed",
     "clearScore": "Clear score",
     "wonAmount": "Won {amount}",
-    "lostAmount": "Lost {amount}"
+    "lostAmount": "Lost {amount}",
+    "pick": "Pick"
   },
   "customBet": {
     "propose": "Propose a custom bet",

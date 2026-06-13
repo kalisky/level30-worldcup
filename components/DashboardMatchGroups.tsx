@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import LocalDateTime from "@/components/LocalDateTime";
 import MatchCard, {
@@ -94,42 +94,8 @@ export default function DashboardMatchGroups({
     () => "UTC"
   );
   const now = useSyncExternalStore(subscribeToNow, getNowSnapshot, () => 0);
-
-  // Played matches stay in the list, so land the first paint on the next
-  // game instead of making users scroll past everything already finished.
-  // Retries like the custom-bet deep-link scroll: with streamed/hydrating
-  // content a one-shot scrollIntoView can fire before the card is in the DOM.
-  const nextMatchId = matches.find((m) => m.status !== "final")?.id ?? null;
-  const didScrollRef = useRef(false);
-  useEffect(() => {
-    if (didScrollRef.current || !nextMatchId) return;
-    if (matches[0]?.id === nextMatchId) return; // nothing played above it
-
-    let cancelled = false;
-    let attempts = 0;
-
-    const scrollToNext = () => {
-      if (cancelled || didScrollRef.current) return;
-
-      const element = document.getElementById(`match-card-${nextMatchId}`);
-      if (element) {
-        didScrollRef.current = true;
-        element.scrollIntoView({ block: "start" });
-        return;
-      }
-
-      if (attempts < 8) {
-        attempts += 1;
-        window.setTimeout(scrollToNext, 120);
-      }
-    };
-
-    window.setTimeout(scrollToNext, 120);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [nextMatchId, matches]);
+  const activeMatches = matches.filter((match) => match.status !== "final");
+  const endedMatches = matches.filter((match) => match.status === "final");
 
   const renderMatchCards = (items: MatchCardMatch[]) => (
     <div className="space-y-2">
@@ -154,17 +120,40 @@ export default function DashboardMatchGroups({
     </div>
   );
 
+  const endedMatchesSection =
+    endedMatches.length > 0 ? (
+      <details className="rounded-[28px] border border-[#dbe5f2] bg-[#F8FBFF] px-5 py-4 shadow-[0_10px_24px_rgba(30,58,138,0.04)]">
+        <summary className="cursor-pointer py-1">
+          {/* <span className="flex flex-wrap items-center gap-2"> */}
+            <span className="text-[13px] font-semibold text-slate-700">
+              {t("endedMatches")}
+            </span>
+            <span className="inline-flex items-center rounded-full bg-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-700">
+              {t("matchCount", { count: endedMatches.length })}
+            </span>
+          {/* </span> */}
+        </summary>
+        <div className="mt-4">{renderMatchCards(endedMatches)}</div>
+      </details>
+    ) : null;
+
   if (!hydrated) {
-    return renderMatchCards(matches);
+    return (
+      <div className="space-y-5">
+        {endedMatchesSection}
+        {activeMatches.length > 0 ? renderMatchCards(activeMatches) : null}
+      </div>
+    );
   }
 
-  const matchGroups = groupMatchesByLocalDate(matches, {
+  const matchGroups = groupMatchesByLocalDate(activeMatches, {
     timeZone,
     now,
   });
 
   return (
     <div className="space-y-5">
+      {endedMatchesSection}
       {matchGroups.map((group) => (
         <section key={group.dateKey} className="space-y-2">
           <div className="sticky top-[11rem] z-[5] -mx-4 flex items-center gap-3 bg-background px-4 py-2 shadow-[0_2px_8px_rgba(15,23,42,0.04)] lg:top-[4.75rem] lg:mx-0 lg:px-0 lg:shadow-none">

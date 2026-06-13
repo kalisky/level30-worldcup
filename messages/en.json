@@ -223,6 +223,7 @@
     "leaderboardModeAvailableHint": "Excludes chips currently tied up in unsettled bets.",
     "leaderboardUnsettledBets": "{amount} in unsettled bets",
     "upcomingMatches": "Upcoming & live matches",
+    "endedMatches": "Ended matches",
     "noMatches": "No matches scheduled.",
     "customBets": "Custom bets",
     "noCustomBets": "No open custom bets right now. Propose one from a match page during the game.",

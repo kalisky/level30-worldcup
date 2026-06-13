@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { desc, eq, gt, sql } from "drizzle-orm";
+import { desc, eq, gt, isNotNull, sql } from "drizzle-orm";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { isAppAdmin } from "@/lib/app-admin";
 import { db } from "@/lib/db";
@@ -78,6 +78,9 @@ export default async function AdminPage() {
     totalCustomBets,
     totalCustomWagers,
     activeSessions,
+    matchBetAccountRows,
+    customBetAccountRows,
+    customWagerAccountRows,
     roomRows,
     userRows,
     matchBetActivity,
@@ -106,6 +109,24 @@ export default async function AdminPage() {
         .from(authSessions)
         .where(gt(authSessions.expiresAt, now))
     ),
+    db
+      .select({ authUserId: users.authUserId })
+      .from(matchBets)
+      .innerJoin(users, eq(users.id, matchBets.userId))
+      .where(isNotNull(users.authUserId))
+      .groupBy(users.authUserId),
+    db
+      .select({ authUserId: users.authUserId })
+      .from(customBets)
+      .innerJoin(users, eq(users.id, customBets.proposerId))
+      .where(isNotNull(users.authUserId))
+      .groupBy(users.authUserId),
+    db
+      .select({ authUserId: users.authUserId })
+      .from(customWagers)
+      .innerJoin(users, eq(users.id, customWagers.userId))
+      .where(isNotNull(users.authUserId))
+      .groupBy(users.authUserId),
     // Per-room breakdown.
     db
       .select({
@@ -183,6 +204,17 @@ export default async function AdminPage() {
   mergeActivity(activityByRoom, customBetActivity);
   mergeActivity(activityByRoom, customWagerActivity);
 
+  const bettingAccounts = new Set<string>();
+  for (const row of matchBetAccountRows) {
+    if (row.authUserId) bettingAccounts.add(row.authUserId);
+  }
+  for (const row of customBetAccountRows) {
+    if (row.authUserId) bettingAccounts.add(row.authUserId);
+  }
+  for (const row of customWagerAccountRows) {
+    if (row.authUserId) bettingAccounts.add(row.authUserId);
+  }
+
   // Most active rooms first: by 7-day action count, then by recency of the
   // last action, then by size.
   const sortedRooms = [...roomRows].sort((a, b) => {
@@ -197,6 +229,7 @@ export default async function AdminPage() {
 
   const stats: { label: string; value: string }[] = [
     { label: "Signed-up accounts", value: totalAuthUsers.toLocaleString() },
+    { label: "Accounts with at least one bet", value: bettingAccounts.size.toLocaleString() },
     { label: "Active sessions", value: activeSessions.toLocaleString() },
     { label: "Rooms", value: totalRooms.toLocaleString() },
     { label: "Room memberships", value: totalMemberships.toLocaleString() },

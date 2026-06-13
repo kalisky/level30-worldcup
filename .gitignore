@@ -42,3 +42,4 @@ yarn-error.log*
 next-env.d.ts
 app/r/\[code]/match/\[id]/odds_h2h.json
 server_logs
+scripts/rename-display-name.ts

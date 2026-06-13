@@ -79,6 +79,7 @@ Open [http://localhost:3000](http://localhost:3000), sign in with Google, create
 | `npm run seed` | Insert 72 group-stage fixtures (idempotent) |
 | `npm run odds:generate` | Force-sync match odds from Polymarket and regenerate Poisson exact-score odds |
 | `npm test` | Run the odds-sync unit tests |
+| `npm run match:correct-settlement -- --match-id aa65a0a3-89c0-4c1a-b64b-b8cb1e4297ce --home-score 1 --away-score 1 --dry-run` |
 
 ## Architecture
 

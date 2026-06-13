@@ -18,7 +18,8 @@
     "odds:generate": "tsx scripts/generate-odds.ts",
     "odds:build-oddschecker-json": "tsx scripts/build-oddschecker-json.ts",
     "odds:backfill-oddschecker": "tsx scripts/backfill-oddschecker-json.ts",
-    "ledger:backfill": "tsx scripts/backfill-ledger.ts"
+    "ledger:backfill": "tsx scripts/backfill-ledger.ts",
+    "match:correct-settlement": "node --import tsx scripts/correct-match-settlement.ts"
   },
   "dependencies": {
     "@google/genai": "^2.6.0",

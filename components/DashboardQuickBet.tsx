@@ -17,9 +17,11 @@ import { parseScoreKey, scoreKey, type ScoreOddsCache } from "@/lib/db/schema";
 export type DashboardQuickBetExisting = {
   directionPick: "HOME" | "DRAW" | "AWAY";
   directionStake: number;
+  directionOddsLocked?: number;
   predictedHomeScore: number;
   predictedAwayScore: number;
   scoreStake: number;
+  scoreOddsLocked?: number;
   totalStake: number;
   status?: "open" | "settled" | "void";
   directionOutcome?: "pending" | "won" | "lost";
@@ -57,16 +59,52 @@ function directionLabel(
   return drawLabel;
 }
 
-function scoreSummary(
-  home: number,
-  away: number,
-  stake: number,
-  chipsLabel: string,
-  odd: number
-) {
-  return odd > 0
-    ? `${home}-${away} · ${stake} ${chipsLabel} · ${odd.toFixed(2)}x`
-    : `${home}-${away} · ${stake} ${chipsLabel}`;
+/**
+ * One leg (side or exact score) of a placed bet: pick, stake, locked odds,
+ * and — once settled — its won/lost outcome and what it returned. Spelling
+ * out both legs is what makes a net like "won the side but still lost
+ * overall" legible.
+ */
+function BetLegRow({
+  label,
+  pick,
+  stake,
+  odds,
+  outcome,
+  returned,
+  chipsLabel,
+}: {
+  label: string;
+  pick: string;
+  stake: number;
+  odds: number;
+  outcome?: "pending" | "won" | "lost";
+  returned: number;
+  chipsLabel: string;
+}) {
+  const won = outcome === "won";
+  return (
+    <div className="flex items-center justify-between gap-2 text-xs">
+      <span className="min-w-0 truncate text-slate-600">
+        <span className="font-semibold text-slate-500">{label}:</span>{" "}
+        <span className="font-bold text-[#1E3A8A]">{pick}</span> · {stake}{" "}
+        {chipsLabel}
+        {odds > 0 ? (
+          <span className="font-mono"> · {odds.toFixed(2)}x</span>
+        ) : null}
+      </span>
+      {outcome && outcome !== "pending" ? (
+        <span
+          className={
+            "shrink-0 font-mono font-bold " +
+            (won ? "text-emerald-600" : "text-red-500")
+          }
+        >
+          {won ? `✓ +${returned}` : "✗ 0"}
+        </span>
+      ) : null}
+    </div>
+  );
 }
 
 function ScoreSelectField({
@@ -483,9 +521,28 @@ export default function DashboardQuickBet({
       localizedAway,
       drawLabel
     );
+    const hasDirectionBet = myBet.directionStake > 0;
     const hasScoreBet = myBet.scoreStake > 0;
     const isSettled = myBet.status === "settled";
     const net = isSettled ? (myBet.payout ?? 0) - myBet.totalStake : 0;
+
+    // Locked-in odds the bet was placed at — fall back to the live cache for
+    // older rows that predate carrying them on the bet.
+    const directionOdds =
+      myBet.directionOddsLocked ??
+      (myBet.directionPick === "HOME"
+        ? oddsHome ?? 0
+        : myBet.directionPick === "AWAY"
+          ? oddsAway ?? 0
+          : oddsDraw ?? 0);
+    const scoreOdd =
+      myBet.scoreOddsLocked ??
+      Number(
+        scoreOdds?.[scoreKey(myBet.predictedHomeScore, myBet.predictedAwayScore)] ?? 0
+      );
+
+    const directionReturn = Math.floor(myBet.directionStake * directionOdds);
+    const scoreReturn = Math.floor(myBet.scoreStake * scoreOdd);
 
     return (
       <div className="mt-4 rounded-[22px] border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-3">
@@ -512,27 +569,30 @@ export default function DashboardQuickBet({
             </span>
           )}
         </div>
-        <p className="mt-2 text-sm font-bold text-[#1E3A8A]">
-          {hasScoreBet
-            ? `${localizedHome} ${myBet.predictedHomeScore}–${myBet.predictedAwayScore} ${localizedAway}`
-            : sideLabel}
-        </p>
-        <p className="mt-1 text-xs text-slate-500">
-          {tb("directionOutcome")}: {sideLabel} · {myBet.directionStake} {tc("chips")}
-          {hasScoreBet
-            ? ` · ${scoreSummary(
-                myBet.predictedHomeScore,
-                myBet.predictedAwayScore,
-                myBet.scoreStake,
-                tc("chips"),
-                Number(
-                  scoreOdds?.[
-                    scoreKey(myBet.predictedHomeScore, myBet.predictedAwayScore)
-                  ] ?? 0
-                )
-              )}`
-            : ""}
-        </p>
+        <div className="mt-2 space-y-1.5">
+          {hasDirectionBet && (
+            <BetLegRow
+              label={tb("directionOutcome")}
+              pick={sideLabel}
+              stake={myBet.directionStake}
+              odds={directionOdds}
+              outcome={isSettled ? myBet.directionOutcome : undefined}
+              returned={directionReturn}
+              chipsLabel={tc("chips")}
+            />
+          )}
+          {hasScoreBet && (
+            <BetLegRow
+              label={tb("scoreOutcome")}
+              pick={`${myBet.predictedHomeScore}–${myBet.predictedAwayScore}`}
+              stake={myBet.scoreStake}
+              odds={scoreOdd}
+              outcome={isSettled ? myBet.scoreOutcome : undefined}
+              returned={scoreReturn}
+              chipsLabel={tc("chips")}
+            />
+          )}
+        </div>
       </div>
     );
   }

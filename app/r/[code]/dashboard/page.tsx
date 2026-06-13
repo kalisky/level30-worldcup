@@ -233,9 +233,11 @@ async function DashboardMatchesPane({
       {
         directionPick: bet.directionPick,
         directionStake: bet.directionStake,
+        directionOddsLocked: Number(bet.directionOddsLocked),
         predictedHomeScore: bet.predictedHomeScore,
         predictedAwayScore: bet.predictedAwayScore,
         scoreStake: bet.scoreStake,
+        scoreOddsLocked: Number(bet.scoreOddsLocked),
         totalStake: bet.totalStake,
         status: bet.status,
         directionOutcome: bet.directionOutcome,

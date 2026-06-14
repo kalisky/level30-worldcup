@@ -156,6 +156,7 @@ export default async function MatchPage(props: {
   const awayTeamAbbreviation = getTeamAbbreviation(match.awayTeam);
   const homeTeamLocalized = translateTeam(match.homeTeam, locale);
   const awayTeamLocalized = translateTeam(match.awayTeam, locale);
+  console.log("matchPage", allBets);
 
   const matchPane = (
     <>
@@ -251,9 +252,11 @@ export default async function MatchPage(props: {
               >
                 <span>
                   <span className="font-bold text-[#1E3A8A]">{userName}</span>:{" "}
-                  <span className="font-mono font-bold text-slate-700">
-                    {bet.predictedHomeScore} – {bet.predictedAwayScore}
-                  </span>
+                  {bet.scoreStake > 0 && (
+                    <span className="font-mono font-bold text-slate-700">
+                      {bet.predictedHomeScore} – {bet.predictedAwayScore}
+                    </span>
+                  )}
                 </span>
                 <span className="font-mono font-semibold text-slate-500">
                   {bet.totalStake} {tcomm("chips")}

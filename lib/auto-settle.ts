@@ -6,8 +6,8 @@ import { suggestMatchResult } from "@/lib/ai/suggest";
 import { settleMatchBetsForRoom } from "@/lib/settle-match-core";
 import { revalidateRoomChipPaths } from "@/lib/revalidate-room-chip-paths";
 
-// A match can't be over before kickoff + 90' + half-time + stoppage.
-const MIN_MATCH_DURATION_MS = 105 * 60 * 1000;
+// A match can't be over before kickoff + 90' + half-time + stoppage (giving 10 minutes for the combined stoppage).
+const MIN_MATCH_DURATION_MS = 115 * 60 * 1000;
 // Re-ask the AI for an unconfirmed result at most this often, escalating the
 // interval the longer the result stays unconfirmed so a match the AI can
 // never resolve doesn't burn grounded-search quota forever:

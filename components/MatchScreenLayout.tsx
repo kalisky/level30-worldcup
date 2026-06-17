@@ -9,6 +9,10 @@ export default function MatchScreenLayout({
   customBetsTabLabel = "Custom Bets",
   targetCustomBetId,
   initialTab = "match",
+  // Where the desktop sidebar pins. The dashboard has an extra sticky header
+  // bar below the app header, so it pushes the sidebar down to clear it.
+  asideStickyTopClass = "lg:top-28",
+  asideMaxHeightClass = "lg:max-h-[calc(100vh-8rem)]",
 }: {
   matchPane: React.ReactNode;
   customBetsPane: React.ReactNode;
@@ -16,6 +20,8 @@ export default function MatchScreenLayout({
   customBetsTabLabel?: string;
   targetCustomBetId?: string | null;
   initialTab?: "match" | "custom";
+  asideStickyTopClass?: string;
+  asideMaxHeightClass?: string;
 }) {
   const [activeTab, setActiveTab] = useState<"match" | "custom">(() =>
     targetCustomBetId ? "custom" : initialTab
@@ -103,7 +109,7 @@ export default function MatchScreenLayout({
           className={
             "space-y-4 " +
             (activeTab === "custom" ? "block" : "hidden") +
-            " lg:sticky lg:top-28 lg:block lg:max-h-[calc(100vh-8rem)] lg:self-start lg:overflow-y-auto lg:pr-1"
+            ` lg:sticky ${asideStickyTopClass} lg:block ${asideMaxHeightClass} lg:self-start lg:overflow-y-auto lg:pr-1`
           }
         >
           {customBetsPane}

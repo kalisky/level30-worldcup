@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import LocalDateTime from "@/components/LocalDateTime";
 import MatchCard, {
@@ -99,13 +99,42 @@ export default function DashboardMatchGroups({
   const activeMatches = matches.filter((match) => match.status !== "final");
   const endedMatches = matches.filter((match) => match.status === "final");
 
+  // `matches` arrive in kickoff order, so the tail of the ended list is the
+  // most recently played. Surface those expanded and only collapse the rest.
+  const RECENT_ENDED_COUNT = 6;
+  const recentEnded = endedMatches.slice(-RECENT_ENDED_COUNT);
+  const olderEnded = endedMatches.slice(
+    0,
+    Math.max(0, endedMatches.length - RECENT_ENDED_COUNT)
+  );
+
+  // On first load, jump to the present — the soonest upcoming/live match —
+  // so the recent results above don't bury what people came to bet on. Runs
+  // once; AutoRefresh uses router.refresh() so this component isn't remounted
+  // on poll and we won't yank the scroll back later.
+  const firstActiveId = activeMatches[0]?.id ?? null;
+  const scrolledRef = useRef(false);
+  useEffect(() => {
+    if (scrolledRef.current) return;
+    // Nothing sits above the upcoming list → already at the right place.
+    if (!firstActiveId || endedMatches.length === 0) {
+      scrolledRef.current = true;
+      return;
+    }
+    const el = document.getElementById(`match-card-${firstActiveId}`);
+    if (el) {
+      el.scrollIntoView({ block: "start" });
+      scrolledRef.current = true;
+    }
+  }, [firstActiveId, endedMatches.length]);
+
   const renderMatchCards = (items: MatchCardMatch[]) => (
     <div className="space-y-2">
       {items.map((match) => (
         <div
           key={match.id}
           id={`match-card-${match.id}`}
-          className="scroll-mt-[12.5rem] lg:scroll-mt-[6.5rem]"
+          className="scroll-mt-[12.5rem] lg:scroll-mt-[10.25rem]"
         >
           <MatchCard
             match={match}
@@ -123,27 +152,42 @@ export default function DashboardMatchGroups({
     </div>
   );
 
-  const endedMatchesSection =
-    endedMatches.length > 0 ? (
+  const olderEndedSection =
+    olderEnded.length > 0 ? (
       <details className="rounded-[28px] border border-[#dbe5f2] bg-[#F8FBFF] px-5 py-4 shadow-[0_10px_24px_rgba(30,58,138,0.04)]">
         <summary className="cursor-pointer py-1">
-          {/* <span className="flex flex-wrap items-center gap-2"> */}
-            <span className="text-[13px] font-semibold text-slate-700">
-              {t("endedMatches")}
-            </span>
-            <span className="inline-flex items-center rounded-full bg-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-700">
-              {t("matchCount", { count: endedMatches.length })}
-            </span>
-          {/* </span> */}
+          <span className="text-[13px] font-semibold text-slate-700">
+            {t("endedMatches")}
+          </span>
+          <span className="inline-flex items-center rounded-full bg-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-700">
+            {t("matchCount", { count: olderEnded.length })}
+          </span>
         </summary>
-        <div className="mt-4">{renderMatchCards(endedMatches)}</div>
+        <div className="mt-4">{renderMatchCards(olderEnded)}</div>
       </details>
+    ) : null;
+
+  const recentResultsSection =
+    recentEnded.length > 0 ? (
+      <section className="space-y-2">
+        <div className="flex items-center gap-3">
+          <span className="text-[13px] font-medium text-slate-700">
+            {t("recentResults")}
+          </span>
+          <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+            {t("matchCount", { count: recentEnded.length })}
+          </span>
+          <div className="h-px min-w-6 flex-1 bg-[#dbe5f2]" aria-hidden="true" />
+        </div>
+        {renderMatchCards(recentEnded)}
+      </section>
     ) : null;
 
   if (!hydrated) {
     return (
       <div className="space-y-5">
-        {endedMatchesSection}
+        {olderEndedSection}
+        {recentResultsSection}
         {activeMatches.length > 0 ? renderMatchCards(activeMatches) : null}
       </div>
     );
@@ -156,10 +200,11 @@ export default function DashboardMatchGroups({
 
   return (
     <div className="space-y-5">
-      {endedMatchesSection}
+      {olderEndedSection}
+      {recentResultsSection}
       {matchGroups.map((group) => (
         <section key={group.dateKey} className="space-y-2">
-          <div className="sticky top-[11rem] z-[5] -mx-4 flex items-center gap-3 bg-background px-4 py-2 shadow-[0_2px_8px_rgba(15,23,42,0.04)] lg:top-[4.75rem] lg:mx-0 lg:px-0 lg:shadow-none">
+          <div className="sticky top-[11rem] z-[5] -mx-4 flex items-center gap-3 bg-background px-4 py-2 shadow-[0_2px_8px_rgba(15,23,42,0.04)] lg:top-[9rem] lg:mx-0 lg:px-0 lg:shadow-none">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[13px] font-medium text-slate-700">
                 <LocalDateTime

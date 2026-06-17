@@ -158,8 +158,8 @@ export default async function DashboardPage(props: {
       />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
         {mobileDashboardHeader}
-        <section className="mb-6 hidden lg:block">
-          <div className="flex items-center justify-between gap-4 pb-5">
+        <section className="mb-6 hidden lg:sticky lg:top-[4.75rem] lg:z-[12] lg:block lg:bg-background">
+          <div className="flex items-center justify-between gap-4 pb-5 pt-2">
             <h1 className="min-w-0 truncate text-[2rem] font-black text-[#1E3A8A]">
               {room.name}
             </h1>
@@ -186,6 +186,8 @@ export default async function DashboardPage(props: {
           matchTabLabel="Dashboard"
           customBetsTabLabel="Custom Bets"
           targetCustomBetId={targetCustomBetId}
+          asideStickyTopClass="lg:top-[9rem]"
+          asideMaxHeightClass="lg:max-h-[calc(100vh-9.5rem)]"
         />
       </main>
     </>

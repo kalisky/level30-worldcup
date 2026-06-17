@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import TeamFlag from "@/components/TeamFlag";
 import { StakeRow } from "@/components/QuickBetForm";
+import ApplyToAllRoomsToggle from "@/components/ApplyToAllRoomsToggle";
 import { useTeamName } from "@/hooks/useTeamName";
 import {
   quickBetActiveParts,
@@ -411,6 +412,7 @@ export default function DashboardQuickBet({
   myBet,
   defaultDirectionStake,
   defaultScoreStake,
+  otherRoomCount = 0,
 }: {
   roomCode: string;
   matchId: string;
@@ -427,6 +429,8 @@ export default function DashboardQuickBet({
   myBet?: DashboardQuickBetExisting | null;
   defaultDirectionStake?: number | null;
   defaultScoreStake?: number | null;
+  /** Rooms the user belongs to besides this one — gates the cross-room toggle. */
+  otherRoomCount?: number;
 }) {
   const tb = useTranslations("bet");
   const td = useTranslations("dashboard");
@@ -447,7 +451,7 @@ export default function DashboardQuickBet({
   // The server re-validates on every save regardless.
   const budget = maxStake + (myBet?.totalStake ?? 0);
 
-  const { desired, apply, status, error } = useQuickBet({
+  const { desired, apply, status, error, notice } = useQuickBet({
     roomCode,
     matchId,
     existing: myBet ?? null,
@@ -708,9 +712,17 @@ export default function DashboardQuickBet({
               </span>
             </div>
 
+            <ApplyToAllRoomsToggle otherRoomCount={otherRoomCount} />
+
             {error ? (
               <p className="rounded-2xl bg-red-50 px-3 py-3 text-sm font-medium text-red-700">
                 {error}
+              </p>
+            ) : null}
+
+            {notice ? (
+              <p className="rounded-2xl bg-amber-50 px-3 py-3 text-sm font-medium text-amber-900">
+                {tb("syncFailed", { rooms: notice })}
               </p>
             ) : null}
           </div>

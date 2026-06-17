@@ -281,7 +281,10 @@
     "clearScore": "Clear score",
     "wonAmount": "Won {amount}",
     "lostAmount": "Lost {amount}",
-    "pick": "Pick"
+    "pick": "Pick",
+    "applyToAllRooms": "Apply to all my rooms ({count})",
+    "applyToAllRoomsHint": "This bet is saved in every room you're in",
+    "syncFailed": "Couldn't sync to: {rooms}"
   },
   "customBet": {
     "propose": "Propose a custom bet",

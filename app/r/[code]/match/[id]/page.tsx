@@ -5,6 +5,7 @@ import { requireRoomUser } from "@/lib/auth-context";
 import {
   getMatch,
   getMatchBetBundleForMatch,
+  countRoomsForAuthUser,
 } from "@/lib/db/queries";
 import { getCustomBetShareMetadata } from "@/lib/share-metadata";
 import RoomHeader from "@/components/RoomHeader";
@@ -76,7 +77,7 @@ export default async function MatchPage(props: {
         })
       );
 
-      const [match, matchBetBundle, locale, translations] = await Promise.all([
+      const [match, matchBetBundle, roomCount, locale, translations] = await Promise.all([
         trace.step(
           "getMatch",
           () => getMatch(id),
@@ -96,6 +97,11 @@ export default async function MatchPage(props: {
             hasMyBet: Boolean(value.myBet),
             matchBetCount: value.allBets.length,
           })
+        ),
+        trace.step(
+          "countRoomsForAuthUser",
+          () => (user.authUserId ? countRoomsForAuthUser(user.authUserId) : Promise.resolve(1)),
+          (value) => ({ roomCount: value })
         ),
         trace.step("getLocale", () => getLocale(), (value) => ({ locale: value })),
         trace.step("getTranslations", async () => {
@@ -126,6 +132,7 @@ export default async function MatchPage(props: {
         match,
         myBet: matchBetBundle.myBet,
         allBets: matchBetBundle.allBets,
+        otherRoomCount: Math.max(0, roomCount - 1),
         locale,
         ...translations,
       };
@@ -142,6 +149,7 @@ export default async function MatchPage(props: {
     match,
     myBet,
     allBets,
+    otherRoomCount,
     locale,
     tm,
     tcomm,
@@ -237,6 +245,7 @@ export default async function MatchPage(props: {
         maxStake={user.chips}
         defaultDirectionStake={user.defaultDirectionStake}
         defaultScoreStake={user.defaultScoreStake}
+        otherRoomCount={otherRoomCount}
       />
 
       {allBets.length > 0 && (

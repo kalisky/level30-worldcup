@@ -115,6 +115,16 @@ export async function listRoomsForAuthUser(authUserId: string) {
     .orderBy(asc(rooms.name));
 }
 
+// Number of rooms this auth user belongs to. Used to decide whether the
+// "apply this bet to all my rooms" toggle is worth showing at all.
+export async function countRoomsForAuthUser(authUserId: string) {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(users)
+    .where(eq(users.authUserId, authUserId));
+  return row?.count ?? 0;
+}
+
 export async function getRoomUsers(roomId: string) {
   return db
     .select()

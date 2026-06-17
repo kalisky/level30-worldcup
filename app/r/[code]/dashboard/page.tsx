@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { requireRoomUser } from "@/lib/auth-context";
 import {
   countOpenCustomBetsByMatch,
+  countRoomsForAuthUser,
   getMyMatchBets,
   hydrateCustomBetRowsWithWagers,
   listOpenCustomBets,
@@ -115,6 +116,7 @@ export default async function DashboardPage(props: {
           roomId={room.id}
           roomCode={room.code}
           userId={user.id}
+          authUserId={user.authUserId}
           myChips={user.chips}
           defaultDirectionStake={user.defaultDirectionStake}
           defaultScoreStake={user.defaultScoreStake}
@@ -195,6 +197,7 @@ async function DashboardMatchesPane({
   roomId,
   roomCode,
   userId,
+  authUserId,
   myChips,
   defaultDirectionStake,
   defaultScoreStake,
@@ -205,13 +208,14 @@ async function DashboardMatchesPane({
   roomId: string;
   roomCode: string;
   userId: string;
+  authUserId: string | null;
   myChips: number;
   defaultDirectionStake: number | null;
   defaultScoreStake: number | null;
   heading: string;
   emptyLabel: string;
 }) {
-  const [upcoming, myBets, customBetCounts] = await Promise.all([
+  const [upcoming, myBets, customBetCounts, roomCount] = await Promise.all([
     trace.step("listAllMatches", () => listAllMatches(), (rows) => ({
       matchCount: rows.length,
     })),
@@ -225,7 +229,14 @@ async function DashboardMatchesPane({
         matchesWithCustomBets: Object.keys(rows).length,
       })
     ),
+    trace.step(
+      "countRoomsForAuthUser",
+      () => (authUserId ? countRoomsForAuthUser(authUserId) : Promise.resolve(1)),
+      (value) => ({ roomCount: value })
+    ),
   ]);
+
+  const otherRoomCount = Math.max(0, roomCount - 1);
 
   const myBetByMatch = Object.fromEntries(
     myBets.map((bet) => [
@@ -281,6 +292,7 @@ async function DashboardMatchesPane({
           maxStake={myChips}
           defaultDirectionStake={defaultDirectionStake}
           defaultScoreStake={defaultScoreStake}
+          otherRoomCount={otherRoomCount}
         />
       )}
     </section>

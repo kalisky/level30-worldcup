@@ -281,7 +281,10 @@
     "clearScore": "נקה תוצאה",
     "wonAmount": "זכית {amount}",
     "lostAmount": "הפסדת {amount}",
-    "pick": "בחירה"
+    "pick": "בחירה",
+    "applyToAllRooms": "החל על כל החדרים שלי ({count})",
+    "applyToAllRoomsHint": "ההימור נשמר בכל חדר שאתה חבר בו",
+    "syncFailed": "לא הצלחנו לסנכרן ל: {rooms}"
   },
   "customBet": {
     "propose": "הצע הימור מותאם אישית",

@@ -11,6 +11,7 @@ import {
   type QuickBetDirection,
 } from "@/hooks/useQuickBet";
 import { parseScoreKey, scoreKey, type MatchBet, type ScoreOddsCache } from "@/lib/db/schema";
+import ApplyToAllRoomsToggle from "@/components/ApplyToAllRoomsToggle";
 
 type DirectionGroup = QuickBetDirection;
 
@@ -56,6 +57,7 @@ export default function QuickBetForm({
   existingBet,
   defaultDirectionStake,
   defaultScoreStake,
+  otherRoomCount = 0,
 }: {
   roomCode: string;
   matchId: string;
@@ -70,6 +72,8 @@ export default function QuickBetForm({
   existingBet: MatchBet | null;
   defaultDirectionStake: number | null;
   defaultScoreStake: number | null;
+  /** Rooms the user belongs to besides this one — gates the cross-room toggle. */
+  otherRoomCount?: number;
 }) {
   const tb = useTranslations("bet");
   const tm = useTranslations("match");
@@ -82,7 +86,7 @@ export default function QuickBetForm({
   // The server re-validates on every save regardless.
   const budget = maxStake + (existingBet?.totalStake ?? 0);
 
-  const { desired, apply, status, error } = useQuickBet({
+  const { desired, apply, status, error, notice } = useQuickBet({
     roomCode,
     matchId,
     existing: existingBet,
@@ -328,9 +332,17 @@ export default function QuickBetForm({
         </span>
       </div>
 
+      <ApplyToAllRoomsToggle otherRoomCount={otherRoomCount} />
+
       {error && (
         <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {error}
+        </p>
+      )}
+
+      {notice && (
+        <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+          {tb("syncFailed", { rooms: notice })}
         </p>
       )}
     </div>

@@ -21,6 +21,7 @@ export default function MatchBetPanel({
   maxStake,
   defaultDirectionStake,
   defaultScoreStake,
+  otherRoomCount = 0,
 }: {
   roomCode: string;
   matchId: string;
@@ -36,6 +37,7 @@ export default function MatchBetPanel({
   maxStake: number;
   defaultDirectionStake: number | null;
   defaultScoreStake: number | null;
+  otherRoomCount?: number;
 }) {
   const [now] = useState(() => Date.now());
   const t = useTranslations("match");
@@ -68,6 +70,7 @@ export default function MatchBetPanel({
         existingBet={myBet}
         defaultDirectionStake={defaultDirectionStake}
         defaultScoreStake={defaultScoreStake}
+        otherRoomCount={otherRoomCount}
       />
     );
   }

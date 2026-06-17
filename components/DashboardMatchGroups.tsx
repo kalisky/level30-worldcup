@@ -73,6 +73,7 @@ export default function DashboardMatchGroups({
   maxStake,
   defaultDirectionStake,
   defaultScoreStake,
+  otherRoomCount = 0,
 }: {
   matches: MatchCardMatch[];
   roomCode: string;
@@ -81,6 +82,7 @@ export default function DashboardMatchGroups({
   maxStake: number;
   defaultDirectionStake?: number | null;
   defaultScoreStake?: number | null;
+  otherRoomCount?: number;
 }) {
   const t = useTranslations("dashboard");
   const hydrated = useSyncExternalStore(
@@ -114,6 +116,7 @@ export default function DashboardMatchGroups({
             now={now}
             defaultDirectionStake={defaultDirectionStake}
             defaultScoreStake={defaultScoreStake}
+            otherRoomCount={otherRoomCount}
           />
         </div>
       ))}

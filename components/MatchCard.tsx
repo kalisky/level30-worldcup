@@ -42,6 +42,7 @@ export default function MatchCard({
   now,
   defaultDirectionStake,
   defaultScoreStake,
+  otherRoomCount = 0,
 }: {
   match: MatchCardMatch;
   roomCode: string;
@@ -51,6 +52,7 @@ export default function MatchCard({
   now: number;
   defaultDirectionStake?: number | null;
   defaultScoreStake?: number | null;
+  otherRoomCount?: number;
 }) {
   const tm = useTranslations("match");
   const teamName = useTeamName();
@@ -220,6 +222,7 @@ export default function MatchCard({
         defaultScoreStake={defaultScoreStake}
         now={now}
         myBet={myBet}
+        otherRoomCount={otherRoomCount}
       />
 
       {isLive && (

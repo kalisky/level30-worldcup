@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { quickSetMatchBet } from "@/lib/actions/bets";
+import { getApplyToAllRooms } from "@/hooks/useApplyToAllRooms";
 
 export type QuickBetDirection = "HOME" | "DRAW" | "AWAY";
 
@@ -109,6 +110,9 @@ export function useQuickBet({
   });
   const [status, setStatus] = useState<QuickBetStatus>("idle");
   const [error, setError] = useState<string | null>(null);
+  // Non-blocking message when the bet saved here but couldn't be mirrored to
+  // one or more of the user's other rooms (e.g. not enough chips there).
+  const [notice, setNotice] = useState<string | null>(null);
 
   const session = useSyncExternalStore(
     subscribeSessionStakeDefaults,
@@ -183,12 +187,18 @@ export function useQuickBet({
     fd.set("predictedHomeScore", hasScore ? String(current.home) : "");
     fd.set("predictedAwayScore", hasScore ? String(current.away) : "");
     fd.set("scoreStake", String(hasScore ? current.scoreStake : 0));
+    fd.set("applyToAllRooms", getApplyToAllRooms() ? "1" : "");
 
     quickSetMatchBet(fd)
-      .then(() => {
+      .then((result) => {
         committedEmptyRef.current = !hasDirection && !hasScore;
         if (hasDirection) publishSessionStakeDefaults({ direction: current.sideStake });
         if (hasScore) publishSessionStakeDefaults({ score: current.scoreStake });
+        if (result?.failedRooms?.length) {
+          setNotice(result.failedRooms.map((r) => `${r.name} (${r.reason})`).join(", "));
+        } else {
+          setNotice(null);
+        }
         setStatus("saved");
       })
       .catch((e) => {
@@ -222,5 +232,5 @@ export function useQuickBet({
   // saves a new stake.
   void session;
 
-  return { desired: toPublic(state), apply, status, error };
+  return { desired: toPublic(state), apply, status, error, notice };
 }

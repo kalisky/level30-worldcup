@@ -539,7 +539,7 @@ export default function CustomBetCard({
                   <p className="mt-2 text-xs text-slate-500">
                     {t("potentialPayout", { stake })}{" "}
                     <span className="font-mono font-bold text-[#1E3A8A]">
-                      {Math.floor(stake * preview.odds)}
+                      {Math.ceil(stake * preview.odds)}
                     </span>
                   </p>
                 </div>
@@ -583,7 +583,7 @@ export default function CustomBetCard({
               <span className="font-bold">{bet.options[wagerView.optionIdx]?.label}</span>{" "}
               @ {Number(wagerView.oddsLocked).toFixed(2)}x.{" "}
               <span className="text-slate-500">
-                {t("payout", { payout: Math.floor(wagerView.stake * Number(wagerView.oddsLocked)) })}
+                {t("payout", { payout: Math.ceil(wagerView.stake * Number(wagerView.oddsLocked)) })}
               </span>
             </p>
             {canEditWager && (

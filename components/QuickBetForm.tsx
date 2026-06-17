@@ -158,8 +158,8 @@ export default function QuickBetForm({
       ? scoreKey(desired.home, desired.away)
       : null;
   const scoreOdd = selectedKey ? Number(scoreOdds[selectedKey] ?? 0) : 0;
-  const directionPayout = Math.floor(desired.sideStake * directionOdds);
-  const scorePayout = Math.floor(desired.scoreStake * scoreOdd);
+  const directionPayout = Math.ceil(desired.sideStake * directionOdds);
+  const scorePayout = Math.ceil(desired.scoreStake * scoreOdd);
   const totalStake = quickBetTotal(desired);
 
   const scoreImpliesDirection = impliedDirection(desired.home, desired.away);

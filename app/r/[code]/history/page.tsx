@@ -124,7 +124,7 @@ export default async function HistoryPage(props: {
         stake: bet.directionStake,
         odds,
         outcome: settled ? bet.directionOutcome : "pending",
-        returned: bet.directionOutcome === "won" ? Math.floor(bet.directionStake * odds) : 0,
+        returned: bet.directionOutcome === "won" ? Math.ceil(bet.directionStake * odds) : 0,
       });
     }
     if (bet.scoreStake > 0) {
@@ -135,7 +135,7 @@ export default async function HistoryPage(props: {
         stake: bet.scoreStake,
         odds,
         outcome: settled ? bet.scoreOutcome : "pending",
-        returned: bet.scoreOutcome === "won" ? Math.floor(bet.scoreStake * odds) : 0,
+        returned: bet.scoreOutcome === "won" ? Math.ceil(bet.scoreStake * odds) : 0,
       });
     }
     const net = settled ? (bet.payout ?? 0) - bet.totalStake : null;
@@ -166,7 +166,7 @@ export default async function HistoryPage(props: {
     const won = wager.status === "won";
     const settled = wager.status === "won" || wager.status === "lost";
     const voided = wager.status === "void";
-    const net = voided ? 0 : settled ? (won ? Math.floor(wager.stake * odds) : 0) - wager.stake : null;
+    const net = voided ? 0 : settled ? (won ? Math.ceil(wager.stake * odds) : 0) - wager.stake : null;
     return {
       kind: "bet",
       id: `custom-${wager.id}`,
@@ -184,7 +184,7 @@ export default async function HistoryPage(props: {
           stake: wager.stake,
           odds,
           outcome: voided ? "void" : settled ? (won ? "won" : "lost") : "pending",
-          returned: won ? Math.floor(wager.stake * odds) : 0,
+          returned: won ? Math.ceil(wager.stake * odds) : 0,
         },
       ],
       totalStake: wager.stake,

@@ -88,7 +88,7 @@ export async function settleCustomBet(formData: FormData) {
     for (const w of openWagers) {
       const won = w.optionIdx === winningOptionIdx;
       if (won) {
-        const payout = Math.floor(w.stake * Number(w.oddsLocked));
+        const payout = Math.ceil(w.stake * Number(w.oddsLocked));
         const [updatedUser] = await tx
           .update(users)
           .set({ chips: sql`${users.chips} + ${payout}` })

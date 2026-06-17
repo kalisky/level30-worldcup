@@ -58,10 +58,10 @@ export async function settleMatchBetsForRoom(
       bet.predictedHomeScore === homeScore && bet.predictedAwayScore === awayScore;
 
     const directionPayout = directionWon
-      ? Math.floor(bet.directionStake * Number(bet.directionOddsLocked))
+      ? Math.ceil(bet.directionStake * Number(bet.directionOddsLocked))
       : 0;
     const scorePayout = scoreWon
-      ? Math.floor(bet.scoreStake * Number(bet.scoreOddsLocked))
+      ? Math.ceil(bet.scoreStake * Number(bet.scoreOddsLocked))
       : 0;
     const payout = directionPayout + scorePayout;
     totalPaidOut += payout;

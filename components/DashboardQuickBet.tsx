@@ -319,11 +319,11 @@ function ExactScoreDialog({
             <StakeRow
               label={tb("scoreStakeLabel")}
               stake={stakeNum}
-              payout={Math.floor(stakeNum * selectedScoreOdd)}
+              payout={Math.ceil(stakeNum * selectedScoreOdd)}
               payoutLabel={
                 selectedScoreOdd > 0
                   ? `${selectedScoreOdd.toFixed(2)}x · ${tb("payIfExact", {
-                      amount: Math.floor(stakeNum * selectedScoreOdd),
+                      amount: Math.ceil(stakeNum * selectedScoreOdd),
                     })}`
                   : ""
               }
@@ -491,7 +491,7 @@ export default function DashboardQuickBet({
         : desired.pick === "AWAY"
           ? oddsAway ?? 0
           : 0;
-  const directionPayout = Math.floor(desired.sideStake * directionOdds);
+  const directionPayout = Math.ceil(desired.sideStake * directionOdds);
   const totalStake = quickBetTotal(desired);
 
   // Popup default when no score is picked yet, matching the side bet:
@@ -541,8 +541,8 @@ export default function DashboardQuickBet({
         scoreOdds?.[scoreKey(myBet.predictedHomeScore, myBet.predictedAwayScore)] ?? 0
       );
 
-    const directionReturn = Math.floor(myBet.directionStake * directionOdds);
-    const scoreReturn = Math.floor(myBet.scoreStake * scoreOdd);
+    const directionReturn = Math.ceil(myBet.directionStake * directionOdds);
+    const scoreReturn = Math.ceil(myBet.scoreStake * scoreOdd);
 
     return (
       <div className="mt-4 rounded-[22px] border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-3">

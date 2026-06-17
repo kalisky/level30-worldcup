@@ -246,6 +246,7 @@
     "oddsNotReady": "Odds aren't ready for this match yet.",
     "yourBet": "Your bet",
     "yourBets": "Predictions on this match",
+    "hiddenUntilKickoff": "Hidden until kickoff",
     "settled": "Settled. Payout:",
     "openOutcome": "open",
     "customBetCount": "{count, plural, one {# custom bet} other {# custom bets}}",

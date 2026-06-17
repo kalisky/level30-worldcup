@@ -246,6 +246,7 @@
     "oddsNotReady": "היחסים למשחק זה עדיין לא מוכנים.",
     "yourBet": "ההימור שלך",
     "yourBets": "תחזיות למשחק זה",
+    "hiddenUntilKickoff": "מוסתר עד פתיחת המשחק",
     "settled": "נסגר. רווח:",
     "openOutcome": "פתוח",
     "customBetCount": "{count, plural, one {הימור מותאם #} other {# הימורים מותאמים}}",

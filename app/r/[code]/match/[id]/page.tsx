@@ -164,7 +164,12 @@ export default async function MatchPage(props: {
   const awayTeamAbbreviation = getTeamAbbreviation(match.awayTeam);
   const homeTeamLocalized = translateTeam(match.homeTeam, locale);
   const awayTeamLocalized = translateTeam(match.awayTeam, locale);
-  console.log("matchPage", allBets);
+
+  // Other players' side + score stay hidden until the match locks (kickoff
+  // passed or no longer scheduled) so nobody can copy live predictions. Your
+  // own bet is always visible to you.
+  const betsLocked =
+    kickoff.getTime() <= new Date().getTime() || match.status !== "scheduled";
 
   const matchPane = (
     <>
@@ -254,24 +259,45 @@ export default async function MatchPage(props: {
             {tm("yourBets")}
           </h2>
           <ul className="divide-y divide-[#e7eef8] overflow-hidden rounded-[22px] border border-[#dbe5f2] bg-[#F8FBFF]">
-            {allBets.map(({ bet, userName }) => (
-              <li
-                key={bet.id}
-                className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
-              >
-                <span>
-                  <span className="font-bold text-[#1E3A8A]">{userName}</span>:{" "}
-                  {bet.scoreStake > 0 && (
-                    <span className="font-mono font-bold text-slate-700">
-                      {bet.predictedHomeScore} – {bet.predictedAwayScore}
-                    </span>
-                  )}
-                </span>
-                <span className="font-mono font-semibold text-slate-500">
-                  {bet.totalStake} {tcomm("chips")}
-                </span>
-              </li>
-            ))}
+            {allBets.map(({ bet, userName }) => {
+              const revealed = betsLocked || bet.userId === user.id;
+              const sideLabel =
+                bet.directionStake > 0
+                  ? bet.directionPick === "HOME"
+                    ? homeTeamLocalized
+                    : bet.directionPick === "AWAY"
+                      ? awayTeamLocalized
+                      : tm("draw")
+                  : null;
+              return (
+                <li
+                  key={bet.id}
+                  className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
+                >
+                  <span>
+                    <span className="font-bold text-[#1E3A8A]">{userName}</span>:{" "}
+                    {revealed ? (
+                      <span className="font-mono font-semibold text-slate-700">
+                        {sideLabel}
+                        {sideLabel && bet.scoreStake > 0 ? " · " : ""}
+                        {bet.scoreStake > 0 && (
+                          <span className="font-bold">
+                            {bet.predictedHomeScore} – {bet.predictedAwayScore}
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">
+                        🔒 {tm("hiddenUntilKickoff")}
+                      </span>
+                    )}
+                  </span>
+                  <span className="font-mono font-semibold text-slate-500">
+                    {bet.totalStake} {tcomm("chips")}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}

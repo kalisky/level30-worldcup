@@ -360,7 +360,7 @@ export function StakeRow({
   const [open, setOpen] = useState(false);
 
   function clamp(value: number) {
-    return Math.max(2, Math.min(maxStake, Math.floor(value) || 2));
+    return Math.max(0, Math.min(maxStake, Math.floor(value) || 0));
   }
 
   return (
@@ -407,7 +407,7 @@ export function StakeRow({
           ))}
           <input
             type="number"
-            min={2}
+            min={1}
             max={maxStake}
             value={stake}
             onFocus={(e) => e.target.select()}

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { RoomLeaderboardEntry } from "@/lib/db/queries";
 
@@ -24,8 +23,9 @@ export default function Leaderboard({
   roomCode: string;
 }) {
   const t = useTranslations("dashboard");
+  const tnav = useTranslations("nav");
   const tc = useTranslations("common");
-  const [mode, setMode] = useState<LeaderboardMode>("includingOpenBets");
+  const mode: LeaderboardMode = "includingOpenBets";
   const sortedUsers = [...users].sort((a, b) => {
     const displayedDiff =
       (mode === "includingOpenBets"
@@ -46,12 +46,20 @@ export default function Leaderboard({
         <h2 className="text-[0.72rem] font-bold uppercase tracking-[0.28em] text-slate-500">
           {t("leaderboard")}
         </h2>
-        <Link
-          href={`/r/${roomCode}/history`}
-          className="text-xs font-bold uppercase tracking-[0.16em] text-[#1D4ED8] hover:underline"
-        >
-          {t("myHistory")}
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/r/${roomCode}/stats`}
+            className="text-xs font-bold uppercase tracking-[0.16em] text-[#1D4ED8] hover:underline"
+          >
+            {tnav("stats")}
+          </Link>
+          <Link
+            href={`/r/${roomCode}/history`}
+            className="text-xs font-bold uppercase tracking-[0.16em] text-[#1D4ED8] hover:underline"
+          >
+            {t("myHistory")}
+          </Link>
+        </div>
       </div>
       <div className="mb-4 flex flex-col gap-3">
         {/* <div className="inline-flex w-full rounded-full border border-[#dbe5f2] bg-[#F8FBFF] p-1 sm:w-auto">

@@ -1,0 +1,686 @@
+{
+    "matches": [
+        {
+            "group": "A",
+            "home_team": "Mexico",
+            "away_team": "South Africa",
+            "score": "2–0",
+            "home_goals": [
+                {
+                    "scorer": "Quiñones",
+                    "minute": "9",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Jiménez",
+                    "minute": "67",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": []
+        },
+        {
+            "group": "A",
+            "home_team": "South Korea",
+            "away_team": "Czech Republic",
+            "score": "2–1",
+            "home_goals": [
+                {
+                    "scorer": "Hwang In-beom",
+                    "minute": "67",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Oh Hyeon-gyu",
+                    "minute": "80",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": [
+                {
+                    "scorer": "Krejčí",
+                    "minute": "59",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ]
+        },
+        {
+            "group": "B",
+            "home_team": "Canada",
+            "away_team": "Bosnia and Herzegovina",
+            "score": "1–1",
+            "home_goals": [
+                {
+                    "scorer": "Larin",
+                    "minute": "78",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": [
+                {
+                    "scorer": "Lukić",
+                    "minute": "21",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ]
+        },
+        {
+            "group": "B",
+            "home_team": "Qatar",
+            "away_team": "Switzerland",
+            "score": "1–1",
+            "home_goals": [
+                {
+                    "scorer": "Muheim",
+                    "minute": "90+4",
+                    "penalty": false,
+                    "own-goal": true
+                }
+            ],
+            "away_goals": [
+                {
+                    "scorer": "Embolo",
+                    "minute": "17",
+                    "penalty": true,
+                    "own-goal": false
+                }
+            ]
+        },
+        {
+            "group": "C",
+            "home_team": "Brazil",
+            "away_team": "Morocco",
+            "score": "1–1",
+            "home_goals": [
+                {
+                    "scorer": "Vinícius",
+                    "minute": "32",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": [
+                {
+                    "scorer": "Saibari",
+                    "minute": "21",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ]
+        },
+        {
+            "group": "C",
+            "home_team": "Haiti",
+            "away_team": "Scotland",
+            "score": "0–1",
+            "home_goals": [],
+            "away_goals": [
+                {
+                    "scorer": "McGinn",
+                    "minute": "28",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ]
+        },
+        {
+            "group": "D",
+            "home_team": "United States",
+            "away_team": "Paraguay",
+            "score": "4–1",
+            "home_goals": [
+                {
+                    "scorer": "Bobadilla",
+                    "minute": "7",
+                    "penalty": false,
+                    "own-goal": true
+                },
+                {
+                    "scorer": "Balogun",
+                    "minute": "31",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Balogun",
+                    "minute": "45+5",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Reyna",
+                    "minute": "90+8",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": [
+                {
+                    "scorer": "Maurício",
+                    "minute": "73",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ]
+        },
+        {
+            "group": "D",
+            "home_team": "Australia",
+            "away_team": "Turkey",
+            "score": "2–0",
+            "home_goals": [
+                {
+                    "scorer": "Irankunda",
+                    "minute": "27",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Metcalfe",
+                    "minute": "75",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": []
+        },
+        {
+            "group": "E",
+            "home_team": "Germany",
+            "away_team": "Curaçao",
+            "score": "7–1",
+            "home_goals": [
+                {
+                    "scorer": "Nmecha",
+                    "minute": "6",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Schlotterbeck",
+                    "minute": "38",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Havertz",
+                    "minute": "45+5",
+                    "penalty": true,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Havertz",
+                    "minute": "88",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Musiala",
+                    "minute": "47",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Brown",
+                    "minute": "68",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Undav",
+                    "minute": "78",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": [
+                {
+                    "scorer": "Comenencia",
+                    "minute": "21",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ]
+        },
+        {
+            "group": "E",
+            "home_team": "Ivory Coast",
+            "away_team": "Ecuador",
+            "score": "1–0",
+            "home_goals": [
+                {
+                    "scorer": "Diallo",
+                    "minute": "90",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": []
+        },
+        {
+            "group": "F",
+            "home_team": "Netherlands",
+            "away_team": "Japan",
+            "score": "2–2",
+            "home_goals": [
+                {
+                    "scorer": "Van Dijk",
+                    "minute": "50",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Summerville",
+                    "minute": "64",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": [
+                {
+                    "scorer": "Nakamura",
+                    "minute": "57",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Kamada",
+                    "minute": "88",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ]
+        },
+        {
+            "group": "F",
+            "home_team": "Sweden",
+            "away_team": "Tunisia",
+            "score": "5–1",
+            "home_goals": [
+                {
+                    "scorer": "Ayari",
+                    "minute": "7",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Ayari",
+                    "minute": "90+6",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Isak",
+                    "minute": "30",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Gyökeres",
+                    "minute": "59",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Svanberg",
+                    "minute": "84",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": [
+                {
+                    "scorer": "Rekik",
+                    "minute": "43",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ]
+        },
+        {
+            "group": "G",
+            "home_team": "Belgium",
+            "away_team": "Egypt",
+            "score": "1–1",
+            "home_goals": [
+                {
+                    "scorer": "Hany",
+                    "minute": "66",
+                    "penalty": false,
+                    "own-goal": true
+                }
+            ],
+            "away_goals": [
+                {
+                    "scorer": "Ashour",
+                    "minute": "19",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ]
+        },
+        {
+            "group": "G",
+            "home_team": "Iran",
+            "away_team": "New Zealand",
+            "score": "2–2",
+            "home_goals": [
+                {
+                    "scorer": "Rezaeian",
+                    "minute": "32",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Mohebi",
+                    "minute": "64",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": [
+                {
+                    "scorer": "Just",
+                    "minute": "7",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Just",
+                    "minute": "54",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ]
+        },
+        {
+            "group": "H",
+            "home_team": "Spain",
+            "away_team": "Cape Verde",
+            "score": "0–0",
+            "home_goals": [],
+            "away_goals": []
+        },
+        {
+            "group": "H",
+            "home_team": "Saudi Arabia",
+            "away_team": "Uruguay",
+            "score": "1–1",
+            "home_goals": [
+                {
+                    "scorer": "Al-Amri",
+                    "minute": "41",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": [
+                {
+                    "scorer": "M. Araújo",
+                    "minute": "80",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ]
+        },
+        {
+            "group": "I",
+            "home_team": "France",
+            "away_team": "Senegal",
+            "score": "3–1",
+            "home_goals": [
+                {
+                    "scorer": "Mbappé",
+                    "minute": "66",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Mbappé",
+                    "minute": "90+6",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Barcola",
+                    "minute": "82",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": [
+                {
+                    "scorer": "Mbaye",
+                    "minute": "90+5",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ]
+        },
+        {
+            "group": "I",
+            "home_team": "Iraq",
+            "away_team": "Norway",
+            "score": "1–4",
+            "home_goals": [
+                {
+                    "scorer": "Hussein",
+                    "minute": "39",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": [
+                {
+                    "scorer": "Haaland",
+                    "minute": "29",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Haaland",
+                    "minute": "43",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Østigård",
+                    "minute": "76",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Hussein",
+                    "minute": "90+6",
+                    "penalty": false,
+                    "own-goal": true
+                }
+            ]
+        },
+        {
+            "group": "J",
+            "home_team": "Argentina",
+            "away_team": "Algeria",
+            "score": "3–0",
+            "home_goals": [
+                {
+                    "scorer": "Messi",
+                    "minute": "17",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Messi",
+                    "minute": "60",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Messi",
+                    "minute": "76",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": []
+        },
+        {
+            "group": "J",
+            "home_team": "Austria",
+            "away_team": "Jordan",
+            "score": "3–1",
+            "home_goals": [
+                {
+                    "scorer": "Schmid",
+                    "minute": "20",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Al-Arab",
+                    "minute": "76",
+                    "penalty": false,
+                    "own-goal": true
+                },
+                {
+                    "scorer": "Arnautović",
+                    "minute": "90+12",
+                    "penalty": true,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": [
+                {
+                    "scorer": "Olwan",
+                    "minute": "50",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ]
+        },
+        {
+            "group": "K",
+            "home_team": "Portugal",
+            "away_team": "DR Congo",
+            "score": "1–1",
+            "home_goals": [
+                {
+                    "scorer": "J. Neves",
+                    "minute": "6",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": [
+                {
+                    "scorer": "Wissa",
+                    "minute": "45+5",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ]
+        },
+        {
+            "group": "K",
+            "home_team": "Uzbekistan",
+            "away_team": "Colombia",
+            "score": "1–3",
+            "home_goals": [
+                {
+                    "scorer": "Fayzullaev",
+                    "minute": "60",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": [
+                {
+                    "scorer": "Muñoz",
+                    "minute": "40",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Díaz",
+                    "minute": "65",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Campaz",
+                    "minute": "90+9",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ]
+        },
+        {
+            "group": "L",
+            "home_team": "England",
+            "away_team": "Croatia",
+            "score": "4–2",
+            "home_goals": [
+                {
+                    "scorer": "Kane",
+                    "minute": "12",
+                    "penalty": true,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Kane",
+                    "minute": "42",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Bellingham",
+                    "minute": "47",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Rashford",
+                    "minute": "85",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": [
+                {
+                    "scorer": "Baturina",
+                    "minute": "36",
+                    "penalty": false,
+                    "own-goal": false
+                },
+                {
+                    "scorer": "Musa",
+                    "minute": "45+5",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ]
+        },
+        {
+            "group": "L",
+            "home_team": "Ghana",
+            "away_team": "Panama",
+            "score": "1–0",
+            "home_goals": [
+                {
+                    "scorer": "Yirenkyi",
+                    "minute": "90+5",
+                    "penalty": false,
+                    "own-goal": false
+                }
+            ],
+            "away_goals": []
+        }
+    ]
+}

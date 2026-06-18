@@ -18,6 +18,11 @@ const podiumClasses = [
   "border-slate-200 bg-slate-100",
   "border-[#FED7AA] bg-[#FFF1E8]",
 ];
+const MAX_STATS_ROWS = 10;
+
+function topRows<T>(rows: T[]): T[] {
+  return rows.slice(0, MAX_STATS_ROWS);
+}
 
 export default async function StatsPage(props: {
   params: Promise<{ code: string }>;
@@ -79,25 +84,25 @@ export default async function StatsPage(props: {
           <div className="space-y-4">
             <StatsUserSection
               title={tstats("directionHitsTitle")}
-              rows={stats.directionHitsByUser}
+              rows={topRows(stats.directionHitsByUser)}
               currentUserId={user.id}
               currentUserLabel={tc("you")}
             />
             <StatsUserSection
               title={tstats("exactScoreHitsTitle")}
-              rows={stats.exactScoreHitsByUser}
+              rows={topRows(stats.exactScoreHitsByUser)}
               currentUserId={user.id}
               currentUserLabel={tc("you")}
             />
             <StatsUserSection
               title={tstats("oneTeamExactHitsTitle")}
-              rows={stats.oneTeamExactHitsByUser}
+              rows={topRows(stats.oneTeamExactHitsByUser)}
               currentUserId={user.id}
               currentUserLabel={tc("you")}
             />
             <StatsContinentSection
               title={tstats("directionHitPctByContinentTitle")}
-              rows={stats.directionHitPctByContinent}
+              rows={topRows(stats.directionHitPctByContinent)}
               percentFormatter={percentFormatter}
               integerFormatter={integerFormatter}
               emptyLabel={tstats("noDirectionPctByContinent")}
@@ -107,7 +112,7 @@ export default async function StatsPage(props: {
             />
             <StatsMatchSection
               title={tstats("directionMissesByMatchTitle")}
-              rows={stats.directionMissesByMatch}
+              rows={topRows(stats.directionMissesByMatch)}
               locale={locale}
               emptyLabel={tstats("noDirectionMisses")}
               finalLabel={tm("final")}
@@ -116,7 +121,7 @@ export default async function StatsPage(props: {
             />
             <StatsMatchSection
               title={tstats("exactScoreHitsByMatchTitle")}
-              rows={stats.exactScoreHitsByMatch}
+              rows={topRows(stats.exactScoreHitsByMatch)}
               locale={locale}
               emptyLabel={tstats("noExactScoreHits")}
               finalLabel={tm("final")}
@@ -125,7 +130,7 @@ export default async function StatsPage(props: {
             />
             <StatsPayoutSection
               title={tstats("biggestPayoutMatchesTitle")}
-              rows={stats.biggestPayoutMatches}
+              rows={topRows(stats.biggestPayoutMatches)}
               locale={locale}
               emptyLabel={tstats("noPayoutMatches")}
               finalLabel={tm("final")}
@@ -135,7 +140,7 @@ export default async function StatsPage(props: {
             />
             <StatsSinglePlayerPayoutSection
               title={tstats("biggestSinglePlayerPayoutsTitle")}
-              rows={stats.biggestSinglePlayerPayouts}
+              rows={topRows(stats.biggestSinglePlayerPayouts)}
               locale={locale}
               emptyLabel={tstats("noSinglePlayerPayouts")}
               finalLabel={tm("final")}

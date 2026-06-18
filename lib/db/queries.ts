@@ -191,6 +191,7 @@ export type RoomStats = {
   directionHitsByUser: RoomStatsUserEntry[];
   exactScoreHitsByUser: RoomStatsUserEntry[];
   oneTeamExactHitsByUser: RoomStatsUserEntry[];
+  oneGoalShortExactHitsByUser: RoomStatsUserEntry[];
   directionHitPctByContinent: RoomStatsContinentEntry[];
   directionMissesByMatch: RoomStatsMatchEntry[];
   exactScoreHitsByMatch: RoomStatsMatchEntry[];
@@ -304,6 +305,7 @@ export async function getRoomStats(roomId: string): Promise<RoomStats> {
   const directionHitsByUser = new Map<string, number>();
   const exactScoreHitsByUser = new Map<string, number>();
   const oneTeamExactHitsByUser = new Map<string, number>();
+  const oneGoalShortExactHitsByUser = new Map<string, number>();
   const directionByContinent = new Map<
     FifaConfederation,
     { hits: number; attempts: number }
@@ -313,6 +315,7 @@ export async function getRoomStats(roomId: string): Promise<RoomStats> {
     directionHitsByUser.set(member.id, 0);
     exactScoreHitsByUser.set(member.id, 0);
     oneTeamExactHitsByUser.set(member.id, 0);
+    oneGoalShortExactHitsByUser.set(member.id, 0);
   }
 
   const directionMissesByMatch = new Map<string, RoomStatsMatchEntry>();
@@ -426,6 +429,19 @@ export async function getRoomStats(roomId: string): Promise<RoomStats> {
           row.userId,
           (oneTeamExactHitsByUser.get(row.userId) ?? 0) + 1
         );
+
+        const homeDiff = Math.abs(row.predictedHomeScore - row.homeScore);
+        const awayDiff = Math.abs(row.predictedAwayScore - row.awayScore);
+        const oneGoalShort =
+          (homeDiff === 0 && awayDiff === 1) ||
+          (awayDiff === 0 && homeDiff === 1);
+
+        if (oneGoalShort) {
+          oneGoalShortExactHitsByUser.set(
+            row.userId,
+            (oneGoalShortExactHitsByUser.get(row.userId) ?? 0) + 1
+          );
+        }
       }
     }
   }
@@ -481,6 +497,13 @@ export async function getRoomStats(roomId: string): Promise<RoomStats> {
         id: member.id,
         name: member.name,
         count: oneTeamExactHitsByUser.get(member.id) ?? 0,
+      }))
+    ),
+    oneGoalShortExactHitsByUser: sortUserEntries(
+      members.map((member) => ({
+        id: member.id,
+        name: member.name,
+        count: oneGoalShortExactHitsByUser.get(member.id) ?? 0,
       }))
     ),
     directionHitPctByContinent: Array.from(directionByContinent.entries())

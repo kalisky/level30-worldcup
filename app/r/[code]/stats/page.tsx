@@ -100,6 +100,12 @@ export default async function StatsPage(props: {
               currentUserId={user.id}
               currentUserLabel={tc("you")}
             />
+            <StatsUserSection
+              title={tstats("oneGoalShortExactHitsTitle")}
+              rows={topRows(stats.oneGoalShortExactHitsByUser)}
+              currentUserId={user.id}
+              currentUserLabel={tc("you")}
+            />
             <StatsContinentSection
               title={tstats("directionHitPctByContinentTitle")}
               rows={topRows(stats.directionHitPctByContinent)}

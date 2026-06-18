@@ -431,6 +431,7 @@
     "directionHitsTitle": "פגיעות כיוון לפי משתמש",
     "exactScoreHitsTitle": "פגיעות בתוצאה מדויקת לפי משתמש",
     "oneTeamExactHitsTitle": "פגיעה בתוצאה של קבוצה אחת לפי משתמש",
+    "oneGoalShortExactHitsTitle": "חסר גול אחד לתוצאה מדויקת לפי משתמש",
     "directionHitPctByContinentTitle": "אחוז פגיעת כיוון לפי קונפדרציה",
     "directionMissesByMatchTitle": "משחקים עם תחזיות כיוון שגויות",
     "exactScoreHitsByMatchTitle": "פגיעות בתוצאה מדויקת לפי משחק",

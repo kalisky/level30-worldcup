@@ -431,6 +431,7 @@
     "directionHitsTitle": "Direction hits by user",
     "exactScoreHitsTitle": "Exact score hits by user",
     "oneTeamExactHitsTitle": "Single-team exact score hits by user",
+    "oneGoalShortExactHitsTitle": "One goal short of exact score by user",
     "directionHitPctByContinentTitle": "Direction hit rate by continent",
     "directionMissesByMatchTitle": "Matches with wrong direction picks",
     "exactScoreHitsByMatchTitle": "Exact score hits by match",

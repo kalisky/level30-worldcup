@@ -26,6 +26,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "leaderboard": "Leaderboard",
+    "stats": "Stats",
     "settle": "Settle",
     "rules": "Rules",
     "history": "History",
@@ -422,6 +423,32 @@
     "noRooms": "You have not joined any rooms yet.",
     "admin": "Admin",
     "chipsLabel": "Chips"
+  },
+  "stats": {
+    "subtitle": "Room-wide rankings from settled match bets.",
+    "settledBetCount": "Based on {count} settled match bets",
+    "noSettledBets": "No settled match bets yet.",
+    "directionHitsTitle": "Direction hits by user",
+    "exactScoreHitsTitle": "Exact score hits by user",
+    "oneTeamExactHitsTitle": "Single-team exact score hits by user",
+    "directionHitPctByContinentTitle": "Direction hit rate by continent",
+    "directionMissesByMatchTitle": "Matches with wrong direction picks",
+    "exactScoreHitsByMatchTitle": "Exact score hits by match",
+    "biggestPayoutMatchesTitle": "Biggest payout matches",
+    "biggestSinglePlayerPayoutsTitle": "Biggest payout by a single player",
+    "noDirectionPctByContinent": "No settled direction bets yet.",
+    "noDirectionMisses": "No wrong direction picks yet.",
+    "noExactScoreHits": "No exact score hits yet.",
+    "noPayoutMatches": "No settled match payouts yet.",
+    "noSinglePlayerPayouts": "No individual settled payouts yet.",
+    "continents": {
+      "UEFA": "Europe (UEFA)",
+      "CONCACAF": "North & Central America (CONCACAF)",
+      "CONMEBOL": "South America (CONMEBOL)",
+      "CAF": "Africa (CAF)",
+      "AFC": "Asia (AFC)",
+      "OFC": "Oceania (OFC)"
+    }
   },
   "roomSettings": {
     "title": "Room settings",

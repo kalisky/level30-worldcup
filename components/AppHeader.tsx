@@ -11,7 +11,7 @@ export default async function AppHeader({
 }: {
   room?: Room;
   user?: User;
-  active?: "dashboard" | "admin";
+  active?: "dashboard" | "admin" | "stats";
   initialRoomModalOpen?: boolean;
 }) {
   const authUser = await getAuthenticatedUser();

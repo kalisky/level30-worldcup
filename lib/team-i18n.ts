@@ -90,3 +90,81 @@ export function translateTeam(name: string, locale: string): string {
   if (!entry) return name;
   return locale === "he" ? entry.he : entry.en;
 }
+
+export type FifaConfederation = "UEFA" | "CONCACAF" | "CONMEBOL" | "CAF" | "AFC" | "OFC";
+
+export const TEAM_CONTINENTS: Record<string, FifaConfederation> = {
+  // Group A
+  Mexico: "CONCACAF",
+  "South Africa": "CAF",
+  "South Korea": "AFC",
+  Czechia: "UEFA",
+  
+  // Group B
+  Canada: "CONCACAF",
+  "Bosnia and Herzegovina": "UEFA",
+  "Bosnia & Herzegovina": "UEFA",
+  "Bosnia & Herzogovina": "UEFA",
+  Qatar: "AFC",
+  Switzerland: "UEFA",
+  
+  // Group C
+  Brazil: "CONMEBOL",
+  Morocco: "CAF",
+  Haiti: "CONCACAF",
+  Scotland: "UEFA",
+  
+  // Group D
+  USA: "CONCACAF",
+  Paraguay: "CONMEBOL",
+  Australia: "AFC", 
+  Turkiye: "UEFA",
+  
+  // Group E
+  Germany: "UEFA",
+  "Curaçao": "CONCACAF",
+  "Ivory Coast": "CAF",
+  Ecuador: "CONMEBOL",
+  
+  // Group F
+  Netherlands: "UEFA",
+  Japan: "AFC",
+  Sweden: "UEFA",
+  Tunisia: "CAF",
+  
+  // Group G
+  Belgium: "UEFA",
+  Egypt: "CAF",
+  "IR Iran": "AFC",
+  "New Zealand": "OFC",
+  
+  // Group H
+  Spain: "UEFA",
+  "Cabo Verde": "CAF",
+  "Saudi Arabia": "AFC",
+  Uruguay: "CONMEBOL",
+  
+  // Group I
+  France: "UEFA",
+  Senegal: "CAF",
+  Iraq: "AFC",
+  Norway: "UEFA",
+  
+  // Group J
+  Argentina: "CONMEBOL",
+  Algeria: "CAF",
+  Austria: "UEFA",
+  Jordan: "AFC",
+  
+  // Group K
+  Portugal: "UEFA",
+  "DR Congo": "CAF",
+  Uzbekistan: "AFC",
+  Colombia: "CONMEBOL",
+  
+  // Group L
+  England: "UEFA",
+  Croatia: "UEFA",
+  Ghana: "CAF",
+  Panama: "CONCACAF",
+};

@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, gt, inArray, isNotNull, sql } from "drizzle-orm";
 import { ensureFreshCustomBetOdds } from "@/lib/custom-bet-odds";
+import { TEAM_CONTINENTS, type FifaConfederation } from "@/lib/team-i18n";
 import { db } from "./index";
 import {
   authSessions,
@@ -141,6 +142,63 @@ export type RoomLeaderboardEntry = {
   openBetChips: number;
 };
 
+export type RoomStatsUserEntry = {
+  id: string;
+  name: string;
+  count: number;
+};
+
+export type RoomStatsMatchEntry = {
+  id: string;
+  homeTeam: string;
+  awayTeam: string;
+  homeScore: number;
+  awayScore: number;
+  kickoff: Date;
+  count: number;
+};
+
+export type RoomStatsPayoutMatchEntry = {
+  id: string;
+  homeTeam: string;
+  awayTeam: string;
+  homeScore: number;
+  awayScore: number;
+  kickoff: Date;
+  totalPayout: number;
+};
+
+export type RoomStatsPlayerPayoutEntry = {
+  id: string;
+  userId: string;
+  userName: string;
+  homeTeam: string;
+  awayTeam: string;
+  homeScore: number;
+  awayScore: number;
+  kickoff: Date;
+  payout: number;
+};
+
+export type RoomStatsContinentEntry = {
+  confederation: FifaConfederation;
+  hits: number;
+  attempts: number;
+  pct: number;
+};
+
+export type RoomStats = {
+  directionHitsByUser: RoomStatsUserEntry[];
+  exactScoreHitsByUser: RoomStatsUserEntry[];
+  oneTeamExactHitsByUser: RoomStatsUserEntry[];
+  directionHitPctByContinent: RoomStatsContinentEntry[];
+  directionMissesByMatch: RoomStatsMatchEntry[];
+  exactScoreHitsByMatch: RoomStatsMatchEntry[];
+  biggestPayoutMatches: RoomStatsPayoutMatchEntry[];
+  biggestSinglePlayerPayouts: RoomStatsPlayerPayoutEntry[];
+  settledBetCount: number;
+};
+
 export async function getRoomLeaderboard(
   roomId: string
 ): Promise<RoomLeaderboardEntry[]> {
@@ -200,6 +258,255 @@ export async function getRoomLeaderboard(
       if (availableDiff !== 0) return availableDiff;
       return a.name.localeCompare(b.name);
     });
+}
+
+export async function getRoomStats(roomId: string): Promise<RoomStats> {
+  const [members, settledMatchBetRows] = await Promise.all([
+    db
+      .select({
+        id: users.id,
+        name: users.name,
+      })
+      .from(users)
+      .where(eq(users.roomId, roomId)),
+    db
+      .select({
+        id: matchBets.id,
+        userId: matchBets.userId,
+        userName: users.name,
+        matchId: matches.id,
+        directionStake: matchBets.directionStake,
+        scoreStake: matchBets.scoreStake,
+        predictedHomeScore: matchBets.predictedHomeScore,
+        predictedAwayScore: matchBets.predictedAwayScore,
+        directionOutcome: matchBets.directionOutcome,
+        scoreOutcome: matchBets.scoreOutcome,
+        homeTeam: matches.homeTeam,
+        awayTeam: matches.awayTeam,
+        homeScore: matches.homeScore,
+        awayScore: matches.awayScore,
+        kickoff: matches.kickoff,
+        payout: matchBets.payout,
+      })
+      .from(matchBets)
+      .innerJoin(users, eq(users.id, matchBets.userId))
+      .innerJoin(matches, eq(matches.id, matchBets.matchId))
+      .where(
+        and(
+          eq(matchBets.roomId, roomId),
+          eq(matchBets.status, "settled"),
+          isNotNull(matches.homeScore),
+          isNotNull(matches.awayScore)
+        )
+      ),
+  ]);
+
+  const directionHitsByUser = new Map<string, number>();
+  const exactScoreHitsByUser = new Map<string, number>();
+  const oneTeamExactHitsByUser = new Map<string, number>();
+  const directionByContinent = new Map<
+    FifaConfederation,
+    { hits: number; attempts: number }
+  >();
+
+  for (const member of members) {
+    directionHitsByUser.set(member.id, 0);
+    exactScoreHitsByUser.set(member.id, 0);
+    oneTeamExactHitsByUser.set(member.id, 0);
+  }
+
+  const directionMissesByMatch = new Map<string, RoomStatsMatchEntry>();
+  const exactScoreHitsByMatch = new Map<string, RoomStatsMatchEntry>();
+  const payoutByMatch = new Map<string, RoomStatsPayoutMatchEntry>();
+  const singlePlayerPayouts: RoomStatsPlayerPayoutEntry[] = [];
+
+  for (const row of settledMatchBetRows) {
+    if (row.homeScore == null || row.awayScore == null) continue;
+
+    if (row.directionStake > 0) {
+      const confederations = new Set<FifaConfederation>();
+      const homeConfederation = TEAM_CONTINENTS[row.homeTeam];
+      const awayConfederation = TEAM_CONTINENTS[row.awayTeam];
+
+      if (homeConfederation) confederations.add(homeConfederation);
+      if (awayConfederation) confederations.add(awayConfederation);
+
+      for (const confederation of confederations) {
+        const current = directionByContinent.get(confederation) ?? {
+          hits: 0,
+          attempts: 0,
+        };
+        current.attempts += 1;
+        if (row.directionOutcome === "won") current.hits += 1;
+        directionByContinent.set(confederation, current);
+      }
+
+      if (row.directionOutcome === "won") {
+        directionHitsByUser.set(
+          row.userId,
+          (directionHitsByUser.get(row.userId) ?? 0) + 1
+        );
+      } else if (row.directionOutcome === "lost") {
+        const existing = directionMissesByMatch.get(row.matchId);
+        if (existing) {
+          existing.count += 1;
+        } else {
+          directionMissesByMatch.set(row.matchId, {
+            id: row.matchId,
+            homeTeam: row.homeTeam,
+            awayTeam: row.awayTeam,
+            homeScore: row.homeScore,
+            awayScore: row.awayScore,
+            kickoff: row.kickoff,
+            count: 1,
+          });
+        }
+      }
+    }
+
+    const payout = row.payout ?? 0;
+    const existingPayoutEntry = payoutByMatch.get(row.matchId);
+    if (existingPayoutEntry) {
+      existingPayoutEntry.totalPayout += payout;
+    } else {
+      payoutByMatch.set(row.matchId, {
+        id: row.matchId,
+        homeTeam: row.homeTeam,
+        awayTeam: row.awayTeam,
+        homeScore: row.homeScore,
+        awayScore: row.awayScore,
+        kickoff: row.kickoff,
+        totalPayout: payout,
+      });
+    }
+
+    if (payout > 0) {
+      singlePlayerPayouts.push({
+        id: row.id,
+        userId: row.userId,
+        userName: row.userName,
+        homeTeam: row.homeTeam,
+        awayTeam: row.awayTeam,
+        homeScore: row.homeScore,
+        awayScore: row.awayScore,
+        kickoff: row.kickoff,
+        payout,
+      });
+    }
+
+    if (row.scoreStake > 0) {
+      if (row.scoreOutcome === "won") {
+        exactScoreHitsByUser.set(
+          row.userId,
+          (exactScoreHitsByUser.get(row.userId) ?? 0) + 1
+        );
+
+        const existing = exactScoreHitsByMatch.get(row.matchId);
+        if (existing) {
+          existing.count += 1;
+        } else {
+          exactScoreHitsByMatch.set(row.matchId, {
+            id: row.matchId,
+            homeTeam: row.homeTeam,
+            awayTeam: row.awayTeam,
+            homeScore: row.homeScore,
+            awayScore: row.awayScore,
+            kickoff: row.kickoff,
+            count: 1,
+          });
+        }
+      }
+
+      const exactSidesMatched =
+        Number(row.predictedHomeScore === row.homeScore) +
+        Number(row.predictedAwayScore === row.awayScore);
+
+      if (exactSidesMatched === 1) {
+        oneTeamExactHitsByUser.set(
+          row.userId,
+          (oneTeamExactHitsByUser.get(row.userId) ?? 0) + 1
+        );
+      }
+    }
+  }
+
+  const sortUserEntries = (entries: RoomStatsUserEntry[]) =>
+    entries.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+
+  const sortMatchEntries = (entries: RoomStatsMatchEntry[]) =>
+    entries.sort(
+      (a, b) =>
+        b.count - a.count ||
+        a.kickoff.getTime() - b.kickoff.getTime() ||
+        a.homeTeam.localeCompare(b.homeTeam) ||
+        a.awayTeam.localeCompare(b.awayTeam)
+    );
+
+  const sortPayoutMatchEntries = (entries: RoomStatsPayoutMatchEntry[]) =>
+    entries.sort(
+      (a, b) =>
+        b.totalPayout - a.totalPayout ||
+        a.kickoff.getTime() - b.kickoff.getTime() ||
+        a.homeTeam.localeCompare(b.homeTeam) ||
+        a.awayTeam.localeCompare(b.awayTeam)
+    );
+
+  const sortPlayerPayoutEntries = (entries: RoomStatsPlayerPayoutEntry[]) =>
+    entries.sort(
+      (a, b) =>
+        b.payout - a.payout ||
+        a.kickoff.getTime() - b.kickoff.getTime() ||
+        a.userName.localeCompare(b.userName) ||
+        a.homeTeam.localeCompare(b.homeTeam) ||
+        a.awayTeam.localeCompare(b.awayTeam)
+    );
+
+  return {
+    directionHitsByUser: sortUserEntries(
+      members.map((member) => ({
+        id: member.id,
+        name: member.name,
+        count: directionHitsByUser.get(member.id) ?? 0,
+      }))
+    ),
+    exactScoreHitsByUser: sortUserEntries(
+      members.map((member) => ({
+        id: member.id,
+        name: member.name,
+        count: exactScoreHitsByUser.get(member.id) ?? 0,
+      }))
+    ),
+    oneTeamExactHitsByUser: sortUserEntries(
+      members.map((member) => ({
+        id: member.id,
+        name: member.name,
+        count: oneTeamExactHitsByUser.get(member.id) ?? 0,
+      }))
+    ),
+    directionHitPctByContinent: Array.from(directionByContinent.entries())
+      .map(([confederation, totals]) => ({
+        confederation,
+        hits: totals.hits,
+        attempts: totals.attempts,
+        pct: totals.attempts > 0 ? totals.hits / totals.attempts : 0,
+      }))
+      .sort(
+        (a, b) =>
+          b.pct - a.pct ||
+          b.hits - a.hits ||
+          b.attempts - a.attempts ||
+          a.confederation.localeCompare(b.confederation)
+      ),
+    directionMissesByMatch: sortMatchEntries(
+      Array.from(directionMissesByMatch.values())
+    ),
+    exactScoreHitsByMatch: sortMatchEntries(
+      Array.from(exactScoreHitsByMatch.values())
+    ),
+    biggestPayoutMatches: sortPayoutMatchEntries(Array.from(payoutByMatch.values())),
+    biggestSinglePlayerPayouts: sortPlayerPayoutEntries(singlePlayerPayouts),
+    settledBetCount: settledMatchBetRows.length,
+  };
 }
 
 export async function getUser(userId: string) {

@@ -26,6 +26,7 @@
   "nav": {
     "dashboard": "ראשי",
     "leaderboard": "טבלת דירוג",
+    "stats": "סטטיסטיקות",
     "settle": "סגירת הימור",
     "rules": "כללים",
     "history": "היסטוריה",
@@ -422,6 +423,32 @@
     "noRooms": "עדיין לא הצטרפת לאף חדר.",
     "admin": "מנהל",
     "chipsLabel": "אסימונים"
+  },
+  "stats": {
+    "subtitle": "דירוגים לכל החדר על סמך הימורי משחק שנסגרו.",
+    "settledBetCount": "מבוסס על {count} הימורי משחק שנסגרו",
+    "noSettledBets": "עדיין אין הימורי משחק שנסגרו.",
+    "directionHitsTitle": "פגיעות כיוון לפי משתמש",
+    "exactScoreHitsTitle": "פגיעות בתוצאה מדויקת לפי משתמש",
+    "oneTeamExactHitsTitle": "פגיעה בתוצאה של קבוצה אחת לפי משתמש",
+    "directionHitPctByContinentTitle": "אחוז פגיעת כיוון לפי קונפדרציה",
+    "directionMissesByMatchTitle": "משחקים עם תחזיות כיוון שגויות",
+    "exactScoreHitsByMatchTitle": "פגיעות בתוצאה מדויקת לפי משחק",
+    "biggestPayoutMatchesTitle": "משחקים עם הרווח הגבוה ביותר",
+    "biggestSinglePlayerPayoutsTitle": "הרווח הגבוה ביותר של שחקן בודד",
+    "noDirectionPctByContinent": "עדיין אין הימורי כיוון שנסגרו.",
+    "noDirectionMisses": "עדיין אין פספוסי כיוון.",
+    "noExactScoreHits": "עדיין אין פגיעות בתוצאה מדויקת.",
+    "noPayoutMatches": "עדיין אין תשלומים מהימורי משחק שנסגרו.",
+    "noSinglePlayerPayouts": "עדיין אין תשלומים אישיים מהימורי משחק שנסגרו.",
+    "continents": {
+      "UEFA": "אירופה (UEFA)",
+      "CONCACAF": "צפון ומרכז אמריקה (CONCACAF)",
+      "CONMEBOL": "דרום אמריקה (CONMEBOL)",
+      "CAF": "אפריקה (CAF)",
+      "AFC": "אסיה (AFC)",
+      "OFC": "אוקיאניה (OFC)"
+    }
   },
   "roomSettings": {
     "title": "הגדרות חדר",

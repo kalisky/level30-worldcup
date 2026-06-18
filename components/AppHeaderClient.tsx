@@ -159,7 +159,7 @@ export default function AppHeaderClient({
 }: {
   room?: Room;
   user?: User;
-  active?: "dashboard" | "admin";
+  active?: "dashboard" | "admin" | "stats";
   initialRoomModalOpen?: boolean;
   viewerName?: string | null;
   profileRooms: ProfileRoomSummary[];
@@ -234,12 +234,20 @@ export default function AppHeaderClient({
   const showMobileOverlay =
     mobileMenuOpen || profileMenuMode === "mobile";
   const preferDashboardBack = searchParams.get("from") === "dashboard";
-  const adminHref =
-    room && active === "dashboard"
-      ? `/r/${room.code}/admin?from=dashboard`
-      : room
-        ? `/r/${room.code}/admin`
-        : null;
+  const preserveDashboardBack = preferDashboardBack || active === "dashboard";
+  const withDashboardBack = (href: string) =>
+    preserveDashboardBack ? `${href}?from=dashboard` : href;
+  const adminHref = room ? withDashboardBack(`/r/${room.code}/admin`) : null;
+  const statsHref = room ? withDashboardBack(`/r/${room.code}/stats`) : null;
+  const desktopProfileNavigationItems = statsHref
+    ? [
+        {
+          href: statsHref,
+          label: t("stats"),
+          tone: active === "stats" ? ("blue" as const) : ("neutral" as const),
+        },
+      ]
+    : [];
   const mobileNavigationItems = room
     ? [
         {
@@ -251,6 +259,11 @@ export default function AppHeaderClient({
           href: adminHref ?? `/r/${room.code}/admin`,
           label: t("settle"),
           tone: active === "admin" ? ("coral" as const) : ("neutral" as const),
+        },
+        {
+          href: statsHref ?? `/r/${room.code}/stats`,
+          label: t("stats"),
+          tone: active === "stats" ? ("blue" as const) : ("neutral" as const),
         },
         {
           href: "/rules",
@@ -471,7 +484,9 @@ export default function AppHeaderClient({
               rooms={profileRooms}
               currentRoomCode={room?.code ?? null}
               navigationItems={
-                profileMenuMode === "mobile" ? mobileNavigationItems : []
+                profileMenuMode === "mobile"
+                  ? mobileNavigationItems
+                  : desktopProfileNavigationItems
               }
               showLanguageSwitcher={profileMenuMode === "mobile"}
               triggerRef={

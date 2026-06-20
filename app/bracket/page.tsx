@@ -316,7 +316,7 @@ export default async function BracketPage(props: {
 
   return (
     <>
-      <AppHeader active="bracket" />
+      <AppHeader/>
       <main className="flex-1 bg-[linear-gradient(180deg,#eef4ff_0%,#f9fbff_20%,#f4f6fb_100%)]">
         <div className="mx-auto w-full max-w-[1800px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
           {roomCode && (

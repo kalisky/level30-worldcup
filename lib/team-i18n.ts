@@ -17,6 +17,7 @@ export const TEAM_NAMES: Record<string, TeamTranslations> = {
   "South Africa": { en: "South Africa", he: "דרום אפריקה" },
   "South Korea": { en: "South Korea", he: "דרום קוריאה" },
   Czechia: { en: "Czechia", he: "צ׳כיה" },
+  "Czech Republic": { en: "Czechia", he: "צ׳כיה" },
   // Group B
   Canada: { en: "Canada", he: "קנדה" },
   "Bosnia and Herzegovina": {
@@ -40,9 +41,11 @@ export const TEAM_NAMES: Record<string, TeamTranslations> = {
   Scotland: { en: "Scotland", he: "סקוטלנד" },
   // Group D
   USA: { en: "USA", he: "ארה״ב" },
+  "United States": { en: "USA", he: "ארה״ב" },
   Paraguay: { en: "Paraguay", he: "פרגוואי" },
   Australia: { en: "Australia", he: "אוסטרליה" },
   Turkiye: { en: "Turkiye", he: "טורקיה" },
+  Turkey: { en: "Turkiye", he: "טורקיה" },
   // Group E
   Germany: { en: "Germany", he: "גרמניה" },
   "Curaçao": { en: "Curaçao", he: "קוראסאו" },
@@ -57,10 +60,12 @@ export const TEAM_NAMES: Record<string, TeamTranslations> = {
   Belgium: { en: "Belgium", he: "בלגיה" },
   Egypt: { en: "Egypt", he: "מצרים" },
   "IR Iran": { en: "Iran", he: "איראן" },
+  Iran: { en: "Iran", he: "איראן" },
   "New Zealand": { en: "New Zealand", he: "ניו זילנד" },
   // Group H
   Spain: { en: "Spain", he: "ספרד" },
   "Cabo Verde": { en: "Cabo Verde", he: "כף ורדה" },
+  "Cape Verde": { en: "Cabo Verde", he: "כף ורדה" },
   "Saudi Arabia": { en: "Saudi Arabia", he: "ערב הסעודית" },
   Uruguay: { en: "Uruguay", he: "אורוגוואי" },
   // Group I

@@ -1,0 +1,175 @@
+{
+    "updated_time": "2026-06-20T11:39:48.438054",
+    "round_of_32": [
+        {
+            "match": 73,
+            "home": "South Korea",
+            "away": "Switzerland"
+        },
+        {
+            "match": 74,
+            "home": "Germany",
+            "away": "Scotland"
+        },
+        {
+            "match": 75,
+            "home": "Sweden",
+            "away": "Morocco"
+        },
+        {
+            "match": 76,
+            "home": "Brazil",
+            "away": "Netherlands"
+        },
+        {
+            "match": 77,
+            "home": "Norway",
+            "away": "Japan"
+        },
+        {
+            "match": 78,
+            "home": "Ivory Coast",
+            "away": "France"
+        },
+        {
+            "match": 79,
+            "home": "Mexico",
+            "away": "Spain"
+        },
+        {
+            "match": 80,
+            "home": "England",
+            "away": "DR Congo"
+        },
+        {
+            "match": 81,
+            "home": "United States",
+            "away": "Bosnia and Herzegovina"
+        },
+        {
+            "match": 82,
+            "home": "Iran",
+            "away": "Czech Republic"
+        },
+        {
+            "match": 83,
+            "home": "Portugal",
+            "away": "Ghana"
+        },
+        {
+            "match": 84,
+            "home": "Uruguay",
+            "away": "Austria"
+        },
+        {
+            "match": 85,
+            "home": "Canada",
+            "away": "Belgium"
+        },
+        {
+            "match": 86,
+            "home": "Argentina",
+            "away": "Saudi Arabia"
+        },
+        {
+            "match": 87,
+            "home": "Colombia",
+            "away": "Paraguay"
+        },
+        {
+            "match": 88,
+            "home": "Australia",
+            "away": "New Zealand"
+        }
+    ],
+    "round_of_16": [
+        {
+            "match": 89,
+            "home": "Winner Match 74",
+            "away": "Winner Match 77"
+        },
+        {
+            "match": 90,
+            "home": "Winner Match 73",
+            "away": "Winner Match 75"
+        },
+        {
+            "match": 91,
+            "home": "Winner Match 76",
+            "away": "Winner Match 78"
+        },
+        {
+            "match": 92,
+            "home": "Winner Match 79",
+            "away": "Winner Match 80"
+        },
+        {
+            "match": 93,
+            "home": "Winner Match 83",
+            "away": "Winner Match 84"
+        },
+        {
+            "match": 94,
+            "home": "Winner Match 81",
+            "away": "Winner Match 82"
+        },
+        {
+            "match": 95,
+            "home": "Winner Match 86",
+            "away": "Winner Match 88"
+        },
+        {
+            "match": 96,
+            "home": "Winner Match 85",
+            "away": "Winner Match 87"
+        }
+    ],
+    "quarter_finals": [
+        {
+            "match": 97,
+            "home": "Winner Match 89",
+            "away": "Winner Match 90"
+        },
+        {
+            "match": 98,
+            "home": "Winner Match 93",
+            "away": "Winner Match 94"
+        },
+        {
+            "match": 99,
+            "home": "Winner Match 91",
+            "away": "Winner Match 92"
+        },
+        {
+            "match": 100,
+            "home": "Winner Match 95",
+            "away": "Winner Match 96"
+        }
+    ],
+    "semi_finals": [
+        {
+            "match": 101,
+            "home": "Winner Match 97",
+            "away": "Winner Match 98"
+        },
+        {
+            "match": 102,
+            "home": "Winner Match 99",
+            "away": "Winner Match 100"
+        }
+    ],
+    "finals": [
+        {
+            "match": 103,
+            "description": "Match for third place",
+            "home": "Loser Match 101",
+            "away": "Loser Match 102"
+        },
+        {
+            "match": 104,
+            "description": "Final",
+            "home": "Winner Match 101",
+            "away": "Winner Match 102"
+        }
+    ]
+}

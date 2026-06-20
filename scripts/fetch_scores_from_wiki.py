@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import re
 import string
 import json
+import datetime
 
 print("Fetching World Cup 2026 data...")
 
@@ -100,6 +101,6 @@ for letter in string.ascii_uppercase[:12]:
 
 output_filename = "wc2026_results.json"
 with open(output_filename, "w", encoding="utf-8") as f:
-    json.dump({"matches": matches_data}, f, indent=4, ensure_ascii=False)
+    json.dump({"updated_time": datetime.datetime.now().isoformat(), "matches": matches_data}, f, indent=4, ensure_ascii=False)
 
 print(f"Success! {len(matches_data)} matches saved to {output_filename}")

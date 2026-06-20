@@ -27,12 +27,24 @@
     "dashboard": "ראשי",
     "leaderboard": "טבלת דירוג",
     "stats": "סטטיסטיקות",
+    "bracket": "בראקט",
     "settle": "סגירת הימור",
     "rules": "כללים",
     "history": "היסטוריה",
     "signOut": "התנתק",
     "profile": "פרופיל",
     "rooms": "חדרים"
+  },
+  "bracket": {
+    "subtitle": "בראקט הנוקאאוט המחושב לפי מצב הבתים הנוכחי.",
+    "updatedAt": "עודכן {time}",
+    "pathToFinal": "הדרך לגמר",
+    "match": "משחק {number}",
+    "roundOf32": "שלב 32 האחרונות",
+    "roundOf16": "שמינית הגמר",
+    "quarterFinals": "רבע הגמר",
+    "semiFinals": "חצי הגמר",
+    "finals": "משחקי ההכרעה"
   },
   "rules": {
     "quickRules": "כללים בקצרה",

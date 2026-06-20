@@ -27,12 +27,24 @@
     "dashboard": "Dashboard",
     "leaderboard": "Leaderboard",
     "stats": "Stats",
+    "bracket": "Bracket",
     "settle": "Settle",
     "rules": "Rules",
     "history": "History",
     "signOut": "Sign out",
     "profile": "Profile",
     "rooms": "Rooms"
+  },
+  "bracket": {
+    "subtitle": "Projected knockout bracket based on the current group standings.",
+    "updatedAt": "Updated {time}",
+    "pathToFinal": "Path to the final",
+    "match": "Match {number}",
+    "roundOf32": "Round of 32",
+    "roundOf16": "Round of 16",
+    "quarterFinals": "Quarterfinals",
+    "semiFinals": "Semifinals",
+    "finals": "Finals"
   },
   "rules": {
     "quickRules": "Quick rules",

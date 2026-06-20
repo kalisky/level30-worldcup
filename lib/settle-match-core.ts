@@ -6,6 +6,7 @@ import {
   settlements,
   users,
   type Match,
+  type MatchBet,
 } from "@/lib/db/schema";
 import { recordLedger } from "@/lib/ledger";
 import {
@@ -15,6 +16,64 @@ import {
 
 type Db = typeof db;
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+
+export type MatchBetSettlement = {
+  directionWon: boolean;
+  scoreWon: boolean;
+  directionPayout: number;
+  scorePayout: number;
+  payout: number;
+  directionOutcome: "won" | "lost";
+  scoreOutcome: "won" | "lost";
+};
+
+/**
+ * The single source of truth for match-bet payout math. A score prediction is
+ * two independent bets sharing the stake 50/50: a direction bet (the user's
+ * explicit HOME/DRAW/AWAY pick, which can disagree with their predicted score)
+ * and an exact-score bet. Winning payouts are rounded up (ceil) at the locked
+ * odds. Used by settlement, the correction engine, and the verification cron so
+ * they can never drift apart.
+ */
+export function computeMatchBetSettlement(
+  bet: Pick<
+    MatchBet,
+    | "directionPick"
+    | "predictedHomeScore"
+    | "predictedAwayScore"
+    | "directionStake"
+    | "scoreStake"
+    | "directionOddsLocked"
+    | "scoreOddsLocked"
+  >,
+  homeScore: number,
+  awayScore: number
+): MatchBetSettlement {
+  const actualDirection: "HOME" | "DRAW" | "AWAY" =
+    homeScore > awayScore ? "HOME" : awayScore > homeScore ? "AWAY" : "DRAW";
+
+  const directionWon = bet.directionPick === actualDirection;
+  const scoreWon =
+    bet.predictedHomeScore === homeScore &&
+    bet.predictedAwayScore === awayScore;
+
+  const directionPayout = directionWon
+    ? Math.ceil(bet.directionStake * Number(bet.directionOddsLocked))
+    : 0;
+  const scorePayout = scoreWon
+    ? Math.ceil(bet.scoreStake * Number(bet.scoreOddsLocked))
+    : 0;
+
+  return {
+    directionWon,
+    scoreWon,
+    directionPayout,
+    scorePayout,
+    payout: directionPayout + scorePayout,
+    directionOutcome: directionWon ? "won" : "lost",
+    scoreOutcome: scoreWon ? "won" : "lost",
+  };
+}
 
 /**
  * Settles one room's open bets on a match whose final score is known.
@@ -35,9 +94,6 @@ export async function settleMatchBetsForRoom(
 ): Promise<{ betsSettled: number; totalPaidOut: number }> {
   const { roomId, actorId, match, homeScore, awayScore } = args;
 
-  const actualDirection: "HOME" | "DRAW" | "AWAY" =
-    homeScore > awayScore ? "HOME" : awayScore > homeScore ? "AWAY" : "DRAW";
-
   const openBets = await tx
     .select()
     .from(matchBets)
@@ -51,19 +107,11 @@ export async function settleMatchBetsForRoom(
 
   let totalPaidOut = 0;
   for (const bet of openBets) {
-    // Direction is settled by the user's explicit side pick, which is
-    // recorded independently of the predicted score (they can disagree).
-    const directionWon = bet.directionPick === actualDirection;
-    const scoreWon =
-      bet.predictedHomeScore === homeScore && bet.predictedAwayScore === awayScore;
-
-    const directionPayout = directionWon
-      ? Math.ceil(bet.directionStake * Number(bet.directionOddsLocked))
-      : 0;
-    const scorePayout = scoreWon
-      ? Math.ceil(bet.scoreStake * Number(bet.scoreOddsLocked))
-      : 0;
-    const payout = directionPayout + scorePayout;
+    const { directionWon, scoreWon, payout } = computeMatchBetSettlement(
+      bet,
+      homeScore,
+      awayScore
+    );
     totalPaidOut += payout;
 
     if (payout > 0) {
@@ -108,7 +156,12 @@ export async function settleMatchBetsForRoom(
     payload: {
       homeScore,
       awayScore,
-      direction: actualDirection,
+      direction:
+        homeScore > awayScore
+          ? "HOME"
+          : awayScore > homeScore
+            ? "AWAY"
+            : "DRAW",
       betsSettled: openBets.length,
       totalPaidOut,
       ...(args.repair ? { repair: true } : {}),

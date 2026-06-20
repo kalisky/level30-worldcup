@@ -435,6 +435,82 @@ export const liveRevisions = pgTable("live_revisions", {
     .defaultNow(),
 });
 
+export const dailyCheckStatus = pgEnum("daily_check_status", [
+  "ok", // every match verified, scores and chips all correct
+  "issues", // at least one discrepancy found (some may have been auto-fixed)
+  "error", // the check itself failed to run
+]);
+
+// Per-match detail captured by the morning verification cron. See
+// lib/daily-check.ts for how these are produced.
+export type DailyCheckMatchReport = {
+  matchId: string;
+  match: string; // "Home vs Away"
+  kickoff: string; // ISO
+  storedScore: string | null; // "1-3" or null if no recorded score
+  // Authoritative score from the AI re-check; null when the AI couldn't
+  // confirm a result (then `verified` is false and nothing is changed).
+  authoritativeScore: string | null;
+  verified: boolean;
+  // One of: "ok" (score + chips correct), "score-mismatch" (stored score
+  // disagreed with the authoritative re-check), "chip-mismatch" (score is
+  // right but a settled bet's payout/outcome didn't match the recompute),
+  // "unverified" (AI couldn't confirm a score), "no-bets".
+  verdict: "ok" | "score-mismatch" | "chip-mismatch" | "unverified" | "no-bets";
+  reasoning: string; // AI citation / explanation
+  betsChecked: number;
+  // Populated for chip-mismatch: bets whose stored settlement != recompute.
+  chipDiscrepancies?: {
+    betId: string;
+    roomId: string;
+    userId: string;
+    storedPayout: number | null;
+    expectedPayout: number;
+    storedDirectionOutcome: string;
+    expectedDirectionOutcome: string;
+    storedScoreOutcome: string;
+    expectedScoreOutcome: string;
+  }[];
+  // Populated when verdict was score-mismatch and auto-fix ran.
+  autoFix?: {
+    applied: boolean;
+    fromScore: string | null;
+    toScore: string;
+    roomsResettled: number;
+    betsResettled: number;
+    chipsReversed: number;
+    chipsPaidOut: number;
+    error?: string;
+  };
+};
+
+export type DailyCheckReport = {
+  checkDate: string; // the Israel calendar day being verified, YYYY-MM-DD
+  matches: DailyCheckMatchReport[];
+  error?: string;
+};
+
+// Audit log of the morning verification cron — one row per run. Surfaced at
+// /admin/checks. Global (not per-room), so no roomId.
+export const dailyChecks = pgTable(
+  "daily_checks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // The Israel calendar day whose matches were verified (YYYY-MM-DD).
+    checkDate: text("check_date").notNull(),
+    ranAt: timestamp("ran_at", { withTimezone: true }).notNull().defaultNow(),
+    status: dailyCheckStatus("status").notNull(),
+    matchesChecked: integer("matches_checked").notNull().default(0),
+    issuesFound: integer("issues_found").notNull().default(0),
+    autoFixed: integer("auto_fixed").notNull().default(0),
+    report: jsonb("report").$type<DailyCheckReport>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("daily_checks_ran_at_idx").on(t.ranAt)]
+);
+
 export type Room = typeof rooms.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type AuthUser = typeof authUsers.$inferSelect;
@@ -448,6 +524,7 @@ export type ChipLedger = typeof chipLedger.$inferSelect;
 export type OddsSyncRun = typeof oddsSyncRuns.$inferSelect;
 export type MatchOddsSnapshot = typeof matchOddsSnapshots.$inferSelect;
 export type LiveRevision = typeof liveRevisions.$inferSelect;
+export type DailyCheck = typeof dailyChecks.$inferSelect;
 
 export function scoreKey(home: number, away: number): string {
   return `${home}-${away}`;

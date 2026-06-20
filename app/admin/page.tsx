@@ -260,6 +260,12 @@ export default async function AdminPage() {
         <p className="mt-1 text-sm text-slate-500">
           Signed in as {authUser?.email}
         </p>
+        <Link
+          href="/admin/checks"
+          className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#1E3A8A] px-4 py-1.5 text-xs font-bold text-white hover:bg-[#1D4ED8]"
+        >
+          Daily settlement checks →
+        </Link>
       </header>
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">

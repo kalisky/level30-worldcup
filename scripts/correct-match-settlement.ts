@@ -2,7 +2,7 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 config();
 
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "../lib/db";
 import {
   matchBets,
@@ -12,9 +12,7 @@ import {
   type Match,
   type MatchBet,
 } from "../lib/db/schema";
-import { recordLedger } from "../lib/ledger";
-import { touchMatchLiveRevisions } from "../lib/live-updates";
-import { settleMatchBetsForRoom } from "../lib/settle-match-core";
+import { correctMatchSettlement } from "../lib/correct-settlement";
 
 type Options = {
   matchId: string | null;
@@ -140,11 +138,13 @@ function expectedSettlementForBet(
   const scoreWon =
     bet.predictedHomeScore === homeScore && bet.predictedAwayScore === awayScore;
 
+  // Mirror the live settler's rounding (lib/settle-match-core.ts uses ceil) so
+  // the dry-run estimate matches what re-settlement will actually pay out.
   const directionPayout = directionWon
-    ? Math.floor(bet.directionStake * Number(bet.directionOddsLocked))
+    ? Math.ceil(bet.directionStake * Number(bet.directionOddsLocked))
     : 0;
   const scorePayout = scoreWon
-    ? Math.floor(bet.scoreStake * Number(bet.scoreOddsLocked))
+    ? Math.ceil(bet.scoreStake * Number(bet.scoreOddsLocked))
     : 0;
 
   return {
@@ -362,115 +362,28 @@ async function main() {
     process.exit(0);
   }
 
-  const originalScoreLabel = formatScore(
-    targetMatch.homeScore,
-    targetMatch.awayScore,
-    targetMatch.status
-  );
-
-  await db.transaction(async (tx) => {
-    const correctedMatch =
-      correctionNeeded
-        ? (
-            await tx
-              .update(matches)
-              .set({
-                homeScore: options.homeScore,
-                awayScore: options.awayScore,
-                status: "final",
-              })
-              .where(eq(matches.id, targetMatch.id))
-              .returning()
-          )[0]
-        : {
-            ...targetMatch,
-            homeScore: options.homeScore,
-            awayScore: options.awayScore,
-            status: "final" as const,
-          };
-
-    if (!correctedMatch) {
-      throw new Error(`Failed to update match ${targetMatch.id}.`);
-    }
-
-    await touchMatchLiveRevisions(tx, correctedMatch.id);
-
-    for (const plan of activePlans) {
-      const roomBets = betsByRoom.get(plan.roomId) ?? [];
-      const settledBets = roomBets.filter((bet) => bet.status === "settled");
-
-      const members = await tx
+  // Delegate the actual reverse + re-settle to the shared engine so the script
+  // and the morning verification cron compute payouts identically (ceil-based,
+  // via settleMatchBetsForRoom). Attribute each room's settlement audit row to
+  // that room's creator, matching the original script behavior.
+  const result = await correctMatchSettlement(db, {
+    match: targetMatch,
+    homeScore: options.homeScore,
+    awayScore: options.awayScore,
+    actorIdForRoom: async (roomId) => {
+      const members = await db
         .select()
         .from(users)
-        .where(eq(users.roomId, plan.roomId))
+        .where(eq(users.roomId, roomId))
         .orderBy(asc(users.createdAt));
       const actor = members.find((member) => member.isCreator) ?? members[0];
-
-      if (!actor) {
-        throw new Error(`Room ${plan.roomCode} has no members to attribute the repair.`);
-      }
-
-      if (plan.shouldResetSettledBets) {
-        for (const bet of settledBets) {
-          const payoutToReverse = bet.payout ?? 0;
-
-          if (payoutToReverse > 0) {
-            const [updatedUser] = await tx
-              .update(users)
-              .set({ chips: sql`${users.chips} - ${payoutToReverse}` })
-              .where(eq(users.id, bet.userId))
-              .returning({ chips: users.chips });
-
-            if (!updatedUser) {
-              throw new Error(
-                `Failed to reverse payout for bet ${bet.id} in room ${plan.roomCode}.`
-              );
-            }
-
-            await recordLedger(tx, {
-              roomId: plan.roomId,
-              userId: bet.userId,
-              delta: -payoutToReverse,
-              balanceAfter: updatedUser.chips,
-              reason: "match_bet_payout",
-              refMatchId: correctedMatch.id,
-              note: `Settlement correction - reversed incorrect payout from ${originalScoreLabel} before re-settling as ${options.homeScore}-${options.awayScore}`,
-            });
-          }
-        }
-
-        await tx
-          .update(matchBets)
-          .set({
-            status: "open",
-            directionOutcome: "pending",
-            scoreOutcome: "pending",
-            payout: null,
-          })
-          .where(
-            and(
-              eq(matchBets.roomId, plan.roomId),
-              eq(matchBets.matchId, correctedMatch.id),
-              eq(matchBets.status, "settled")
-            )
-          );
-      }
-
-      const result = await settleMatchBetsForRoom(tx, {
-        roomId: plan.roomId,
-        actorId: actor.id,
-        match: correctedMatch,
-        homeScore: options.homeScore,
-        awayScore: options.awayScore,
-        repair: true,
-      });
-
-      console.log(
-        `Room ${plan.roomCode}: settled ${result.betsSettled} bets, reversed ${plan.payoutToReverse} chips, paid out ${result.totalPaidOut} chips`
-      );
-    }
+      return actor?.id ?? null;
+    },
   });
 
+  console.log(
+    `Re-settled ${result.betsResettled} bets across ${result.roomsResettled} rooms; reversed ${result.chipsReversed} chips, paid out ${result.chipsPaidOut} chips.`
+  );
   console.log("Match settlement correction completed.");
   process.exit(0);
 }

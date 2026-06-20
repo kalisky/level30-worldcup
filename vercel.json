@@ -3,6 +3,10 @@
     {
       "path": "/api/internal/settle/sync",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/internal/verify/daily",
+      "schedule": "0 5 * * *"
     }
   ]
 }

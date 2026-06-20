@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { desc } from "drizzle-orm";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { isAppAdmin } from "@/lib/app-admin";
+import SubmitButton from "@/components/SubmitButton";
+import { runCheckNowAction } from "@/lib/actions/admin-checks";
 import { db } from "@/lib/db";
 import {
   dailyChecks,
@@ -191,13 +193,26 @@ export default async function AdminChecksPage() {
         >
           ← Admin overview
         </Link>
-        <h1 className="mt-2 text-3xl font-black text-[#1E3A8A]">
-          Daily settlement checks
-        </h1>
+        <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+          <h1 className="text-3xl font-black text-[#1E3A8A]">
+            Daily settlement checks
+          </h1>
+          <form action={runCheckNowAction}>
+            <SubmitButton
+              pendingLabel="Checking…"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#1E3A8A] px-4 py-2 text-sm font-bold text-white hover:bg-[#1D4ED8] disabled:opacity-60"
+            >
+              Check now
+            </SubmitButton>
+          </form>
+        </div>
         <p className="mt-1 text-sm text-slate-500">
-          Every morning (08:00 Israel) each of the prior day&apos;s matches is
-          re-checked against Wikipedia and every bet&apos;s payout is recomputed.
-          Score-pull mismatches are auto-fixed; chip mismatches are flagged here.
+          Every morning (07:00 Israel) every match that finished since the last
+          check is re-checked against Wikipedia and every bet&apos;s payout is
+          recomputed. Score-pull mismatches are auto-fixed; chip mismatches are
+          flagged here. A game still in play at 07:00 is verified the next
+          morning. <strong>Check now</strong> re-verifies the last few days on
+          demand.
         </p>
       </header>
 

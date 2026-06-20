@@ -485,7 +485,7 @@ export type DailyCheckMatchReport = {
 };
 
 export type DailyCheckReport = {
-  checkDate: string; // the Israel calendar day being verified, YYYY-MM-DD
+  checkDate: string; // Israel date the check ran (YYYY-MM-DD), as a label
   matches: DailyCheckMatchReport[];
   error?: string;
 };

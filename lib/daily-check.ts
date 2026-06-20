@@ -1,11 +1,21 @@
-// Morning verification cron. For every match that kicked off "yesterday"
-// (Israel time), it checks the recorded score against an independent source
-// (Wikipedia, via lib/result-oracle) and recomputes every settled bet's payout
-// from the canonical math. Score-pull mismatches are auto-fixed (reverse +
-// re-settle); chip-calculation discrepancies are reported for review. Each run
-// is logged to the daily_checks table, surfaced at /admin/checks.
+// Morning verification cron (runs ~07:00 Israel). It verifies every match that
+// has *finished* since the previous check — independent of calendar date, since
+// a single night's World Cup slate (games are in the Americas) straddles Israel
+// midnight. For each finished match it checks the recorded score against an
+// independent source (Wikipedia, via lib/result-oracle) and recomputes every
+// bet's payout from the canonical math. Score-pull mismatches (wrong score, or
+// a finished match we never settled) are auto-fixed (settle / reverse +
+// re-settle); chip-calculation discrepancies are reported for review.
+//
+// A match still in progress at run time (e.g. one ending ~09:00 Israel) isn't
+// "done" yet, so it's skipped this run and picked up the next morning — by
+// which point users have long seen the corrected state of everything that
+// finished overnight. De-duplication against recent checks means each match is
+// reported once and nothing is missed across the midnight boundary.
+//
+// Each run is logged to the daily_checks table, surfaced at /admin/checks.
 
-import { and, eq, gte, lte } from "drizzle-orm";
+import { and, desc, eq, gte, lte } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   dailyChecks,
@@ -25,7 +35,18 @@ import {
 
 const ISRAEL_TZ = "Asia/Jerusalem";
 
-/** The Israel calendar date (YYYY-MM-DD) for an instant. */
+// A match can't be over before kickoff + 90' + half-time + stoppage. Matches
+// this the auto-settler's threshold: before this elapses we don't trust any
+// "final" score (and Wikipedia might still show a live score).
+const MIN_MATCH_DURATION_MS = 115 * 60 * 1000;
+// How far back to scan for finished-but-unverified matches. Comfortably longer
+// than the daily cadence so a match that wasn't done at one run is still in
+// range at the next — de-dup stops it being re-reported once handled.
+const SCAN_WINDOW_MS = 72 * 60 * 60 * 1000;
+// How far back to read prior checks when building the "already handled" set.
+const DEDUP_LOOKBACK_MS = 5 * 24 * 60 * 60 * 1000;
+
+/** The Israel calendar date (YYYY-MM-DD) for an instant — used only as a label. */
 function israelDateStr(d: Date): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: ISRAEL_TZ,
@@ -33,20 +54,6 @@ function israelDateStr(d: Date): string {
     month: "2-digit",
     day: "2-digit",
   }).format(d);
-}
-
-/** Calendar date string N days before the given Israel day, DST-proof. */
-function shiftDateStr(dateStr: string, deltaDays: number): string {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const shifted = new Date(Date.UTC(y, m - 1, d) + deltaDays * 86_400_000);
-  return israelDateStrFromUTCDate(shifted);
-}
-
-function israelDateStrFromUTCDate(d: Date): string {
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
 }
 
 function scoreStr(home: number | null, away: number | null): string | null {
@@ -65,30 +72,26 @@ export type DailyCheckResult = {
 };
 
 /**
- * Run the verification for one Israel day (defaults to yesterday). Persists a
- * daily_checks row and returns the summary.
+ * Verify every match finished since the previous check and persist a
+ * daily_checks row. Auto-fixes score-pull mismatches by default.
  */
 export async function runDailyCheck(options?: {
-  /** Israel calendar date YYYY-MM-DD to verify. Defaults to yesterday. */
-  date?: string;
-  /** Server-side default: auto-fix score-pull mismatches. */
   autoFix?: boolean;
   now?: Date;
+  /** Re-verify matches already confirmed by a prior run (default false). */
+  force?: boolean;
 }): Promise<DailyCheckResult> {
   const autoFix = options?.autoFix ?? true;
   const now = options?.now ?? new Date();
-  const checkDate = options?.date ?? shiftDateStr(israelDateStr(now), -1);
+  const checkDate = israelDateStr(now);
 
   try {
-    const report = await verifyMatchesForDate(checkDate, autoFix);
+    const report = await verifyFinishedMatches(now, autoFix, options?.force ?? false);
     const issuesFound = report.matches.filter(
       (m) => m.verdict === "score-mismatch" || m.verdict === "chip-mismatch"
     ).length;
-    const autoFixed = report.matches.filter(
-      (m) => m.autoFix?.applied
-    ).length;
-    const status: DailyCheckResult["status"] =
-      issuesFound > 0 ? "issues" : "ok";
+    const autoFixed = report.matches.filter((m) => m.autoFix?.applied).length;
+    const status: DailyCheckResult["status"] = issuesFound > 0 ? "issues" : "ok";
 
     const [row] = await db
       .insert(dailyChecks)
@@ -137,34 +140,58 @@ export async function runDailyCheck(options?: {
   }
 }
 
-async function verifyMatchesForDate(
-  checkDate: string,
-  autoFix: boolean
-): Promise<DailyCheckReport> {
-  // Over-fetch a ±2 day UTC window, then filter precisely by Israel calendar
-  // day — avoids fiddly timezone-offset math while keeping the scan tiny.
-  const [y, m, d] = checkDate.split("-").map(Number);
-  const center = Date.UTC(y, m - 1, d);
-  const lower = new Date(center - 2 * 86_400_000);
-  const upper = new Date(center + 2 * 86_400_000);
+/** matchIds already confirmed correct (or successfully auto-fixed) by a prior run. */
+async function loadHandledMatchIds(now: Date): Promise<Set<string>> {
+  const since = new Date(now.getTime() - DEDUP_LOOKBACK_MS);
+  const prior = await db
+    .select({ report: dailyChecks.report })
+    .from(dailyChecks)
+    .where(gte(dailyChecks.ranAt, since))
+    .orderBy(desc(dailyChecks.ranAt));
 
-  const windowMatches = await db
+  const handled = new Set<string>();
+  for (const row of prior) {
+    for (const m of row.report?.matches ?? []) {
+      // "Done" = nothing more to do: verified correct, had no bets, or the
+      // score mismatch was auto-fixed. Leave "unverified" and "chip-mismatch"
+      // out so they keep being re-checked until resolved.
+      if (m.verdict === "ok" || m.verdict === "no-bets" || m.autoFix?.applied) {
+        handled.add(m.matchId);
+      }
+    }
+  }
+  return handled;
+}
+
+async function verifyFinishedMatches(
+  now: Date,
+  autoFix: boolean,
+  force: boolean
+): Promise<DailyCheckReport> {
+  const checkDate = israelDateStr(now);
+  const doneBy = new Date(now.getTime() - MIN_MATCH_DURATION_MS);
+  const scanFrom = new Date(now.getTime() - SCAN_WINDOW_MS);
+
+  // Candidates: anything that should be over by now (kickoff + 115' <= now),
+  // within the scan window. Includes non-final matches so a finished game the
+  // auto-settler missed still gets settled here.
+  const candidates = await db
     .select()
     .from(matches)
-    .where(and(gte(matches.kickoff, lower), lte(matches.kickoff, upper)));
+    .where(and(gte(matches.kickoff, scanFrom), lte(matches.kickoff, doneBy)))
+    .orderBy(matches.kickoff);
 
-  const dayMatches = windowMatches
-    .filter((mt) => israelDateStr(new Date(mt.kickoff)) === checkDate)
-    .sort((a, b) => new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime());
+  const handled = force ? new Set<string>() : await loadHandledMatchIds(now);
+  const todo = candidates.filter((m) => !handled.has(m.id));
 
-  if (dayMatches.length === 0) {
+  if (todo.length === 0) {
     return { checkDate, matches: [] };
   }
 
   const index = await buildWikipediaIndex();
 
   const reports: DailyCheckMatchReport[] = [];
-  for (const match of dayMatches) {
+  for (const match of todo) {
     reports.push(await verifyMatch(match, index, autoFix));
   }
   return { checkDate, matches: reports };
@@ -195,7 +222,8 @@ async function verifyMatch(
     betsChecked: 0,
   };
 
-  // Couldn't confirm an independent result — surface it, change nothing.
+  // Couldn't confirm an independent result — surface it, change nothing. Stays
+  // out of the "handled" set, so it's retried next run.
   if (!auth.found || auth.homeScore == null || auth.awayScore == null) {
     return { ...base, verdict: "unverified" };
   }
@@ -206,7 +234,7 @@ async function verifyMatch(
     match.awayScore === auth.awayScore;
 
   if (!scoreMatches) {
-    // The recorded score is wrong or wasn't pulled at all.
+    // The recorded score is wrong, or the match finished but was never settled.
     const report: DailyCheckMatchReport = { ...base, verdict: "score-mismatch" };
     if (autoFix) {
       try {

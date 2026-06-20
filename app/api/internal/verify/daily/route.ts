@@ -8,13 +8,10 @@ export const runtime = "nodejs";
 export const maxDuration = 120;
 
 const bodySchema = z.object({
-  // Israel calendar date YYYY-MM-DD to verify. Defaults to yesterday.
-  date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD")
-    .optional(),
   // Override the default auto-fix behavior (e.g. report-only dry check).
   autoFix: z.boolean().optional(),
+  // Re-verify matches already confirmed by a prior run.
+  force: z.boolean().optional(),
 });
 
 function digest(value: string) {
@@ -51,8 +48,8 @@ export async function POST(request: Request) {
   }
 
   const result = await runDailyCheck({
-    date: parsed.data.date,
     autoFix: parsed.data.autoFix,
+    force: parsed.data.force,
   });
   return NextResponse.json(result);
 }

@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/internal/verify/daily",
-      "schedule": "0 5 * * *"
+      "schedule": "0 4 * * *"
     }
   ]
 }

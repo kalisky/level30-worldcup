@@ -270,6 +270,11 @@ export default function AppHeaderClient({
           label: t("rules"),
           tone: "neutral" as const,
         },
+        {
+          href: "/bracket",
+          label: t("bracket"),
+          tone: "neutral" as const,
+        }
       ]
     : [
         {
@@ -462,6 +467,7 @@ export default function AppHeaderClient({
                 </>
               )}
               <HeaderLink href="/rules" label={t("rules")} tone="neutral" />
+              <HeaderLink href="/bracket" label={t("bracket")} tone="neutral" />
               <LanguageSwitcher className="ml-1" />
             </nav>
 

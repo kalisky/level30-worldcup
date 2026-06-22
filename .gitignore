@@ -44,3 +44,4 @@ app/r/\[code]/match/\[id]/odds_h2h.json
 server_logs
 scripts/rename-display-name.ts
 data/room-5ydpu-chips-by-minute.json
+scripts/generate-room-chips-by-minute.ts

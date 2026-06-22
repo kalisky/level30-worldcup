@@ -91,6 +91,7 @@ export default function CustomBetCard({
   } | null>(null);
   const [previewing, startPreview] = useTransition();
   const isOpenQuestion = bet.kind === "open_question";
+  const isVoided = bet.status === "void";
 
   const isLocked =
     bet.status !== "open" ||
@@ -297,10 +298,13 @@ export default function CustomBetCard({
     <article
       id={`custom-bet-${bet.id}`}
       className={
-        "scroll-mt-28 rounded-[26px] border bg-white p-5 shadow-[0_14px_32px_rgba(30,58,138,0.07)] transition " +
+        "scroll-mt-28 rounded-[26px] border p-5 shadow-[0_14px_32px_rgba(30,58,138,0.07)] transition " +
         (highlighted
-          ? "border-[#3B82F6] ring-2 ring-[#BFDBFE]"
-          : "border-[#dbe5f2]")
+          ? "ring-2 ring-[#BFDBFE] "
+          : "") +
+        (isVoided
+          ? "border-[#F2C185] bg-[linear-gradient(180deg,#ffffff_0%,#fff8ef_100%)]"
+          : "border-[#dbe5f2] bg-white")
       }
     >
       <header className="space-y-2">
@@ -448,6 +452,18 @@ export default function CustomBetCard({
         <p className="mt-2 rounded-2xl bg-[#F8FBFF] px-3 py-2 text-xs italic text-slate-500 ring-1 ring-[#dbe5f2]">
           AI: {bet.aiReasoning}
         </p>
+      )}
+      {isVoided && (
+        <div className="mt-3 rounded-[22px] border border-[#F2C185] bg-[linear-gradient(135deg,#FFF7ED_0%,#FFEDD5_100%)] px-4 py-3 text-[#9A3412] shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-white/80 px-2.5 py-1 text-[0.65rem] font-black uppercase tracking-[0.18em] text-[#C2410C] ring-1 ring-[#F2C185]">
+              {t("voidedStatus")}
+            </span>
+            <p className="text-sm font-semibold">
+              {t("voidedStatusHint")}
+            </p>
+          </div>
+        </div>
       )}
 
       {isOpenQuestion ? (

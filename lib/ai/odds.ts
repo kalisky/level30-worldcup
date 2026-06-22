@@ -183,6 +183,68 @@ function poisson(k: number, lambda: number): number {
 
 // --- Custom bet odds ------------------------------------------------------
 
+function safeParseGeminiYesNo(responseText: string) {
+  // Step 1: Strip markdown code blocks and trim whitespace
+  const cleanedText = responseText.replace(/```json\n?|```/g, '').trim();
+
+  try {
+    // Step 2: Attempt to parse the cleaned string
+    const parsedData = JSON.parse(cleanedText);
+
+    // Step 3: Validate the expected schema
+    if (!parsedData.probabilities || !Array.isArray(parsedData.probabilities)) {
+      throw new Error("Missing or invalid 'probabilities' array.");
+    }
+    if (!parsedData.reasoning || typeof parsedData.reasoning !== 'string') {
+      throw new Error("Missing or invalid 'reasoning' string.");
+    }
+
+    return parsedData; // Success!
+
+  } catch (error) {
+    // Handle the failure gracefully
+    console.error("Failed to parse Gemini response:", (error as Error).message);
+    console.debug("Raw output was:", responseText);
+    
+    // Return a fallback object or re-throw depending on your app's needs
+    return {
+      probabilities: [],
+      reasoning: "Error parsing response."
+    };
+  }
+}
+
+function safeParseGeminiOpenAnswer(responseText: string) {
+  // Step 1: Strip markdown code blocks and trim whitespace
+  const cleanedText = responseText.replace(/```json\n?|```/g, '').trim();
+
+  try {
+    // Step 2: Attempt to parse the cleaned string
+    const parsedData = JSON.parse(cleanedText);
+
+    // Step 3: Validate the expected schema
+    if (typeof parsedData.probability !== 'number') {
+      throw new Error("Missing or invalid 'probability' number.");
+    }
+    if (!parsedData.reasoning || typeof parsedData.reasoning !== 'string') {
+      throw new Error("Missing or invalid 'reasoning' string.");
+    }
+
+    return parsedData; // Success!
+
+  } catch (error) {
+    // Handle the failure gracefully
+    console.error("Failed to parse Gemini response:", (error as Error).message);
+    console.debug("Raw output was:", responseText);
+    
+    // Return a fallback object or re-throw depending on your app's needs
+    return {
+      probability: 0,
+      reasoning: "Error parsing response."
+    };
+  }
+}
+
 export type CustomBetOddsResult = {
   options: { label: string; probability: number; odds: number }[];
   reasoning: string;
@@ -225,28 +287,24 @@ export async function generateCustomBetOdds(input: {
     "Return: probabilities[] (one per option, same order, must sum to ~1.0), and a one-sentence reasoning.",
   ].join("\n");
 
+  const finalPrompt = prompt + "\n\nCRITICAL INSTRUCTION: You must respond ONLY with a raw, valid JSON object. Do not include markdown formatting like ```json. The JSON must exactly match this schema: { \"probabilities\": [number], \"reasoning\": \"string\" }";
   const response = await ai.models.generateContent({
     model: MODEL,
-    contents: prompt,
+    contents: finalPrompt,
     config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          probabilities: {
-            type: Type.ARRAY,
-            items: { type: Type.NUMBER },
-          },
-          reasoning: { type: Type.STRING },
-        },
-        required: ["probabilities", "reasoning"],
-      },
+      tools: [{ googleSearch: {} }],
     },
   });
 
   const text = response.text;
   if (!text) throw new Error("Gemini returned an empty response.");
-  const parsed = JSON.parse(text) as { probabilities: number[]; reasoning: string };
+  const finalResult = safeParseGeminiYesNo(text);
+  if (finalResult.probabilities.length > 0) {
+    console.log("Success! Reasoning:", finalResult.reasoning);
+  } else {
+    console.log("Something went wrong with the output.");
+  }
+  const parsed = finalResult as { probabilities: number[]; reasoning: string };
 
   if (
     !Array.isArray(parsed.probabilities) ||
@@ -324,25 +382,33 @@ export async function generateOpenAnswerOdds(input: {
     .filter(Boolean)
     .join("\n");
 
+  const finalPrompt = prompt + "\n\nCRITICAL INSTRUCTION: You must respond ONLY with a raw, valid JSON object. Do not include markdown formatting like ```json. The JSON must exactly match this schema: { \"probability\": number, \"reasoning\": \"string\" }";
   const response = await ai.models.generateContent({
     model: MODEL,
-    contents: prompt,
+    contents: finalPrompt,
     config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          probability: { type: Type.NUMBER },
-          reasoning: { type: Type.STRING },
-        },
-        required: ["probability", "reasoning"],
-      },
+      tools: [{ googleSearch: {} }],
+      // responseMimeType: "application/json",
+      // responseSchema: {
+      //   type: Type.OBJECT,
+      //   properties: {
+      //     probability: { type: Type.NUMBER },
+      //     reasoning: { type: Type.STRING },
+      //   },
+      //   required: ["probability", "reasoning"],
+      // },
     },
   });
 
   const text = response.text;
   if (!text) throw new Error("Gemini returned an empty response.");
-  const parsed = JSON.parse(text) as { probability: number; reasoning: string };
+  const finalResult = safeParseGeminiOpenAnswer(text);
+  if (finalResult.probability > 0) {
+    console.log("Success! Reasoning:", finalResult.reasoning);
+  } else {
+    console.log("Something went wrong with the output.");
+  }
+  const parsed = finalResult as { probability: number; reasoning: string };
   const p = Math.max(0.005, Math.min(0.99, parsed.probability));
   return {
     probability: p,

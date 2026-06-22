@@ -348,6 +348,8 @@
     "payout": "(payout {payout})",
     "openHint": "Players will type their own answers when they wager. AI calculates odds the first time each answer is submitted; later wagers on the same answer use the cached odds.",
     "locked": "Locked",
+    "voidedStatus": "Void & refund",
+    "voidedStatusHint": "This bet was canceled and all wagers on it were refunded.",
     "edit": "Edit",
     "update": "Update wager",
     "updatePending": "Updating…",

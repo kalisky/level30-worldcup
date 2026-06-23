@@ -30,10 +30,12 @@ export default function SettleCustomBet({
   const t = useTranslations("admin");
   const tDefaults = useTranslations("customBet.defaults");
   const copy = customBetCopy(bet, tDefaults);
+  const isOpenQuestion = bet.kind === "open_question";
   const hasEnoughWagerers = wagererCount >= 2;
   const wagererLabel =
     wagererCount === 1 ? t("wagerer", { count: wagererCount }) : t("wagerers", { count: wagererCount });
   const [idx, setIdx] = useState<number | null>(null);
+  const [winningAnswer, setWinningAnswer] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -45,6 +47,23 @@ export default function SettleCustomBet({
     fd.set("roomCode", roomCode);
     fd.set("customBetId", bet.id);
     fd.set("winningOptionIdx", String(idx));
+    if (bet.matchId) fd.set("matchId", bet.matchId);
+    startTransition(async () => {
+      try {
+        await settleCustomBet(fd);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Action failed.");
+      }
+    });
+  }
+
+  function submitSettleByAnswer() {
+    if (!winningAnswer.trim()) return;
+    setError(null);
+    const fd = new FormData();
+    fd.set("roomCode", roomCode);
+    fd.set("customBetId", bet.id);
+    fd.set("winningAnswer", winningAnswer.trim());
     if (bet.matchId) fd.set("matchId", bet.matchId);
     startTransition(async () => {
       try {
@@ -138,6 +157,35 @@ export default function SettleCustomBet({
           </button>
         ))}
       </div>
+
+      {isOpenQuestion ? (
+        <div className="mt-3 rounded-[22px] border border-[#dbe5f2] bg-[#F8FBFF] p-3">
+          <label className="block text-[0.65rem] font-bold uppercase tracking-[0.18em] text-slate-500">
+            {t("winningAnswer")}
+          </label>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              dir="auto"
+              value={winningAnswer}
+              onChange={(e) => setWinningAnswer(e.target.value)}
+              placeholder={t("winningAnswerPlaceholder")}
+              className="min-w-[14rem] flex-1 rounded-2xl border border-[#cdd9ea] bg-white px-3 py-2 text-sm text-[#1E3A8A] focus:border-[#3B82F6] focus:outline-none"
+            />
+            <button
+              type="button"
+              disabled={!winningAnswer.trim() || pending || !hasEnoughWagerers}
+              onClick={submitSettleByAnswer}
+              className="rounded-full border border-[#cdd9ea] bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-[#3B82F6] hover:bg-white disabled:opacity-50"
+            >
+              {t("settleWithAnswer")}
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-slate-500">
+            {t("winningAnswerHint")}
+          </p>
+        </div>
+      ) : null}
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button

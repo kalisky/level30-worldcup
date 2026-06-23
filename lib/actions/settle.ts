@@ -13,6 +13,10 @@ import {
   type CustomBetOption,
 } from "@/lib/db/schema";
 import { requireRoomUser } from "@/lib/auth-context";
+import {
+  findOptionIdxByAnswer,
+  stampCustomBetOption,
+} from "@/lib/custom-bet-odds";
 import { recordLedger } from "@/lib/ledger";
 import {
   touchMatchLiveRevisions,
@@ -29,10 +33,24 @@ import { revalidateRoomChipPaths } from "@/lib/revalidate-room-chip-paths";
 // Match settlement is server-side only — see lib/auto-settle.ts. Users
 // never settle matches; they only resolve custom bets below.
 
-const settleCustomSchema = z.object({
-  customBetId: z.string().uuid(),
-  winningOptionIdx: z.number().int().nonnegative(),
-});
+const settleCustomSchema = z
+  .object({
+    customBetId: z.string().uuid(),
+    winningOptionIdx: z.preprocess((value) => {
+      if (value == null || value === "") return undefined;
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : value;
+    }, z.number().int().nonnegative().optional()),
+    winningAnswer: z.preprocess((value) => {
+      if (value == null) return undefined;
+      const text = String(value).trim();
+      return text.length > 0 ? text : undefined;
+    }, z.string().max(80).optional()),
+  })
+  .refine(
+    (data) => data.winningOptionIdx != null || data.winningAnswer != null,
+    { message: "Invalid choice." }
+  );
 
 export async function settleCustomBet(formData: FormData) {
   const code = String(formData.get("roomCode") ?? "");
@@ -40,10 +58,11 @@ export async function settleCustomBet(formData: FormData) {
 
   const parsed = settleCustomSchema.safeParse({
     customBetId: String(formData.get("customBetId") ?? ""),
-    winningOptionIdx: Number(formData.get("winningOptionIdx") ?? -1),
+    winningOptionIdx: formData.get("winningOptionIdx"),
+    winningAnswer: formData.get("winningAnswer"),
   });
   if (!parsed.success) throw new Error("Invalid choice.");
-  const { customBetId, winningOptionIdx } = parsed.data;
+  const { customBetId, winningAnswer } = parsed.data;
 
   await db.transaction(async (tx) => {
     const [bet] = await tx
@@ -56,7 +75,30 @@ export async function settleCustomBet(formData: FormData) {
     if (bet.status === "settled" || bet.status === "void") {
       throw new Error("Already resolved.");
     }
-    if (winningOptionIdx >= bet.options.length) {
+    if (bet.kind !== "open_question" && winningAnswer) {
+      throw new Error("Only open-question bets can be settled with a typed answer.");
+    }
+
+    let winningOptionIdx = parsed.data.winningOptionIdx ?? null;
+    let options = [...(bet.options as CustomBetOption[])];
+
+    if (bet.kind === "open_question" && winningAnswer) {
+      const existingIdx = findOptionIdxByAnswer(options, winningAnswer);
+      if (existingIdx >= 0) {
+        winningOptionIdx = existingIdx;
+      } else {
+        options.push(
+          stampCustomBetOption({
+            label: winningAnswer,
+            probability: 0,
+            odds: 0,
+          })
+        );
+        winningOptionIdx = options.length - 1;
+      }
+    }
+
+    if (winningOptionIdx == null || winningOptionIdx >= options.length) {
       throw new Error("Invalid option.");
     }
 
@@ -75,7 +117,7 @@ export async function settleCustomBet(formData: FormData) {
 
     await tx
       .update(customBets)
-      .set({ status: "settled", winningOptionIdx })
+      .set({ status: "settled", winningOptionIdx, options })
       .where(eq(customBets.id, customBetId));
 
     const openWagers = await tx
@@ -101,7 +143,7 @@ export async function settleCustomBet(formData: FormData) {
           balanceAfter: updatedUser.chips,
           reason: "custom_wager_payout",
           refCustomBetId: customBetId,
-          note: `Won "${(bet.options as CustomBetOption[])[winningOptionIdx].label}" on "${bet.title}"`,
+          note: `Won "${options[winningOptionIdx]?.label}" on "${bet.title}"`,
         });
       }
       await tx
@@ -117,7 +159,7 @@ export async function settleCustomBet(formData: FormData) {
       targetId: customBetId,
       payload: {
         winningOptionIdx,
-        winningLabel: (bet.options as CustomBetOption[])[winningOptionIdx].label,
+        winningLabel: options[winningOptionIdx]?.label,
         wagersSettled: openWagers.length,
       },
     });

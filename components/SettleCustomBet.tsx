@@ -14,12 +14,14 @@ export default function SettleCustomBet({
   bet,
   roomCode,
   proposerName,
+  matchLabel,
   wagererCount,
   wagers,
 }: {
   bet: CustomBet;
   roomCode: string;
   proposerName: string;
+  matchLabel?: string | null;
   /** Distinct number of users who've wagered. Below 2 the bet is invalid and
    *  can only be voided. */
   wagererCount: number;
@@ -99,6 +101,11 @@ export default function SettleCustomBet({
           {proposerName}
         </span>
       </header>
+      {matchLabel ? (
+        <div className="mt-1 inline-flex items-center rounded-full bg-[#EFF6FF] px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-[#1D4ED8] ring-1 ring-[#BFDBFE]">
+          {matchLabel}
+        </div>
+      ) : null}
       {copy.description && (
         <p className="mt-1 text-xs leading-6 text-slate-500">{copy.description}</p>
       )}

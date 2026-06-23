@@ -81,6 +81,7 @@ export default async function AdminPage(props: {
     (m) => m.status !== "final" && new Date(m.kickoff) > now
   );
   const completed = allMatches.filter((m) => m.status === "final");
+  const matchById = new Map(allMatches.map((match) => [match.id, match]));
 
   return (
     <>
@@ -116,16 +117,24 @@ export default async function AdminPage(props: {
             <p className="text-sm text-zinc-500">{t("noCustomBets")}</p>
           ) : (
             <div className="space-y-2">
-              {openBets.map(({ bet, proposerName, wagererCount }) => (
-                <SettleCustomBet
-                  key={bet.id}
-                  bet={bet}
-                  roomCode={room.code}
-                  proposerName={proposerName}
-                  wagererCount={wagererCount}
-                  wagers={wagersByBet.get(bet.id) ?? []}
-                />
-              ))}
+              {openBets.map(({ bet, proposerName, wagererCount }) => {
+                const match = bet.matchId ? matchById.get(bet.matchId) : null;
+                const matchLabel = match
+                  ? `${translateTeam(match.homeTeam, locale)} ${tm("vs")} ${translateTeam(match.awayTeam, locale)}`
+                  : null;
+
+                return (
+                  <SettleCustomBet
+                    key={bet.id}
+                    bet={bet}
+                    roomCode={room.code}
+                    proposerName={proposerName}
+                    matchLabel={matchLabel}
+                    wagererCount={wagererCount}
+                    wagers={wagersByBet.get(bet.id) ?? []}
+                  />
+                );
+              })}
             </div>
           )}
         </section>

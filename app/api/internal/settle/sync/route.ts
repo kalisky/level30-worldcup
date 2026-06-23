@@ -4,7 +4,7 @@ import { z } from "zod";
 import { autoSettleFinishedMatches } from "@/lib/auto-settle";
 
 export const runtime = "nodejs";
-// AI lookups for several matches can take a while.
+// Fetching the Wikipedia group pages and settling several rooms can take a bit.
 export const maxDuration = 120;
 
 const bodySchema = z.object({

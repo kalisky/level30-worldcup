@@ -2,20 +2,20 @@ import { and, eq, inArray, isNull, lt, lte, ne, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { matchBets, matches, rooms } from "@/lib/db/schema";
-import { suggestMatchResult } from "@/lib/ai/suggest";
+import { buildWikipediaIndex, resolveFromWikipedia } from "@/lib/result-oracle";
 import { settleMatchBetsForRoom } from "@/lib/settle-match-core";
 import { revalidateRoomChipPaths } from "@/lib/revalidate-room-chip-paths";
 
 // A match can't be over before kickoff + 90' + half-time + stoppage (giving 10 minutes for the combined stoppage).
 const MIN_MATCH_DURATION_MS = 115 * 60 * 1000;
-// Re-ask the AI for an unconfirmed result at most this often, escalating the
-// interval the longer the result stays unconfirmed so a match the AI can
-// never resolve doesn't burn grounded-search quota forever:
+// Re-check Wikipedia for an unconfirmed result at most this often, escalating
+// the interval the longer the result stays unresolved so a match that never
+// appears on the group pages doesn't get hammered forever:
 //   first hour → every 10 min, first day → hourly, after that → daily.
 const CHECK_INTERVAL_MS = 10 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
-// Bound AI lookups per run for when several matches end together; the next
+// Bound per-run lookups for when several matches end together; the next
 // run picks up whatever this one didn't get to.
 const MAX_CHECKS_PER_RUN = 3;
 
@@ -42,7 +42,7 @@ export type AutoSettleResult = {
 
 /**
  * Server-side settlement: finds matches that should have finished, looks up
- * the official final score via AI + web search, and settles every room's
+ * the official final score from Wikipedia's group pages, and settles every room's
  * open bets on them. Users never settle matches themselves.
  *
  * Safe to call from any request (it's cheap when there's nothing to do) and
@@ -96,6 +96,10 @@ export async function autoSettleFinishedMatches(options?: {
     return { status: "noop", checked: [] };
   }
 
+  // Fetch the group pages once per run, then resolve every candidate from the
+  // prebuilt index so the scheduling/backoff behavior stays the same while the
+  // source of truth matches /admin/checks.
+  const wikiIndex = await buildWikipediaIndex();
   const checked: AutoSettleCheck[] = [];
 
   for (const match of candidates) {
@@ -121,18 +125,7 @@ export async function autoSettleFinishedMatches(options?: {
       .returning({ id: matches.id });
     if (claimed.length === 0) continue;
 
-    let result;
-    try {
-      result = await suggestMatchResult(match);
-    } catch (e) {
-      checked.push({
-        matchId: match.id,
-        match: label,
-        found: false,
-        reasoning: e instanceof Error ? e.message : "AI lookup failed.",
-      });
-      continue;
-    }
+    const result = resolveFromWikipedia(match, wikiIndex);
 
     if (
       !result.found ||

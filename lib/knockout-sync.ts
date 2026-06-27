@@ -11,11 +11,21 @@ import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { matchBets, matches } from "@/lib/db/schema";
 import { generateKnockoutOdds } from "@/lib/ai/odds";
-import { isPlaceholderTeam } from "@/lib/knockout";
+import { isPlaceholderTeam, KNOCKOUT_ROUNDS } from "@/lib/knockout";
 
-const ROUND = "R32";
 const KNOCKOUT_URL =
   "https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_knockout_stage";
+
+// 48-team bracket match numbers → round labels (see data/knockout_bracket.json).
+function roundForMatchNo(n: number): string | null {
+  if (n >= 73 && n <= 88) return "R32";
+  if (n >= 89 && n <= 96) return "R16";
+  if (n >= 97 && n <= 100) return "QF";
+  if (n >= 101 && n <= 102) return "SF";
+  if (n === 103) return "3RD";
+  if (n === 104) return "F";
+  return null;
+}
 
 function decode(s: string): string {
   return s
@@ -57,6 +67,7 @@ function pairKey(a: string, b: string): string {
 
 export type KnockoutFixture = {
   matchNo: number;
+  round: string; // "R32" | "R16" | "QF" | "SF" | "3RD" | "F"
   home: string;
   away: string;
   kickoff: Date;
@@ -80,8 +91,8 @@ function parseKickoff(fdateText: string, ftimeText: string): Date | null {
   );
 }
 
-/** Fetch + parse all R32 fixtures (matches 73–88), placeholders included. */
-export async function fetchR32Fixtures(): Promise<KnockoutFixture[]> {
+/** Fetch + parse every knockout fixture (R32 → Final), placeholders included. */
+export async function fetchKnockoutFixtures(): Promise<KnockoutFixture[]> {
   const res = await fetch(KNOCKOUT_URL, {
     headers: { "User-Agent": "Mozilla/5.0 wc-knockout-sync" },
     cache: "no-store",
@@ -94,16 +105,19 @@ export async function fetchR32Fixtures(): Promise<KnockoutFixture[]> {
     const b = blocks[i].slice(0, 6000);
     const home = cellText(firstCell(b, "fhome"));
     const away = cellText(firstCell(b, "faway"));
+    // Before kickoff the score cell reads "Match NN"; after, it's the score —
+    // either way the match-number label is what we key the round off of.
     const mn = /Match\s+(\d+)/i.exec(cellText(firstCell(b, "fscore")));
     if (!home || !away || !mn) continue;
     const matchNo = Number(mn[1]);
-    if (matchNo < 73 || matchNo > 88) continue;
+    const round = roundForMatchNo(matchNo);
+    if (!round) continue;
     const kickoff = parseKickoff(
       cellText(firstCell(b, "fdate")),
       cellText(firstCell(b, "ftime"))
     );
     if (!kickoff) continue;
-    out.push({ matchNo, home, away, kickoff });
+    out.push({ matchNo, round, home, away, kickoff });
   }
   return out.sort((a, b) => a.matchNo - b.matchNo);
 }
@@ -118,8 +132,10 @@ export type KnockoutSyncResult = {
 };
 
 /**
- * Sync R32 fixtures from Wikipedia. Inserts newly-resolved fixtures (both teams
- * real) with freshly generated odds, and prunes bet-free placeholder rows.
+ * Sync every knockout round (R32 → Final) from Wikipedia. Inserts each fixture
+ * once both teams are real, with freshly generated odds, and prunes bet-free
+ * placeholder rows. As each round finishes, the next round's fixtures resolve
+ * and get picked up here — no manual step per round.
  */
 export async function syncKnockoutFixtures(options?: {
   /** Skip Gemini odds (rows only). */
@@ -136,7 +152,7 @@ export async function syncKnockoutFixtures(options?: {
     errors: [],
   };
 
-  const fixtures = await fetchR32Fixtures();
+  const fixtures = await fetchKnockoutFixtures();
   result.fetched = fixtures.length;
 
   // Default normalizer: map Wikipedia names to the names already in the DB
@@ -157,7 +173,7 @@ export async function syncKnockoutFixtures(options?: {
   const existing = await db
     .select()
     .from(matches)
-    .where(eq(matches.groupLabel, ROUND));
+    .where(inArray(matches.groupLabel, [...KNOCKOUT_ROUNDS]));
   const existingByPair = new Map(
     existing.map((m) => [pairKey(m.homeTeam, m.awayTeam), m])
   );
@@ -189,7 +205,7 @@ export async function syncKnockoutFixtures(options?: {
 
     const [row] = await db
       .insert(matches)
-      .values({ groupLabel: ROUND, homeTeam: home, awayTeam: away, kickoff: f.kickoff })
+      .values({ groupLabel: f.round, homeTeam: home, awayTeam: away, kickoff: f.kickoff })
       .returning({ id: matches.id });
     result.inserted.push({ home, away });
 
@@ -198,7 +214,7 @@ export async function syncKnockoutFixtures(options?: {
         const odds = await generateKnockoutOdds({
           homeTeam: home,
           awayTeam: away,
-          roundLabel: ROUND,
+          roundLabel: f.round,
           kickoff: f.kickoff,
         });
         await db

@@ -2,6 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import type { db } from "@/lib/db";
 import { matchBets, matches, users, type Match } from "@/lib/db/schema";
 import { recordLedger } from "@/lib/ledger";
+import { isKnockout } from "@/lib/knockout";
 import { settleMatchBetsForRoom } from "@/lib/settle-match-core";
 import { touchMatchLiveRevisions } from "@/lib/live-updates";
 
@@ -37,6 +38,9 @@ export async function correctMatchSettlement(
     match: Match;
     homeScore: number;
     awayScore: number;
+    /** Knockout only: which side advanced. Written to the match + used to
+     *  settle the 2-way direction bet. */
+    advancer?: "HOME" | "AWAY" | null;
     /**
      * Attributed to the `settlements.actorId` audit column per room. Defaults
      * to null, recorded as "resolved by the server" (cron / automated). The
@@ -54,6 +58,8 @@ export async function correctMatchSettlement(
 
   const run = async (tx: Tx): Promise<CorrectMatchSettlementResult> => {
     const { match, homeScore, awayScore } = args;
+    const knockout = isKnockout(match.groupLabel);
+    const advancer = knockout ? args.advancer ?? null : null;
     const resolveActor = args.actorIdForRoom ?? (() => null);
 
     const fromScore =
@@ -64,19 +70,26 @@ export async function correctMatchSettlement(
     const scoreChanged =
       match.status !== "final" ||
       match.homeScore !== homeScore ||
-      match.awayScore !== awayScore;
+      match.awayScore !== awayScore ||
+      (knockout && match.advancer !== advancer);
 
     const correctedMatch: Match = {
       ...match,
       homeScore,
       awayScore,
       status: "final",
+      advancer,
     };
 
     if (scoreChanged) {
       await tx
         .update(matches)
-        .set({ homeScore, awayScore, status: "final" })
+        .set({
+          homeScore,
+          awayScore,
+          status: "final",
+          ...(knockout ? { advancer } : {}),
+        })
         .where(eq(matches.id, match.id));
       await touchMatchLiveRevisions(tx, match.id);
     }
@@ -153,6 +166,7 @@ export async function correctMatchSettlement(
         match: correctedMatch,
         homeScore,
         awayScore,
+        advancer,
         repair: true,
       });
       if (result.betsSettled > 0) roomsResettled += 1;

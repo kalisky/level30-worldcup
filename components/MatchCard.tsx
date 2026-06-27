@@ -11,6 +11,7 @@ import DashboardQuickBet, {
 } from "@/components/DashboardQuickBet";
 import { getTeamAbbreviation } from "@/lib/team-flags";
 import { useTeamName } from "@/hooks/useTeamName";
+import { isKnockout } from "@/lib/knockout";
 
 export type MatchCardMatch = Omit<
   Pick<
@@ -223,6 +224,7 @@ export default function MatchCard({
         now={now}
         myBet={myBet}
         otherRoomCount={otherRoomCount}
+        isKnockout={isKnockout(match.groupLabel)}
       />
 
       {isLive && (

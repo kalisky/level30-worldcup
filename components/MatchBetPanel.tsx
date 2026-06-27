@@ -4,11 +4,13 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import QuickBetForm from "@/components/QuickBetForm";
 import { useTeamName } from "@/hooks/useTeamName";
+import { isKnockout as isKnockoutRound } from "@/lib/knockout";
 import type { MatchBet, ScoreOddsCache } from "@/lib/db/schema";
 
 export default function MatchBetPanel({
   roomCode,
   matchId,
+  groupLabel,
   matchStatus,
   kickoff,
   myBet,
@@ -25,6 +27,7 @@ export default function MatchBetPanel({
 }: {
   roomCode: string;
   matchId: string;
+  groupLabel: string;
   matchStatus: "scheduled" | "live" | "final";
   kickoff: string;
   myBet: MatchBet | null;
@@ -39,6 +42,7 @@ export default function MatchBetPanel({
   defaultScoreStake: number | null;
   otherRoomCount?: number;
 }) {
+  const isKnockout = isKnockoutRound(groupLabel);
   const [now] = useState(() => Date.now());
   const t = useTranslations("match");
   const tb = useTranslations("bet");
@@ -49,7 +53,10 @@ export default function MatchBetPanel({
 
   const isLocked =
     new Date(kickoff).getTime() <= now || matchStatus !== "scheduled";
-  const hasDirectionOdds = oddsHome != null && oddsDraw != null && oddsAway != null;
+  // Knockout is a 2-way market — no draw odds to require.
+  const hasDirectionOdds = isKnockout
+    ? oddsHome != null && oddsAway != null
+    : oddsHome != null && oddsDraw != null && oddsAway != null;
   const hasScoreOdds = !!scoreOdds && Object.keys(scoreOdds).length > 0;
   const hasOdds = hasDirectionOdds && hasScoreOdds;
 
@@ -63,7 +70,7 @@ export default function MatchBetPanel({
         homeTeam={homeTeam}
         awayTeam={awayTeam}
         oddsHome={oddsHome!}
-        oddsDraw={oddsDraw!}
+        oddsDraw={oddsDraw ?? 0}
         oddsAway={oddsAway!}
         scoreOdds={scoreOdds!}
         maxStake={maxStake}
@@ -71,6 +78,7 @@ export default function MatchBetPanel({
         defaultDirectionStake={defaultDirectionStake}
         defaultScoreStake={defaultScoreStake}
         otherRoomCount={otherRoomCount}
+        isKnockout={isKnockout}
       />
     );
   }

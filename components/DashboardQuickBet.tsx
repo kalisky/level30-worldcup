@@ -203,6 +203,7 @@ function ExactScoreDialog({
   sideStake,
   maxStake,
   choices,
+  isKnockout = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -217,6 +218,7 @@ function ExactScoreDialog({
   sideStake: number;
   maxStake: number;
   choices: ExactScoreChoice[];
+  isKnockout?: boolean;
 }) {
   const tb = useTranslations("bet");
   const tm = useTranslations("match");
@@ -299,6 +301,12 @@ function ExactScoreDialog({
         </div>
 
         <div className="mt-5 space-y-3">
+          {isKnockout && (
+            <div className="flex items-start gap-2 rounded-[18px] border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-3 text-sm font-medium text-[#1E3A8A]">
+              <span aria-hidden>⏱️</span>
+              <span>{tb("scoreLegalTimeNote")}</span>
+            </div>
+          )}
           <ScoreSelectField
             title={localizedHome}
             teamName={homeTeam}
@@ -413,6 +421,7 @@ export default function DashboardQuickBet({
   defaultDirectionStake,
   defaultScoreStake,
   otherRoomCount = 0,
+  isKnockout = false,
 }: {
   roomCode: string;
   matchId: string;
@@ -431,6 +440,8 @@ export default function DashboardQuickBet({
   defaultScoreStake?: number | null;
   /** Rooms the user belongs to besides this one — gates the cross-room toggle. */
   otherRoomCount?: number;
+  /** Knockout match: 2-way "advances" side (no draw), score is legal-time. */
+  isKnockout?: boolean;
 }) {
   const tb = useTranslations("bet");
   const td = useTranslations("dashboard");
@@ -443,7 +454,9 @@ export default function DashboardQuickBet({
   const [scoreDialogOpen, setScoreDialogOpen] = useState(false);
 
   const isLocked = matchStatus !== "scheduled" || new Date(kickoff).getTime() <= now;
-  const hasDirectionOdds = oddsHome != null && oddsDraw != null && oddsAway != null;
+  const hasDirectionOdds = isKnockout
+    ? oddsHome != null && oddsAway != null
+    : oddsHome != null && oddsDraw != null && oddsAway != null;
   const hasScoreOdds = !!scoreOdds && Object.keys(scoreOdds).length > 0;
   const hasOdds = hasDirectionOdds && hasScoreOdds;
 
@@ -604,24 +617,26 @@ export default function DashboardQuickBet({
   return (
     <>
       <div className="mt-4 border-t border-[#e7eef8] pt-4">
-        <div className="grid grid-cols-3 gap-2">
+        <div className={`grid gap-2 ${isKnockout ? "grid-cols-2" : "grid-cols-3"}`}>
           <QuickSideButton
             label={localizedHome}
             teamName={homeTeam}
-            odds={oddsHome}
+            odds={oddsHome ?? 0}
             selected={desired.pick === "HOME"}
             onSelect={() => togglePick("HOME")}
           />
-          <QuickSideButton
-            label={drawLabel}
-            odds={oddsDraw}
-            selected={desired.pick === "DRAW"}
-            onSelect={() => togglePick("DRAW")}
-          />
+          {!isKnockout && (
+            <QuickSideButton
+              label={drawLabel}
+              odds={oddsDraw ?? 0}
+              selected={desired.pick === "DRAW"}
+              onSelect={() => togglePick("DRAW")}
+            />
+          )}
           <QuickSideButton
             label={localizedAway}
             teamName={awayTeam}
-            odds={oddsAway}
+            odds={oddsAway ?? 0}
             selected={desired.pick === "AWAY"}
             onSelect={() => togglePick("AWAY")}
           />
@@ -753,6 +768,7 @@ export default function DashboardQuickBet({
         sideStake={hasDirection ? desired.sideStake : 0}
         maxStake={budget}
         choices={exactScoreChoices}
+        isKnockout={isKnockout}
       />
     </>
   );

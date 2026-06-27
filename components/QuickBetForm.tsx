@@ -58,6 +58,7 @@ export default function QuickBetForm({
   defaultDirectionStake,
   defaultScoreStake,
   otherRoomCount = 0,
+  isKnockout = false,
 }: {
   roomCode: string;
   matchId: string;
@@ -74,6 +75,8 @@ export default function QuickBetForm({
   defaultScoreStake: number | null;
   /** Rooms the user belongs to besides this one — gates the cross-room toggle. */
   otherRoomCount?: number;
+  /** Knockout match: 2-way "advances" side (no draw), score is legal-time. */
+  isKnockout?: boolean;
 }) {
   const tb = useTranslations("bet");
   const tm = useTranslations("match");
@@ -167,7 +170,10 @@ export default function QuickBetForm({
   const totalStake = quickBetTotal(desired);
 
   const scoreImpliesDirection = impliedDirection(desired.home, desired.away);
+  // In knockout the side is "who advances" (incl. penalties), independent of
+  // the legal-time score, so a draw scoreline never conflicts with the pick.
   const mismatched =
+    !isKnockout &&
     hasDirection &&
     hasScore &&
     scoreImpliesDirection !== null &&
@@ -179,14 +185,14 @@ export default function QuickBetForm({
       <section className="rounded-[28px] border border-[#dbe5f2] bg-white p-5 shadow-[0_16px_38px_rgba(30,58,138,0.08)]">
         <div className="mb-3 flex items-baseline justify-between gap-2">
           <h3 className="text-[0.72rem] font-bold uppercase tracking-[0.28em] text-slate-500">
-            {tb("step1Side")}
+            {isKnockout ? tb("step1Advance") : tb("step1Side")}
           </h3>
           <span className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-400">
             {tb("instantHint")}
           </span>
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className={`grid gap-2 ${isKnockout ? "grid-cols-2" : "grid-cols-3"}`}>
           <SideButton
             label={localizedHome}
             teamName={homeTeam}
@@ -194,12 +200,14 @@ export default function QuickBetForm({
             selected={desired.pick === "HOME"}
             onSelect={() => togglePick("HOME")}
           />
-          <SideButton
-            label={tm("draw")}
-            odds={oddsDraw}
-            selected={desired.pick === "DRAW"}
-            onSelect={() => togglePick("DRAW")}
-          />
+          {!isKnockout && (
+            <SideButton
+              label={tm("draw")}
+              odds={oddsDraw}
+              selected={desired.pick === "DRAW"}
+              onSelect={() => togglePick("DRAW")}
+            />
+          )}
           <SideButton
             label={localizedAway}
             teamName={awayTeam}
@@ -242,6 +250,13 @@ export default function QuickBetForm({
             </span>
           </div>
         </div>
+
+        {isKnockout && (
+          <div className="mb-3 flex items-start gap-2 rounded-[18px] border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-3 text-sm font-medium text-[#1E3A8A]">
+            <span aria-hidden>⏱️</span>
+            <span>{tb("scoreLegalTimeNote")}</span>
+          </div>
+        )}
 
         <div className="space-y-3">
           <ScoreSelectField

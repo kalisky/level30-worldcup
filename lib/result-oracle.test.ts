@@ -63,3 +63,38 @@ test("returns not-found for an unknown pairing", () => {
   assert.equal(r.found, false);
   assert.equal(r.source, "none");
 });
+
+// Knockout: Wikipedia lists Croatia as home and advancing on penalties; the DB
+// stores the match with Japan as home. Both the score and the advancer must be
+// oriented to the DB's home/away.
+const koIndex = indexResults([], [], [
+  {
+    homeTeam: "Croatia",
+    awayTeam: "Japan",
+    homeScore: 1,
+    awayScore: 1,
+    advancer: "HOME", // Croatia advanced
+  },
+]);
+
+test("knockout: orients score AND advancer to the DB home/away", () => {
+  const r = resolveFromWikipedia(
+    { homeTeam: "Japan", awayTeam: "Croatia" },
+    koIndex,
+    true
+  );
+  assert.equal(r.found, true);
+  assert.equal(r.homeScore, 1);
+  assert.equal(r.awayScore, 1);
+  assert.equal(r.advancer, "AWAY"); // Croatia is the DB away team
+});
+
+test("knockout: lookup only hits the knockout index, not group", () => {
+  // Same pair via the group resolver (knockout=false) shouldn't be found here.
+  const r = resolveFromWikipedia(
+    { homeTeam: "Japan", awayTeam: "Croatia" },
+    koIndex,
+    false
+  );
+  assert.equal(r.found, false);
+});

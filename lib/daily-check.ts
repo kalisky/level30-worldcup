@@ -27,6 +27,7 @@ import {
 } from "@/lib/db/schema";
 import { computeMatchBetSettlement } from "@/lib/settle-match-core";
 import { correctMatchSettlement } from "@/lib/correct-settlement";
+import { isKnockout } from "@/lib/knockout";
 import {
   buildWikipediaIndex,
   fetchAuthoritativeResult,
@@ -204,6 +205,7 @@ async function verifyMatch(
 ): Promise<DailyCheckMatchReport> {
   const label = `${match.homeTeam} vs ${match.awayTeam}`;
   const storedScore = scoreStr(match.homeScore, match.awayScore);
+  const knockout = isKnockout(match.groupLabel);
 
   const auth = await fetchAuthoritativeResult(match, index);
 
@@ -228,13 +230,20 @@ async function verifyMatch(
     return { ...base, verdict: "unverified" };
   }
 
+  // Knockout level after extra time but the shootout winner isn't confirmed yet
+  // — can't decide the direction bets, so leave it for the next run.
+  if (knockout && auth.homeScore === auth.awayScore && auth.advancer == null) {
+    return { ...base, verdict: "unverified" };
+  }
+
   const scoreMatches =
     match.status === "final" &&
     match.homeScore === auth.homeScore &&
-    match.awayScore === auth.awayScore;
+    match.awayScore === auth.awayScore &&
+    (!knockout || match.advancer === auth.advancer);
 
   if (!scoreMatches) {
-    // The recorded score is wrong, or the match finished but was never settled.
+    // The recorded score/advancer is wrong, or the match finished unsettled.
     const report: DailyCheckMatchReport = { ...base, verdict: "score-mismatch" };
     if (autoFix) {
       try {
@@ -242,6 +251,7 @@ async function verifyMatch(
           match,
           homeScore: auth.homeScore,
           awayScore: auth.awayScore,
+          advancer: knockout ? auth.advancer ?? null : null,
           actorIdForRoom: () => null, // server / automated correction
         });
         report.autoFix = {
@@ -283,7 +293,8 @@ async function verifyMatch(
     const expected = computeMatchBetSettlement(
       bet,
       auth.homeScore,
-      auth.awayScore
+      auth.awayScore,
+      { knockout, advancer: knockout ? auth.advancer ?? null : null }
     );
     // A bet still open on a final, verified match never got settled.
     const stillOpen = bet.status === "open";

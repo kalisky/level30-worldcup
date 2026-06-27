@@ -2,10 +2,22 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { runDailyCheck } from "@/lib/daily-check";
+import { syncKnockoutFixtures } from "@/lib/knockout-sync";
 
 export const runtime = "nodejs";
-// Fetching ~12 Wikipedia group pages plus any Gemini fallbacks can take a bit.
+// Wikipedia group pages + knockout fixture sync (+ any odds generation) can
+// take a bit.
 export const maxDuration = 120;
+
+// Best-effort: pull in any newly-resolved knockout fixtures + their odds. A
+// failure here must not break the settlement check, so it's swallowed.
+async function syncKnockoutSafe() {
+  try {
+    return await syncKnockoutFixtures();
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
+}
 
 const bodySchema = z.object({
   // Override the default auto-fix behavior (e.g. report-only dry check).
@@ -51,7 +63,8 @@ export async function POST(request: Request) {
     autoFix: parsed.data.autoFix,
     force: parsed.data.force,
   });
-  return NextResponse.json(result);
+  const knockoutSync = await syncKnockoutSafe();
+  return NextResponse.json({ ...result, knockoutSync });
 }
 
 // Vercel Cron entry point — cron requests are GETs carrying
@@ -71,5 +84,6 @@ export async function GET(request: Request) {
   }
 
   const result = await runDailyCheck();
-  return NextResponse.json(result);
+  const knockoutSync = await syncKnockoutSafe();
+  return NextResponse.json({ ...result, knockoutSync });
 }

@@ -43,16 +43,27 @@ export async function generate1X2Odds(input: {
   awayTeam: string;
   groupLabel: string;
   kickoff: Date;
+  /** Knockout: estimate the LEGAL-TIME result (after 90'/120', before pens). */
+  knockout?: boolean;
 }): Promise<Match1X2Odds> {
   const ai = client();
-  const prompt = [
-    "You are a football odds engine for a friend-group betting game (no real money) during the 2026 FIFA World Cup.",
-    "Estimate the probability of each outcome in the upcoming group stage match.",
-    "Be honest and well-calibrated — these are friends, not customers, so do not bake in a house margin.",
-    `Match: ${input.homeTeam} vs ${input.awayTeam} (Group ${input.groupLabel}, kickoff ${input.kickoff.toISOString()})`,
-    "If one or both teams are placeholders like 'Group A - Pos 2', treat them as average teams with high uncertainty.",
-    "Return: homeProb, drawProb, awayProb (must sum to ~1.0), and a one-sentence reasoning.",
-  ].join("\n");
+  const prompt = input.knockout
+    ? [
+        "You are a football odds engine for a friend-group betting game (no real money) during the 2026 FIFA World Cup.",
+        "This is a KNOCKOUT match. Estimate the probability of each LEGAL-TIME outcome — the result after 90 minutes plus extra time if played, but BEFORE any penalty shootout.",
+        "A 'draw' here means the score is level at the end of extra time and the tie would be decided on penalties.",
+        "Be honest and well-calibrated — these are friends, not customers, so do not bake in a house margin.",
+        `Match: ${input.homeTeam} vs ${input.awayTeam} (${input.groupLabel}, kickoff ${input.kickoff.toISOString()})`,
+        "Return: homeProb (home wins in legal time), drawProb (level after extra time), awayProb (away wins in legal time) — must sum to ~1.0 — and a one-sentence reasoning.",
+      ].join("\n")
+    : [
+        "You are a football odds engine for a friend-group betting game (no real money) during the 2026 FIFA World Cup.",
+        "Estimate the probability of each outcome in the upcoming group stage match.",
+        "Be honest and well-calibrated — these are friends, not customers, so do not bake in a house margin.",
+        `Match: ${input.homeTeam} vs ${input.awayTeam} (Group ${input.groupLabel}, kickoff ${input.kickoff.toISOString()})`,
+        "If one or both teams are placeholders like 'Group A - Pos 2', treat them as average teams with high uncertainty.",
+        "Return: homeProb, drawProb, awayProb (must sum to ~1.0), and a one-sentence reasoning.",
+      ].join("\n");
 
   const response = await ai.models.generateContent({
     model: MODEL,
@@ -107,6 +118,8 @@ export async function generateScoreOdds(input: {
   groupLabel: string;
   kickoff: Date;
   direction?: { homeProb: number; drawProb: number; awayProb: number };
+  /** Knockout: the exact score is the legal-time result (incl. extra time). */
+  knockout?: boolean;
 }): Promise<{
   scoreOdds: ScoreOddsCache;
   expectedHomeGoals: number;
@@ -120,10 +133,12 @@ export async function generateScoreOdds(input: {
 
   const prompt = [
     "You are a football odds engine for a friend-group betting game (no real money) during the 2026 FIFA World Cup.",
-    "Estimate expected goals (xG) per side for this group stage match.",
+    input.knockout
+      ? "Estimate expected goals (xG) per side for this KNOCKOUT match's LEGAL-TIME score — the score after 90 minutes plus extra time if played, but BEFORE any penalty shootout. Account for the chance of extra time slightly raising totals."
+      : "Estimate expected goals (xG) per side for this group stage match.",
     "We'll convert your xG into an exact-score probability grid via independent Poisson.",
     "Be honest and well-calibrated. If teams are placeholders, assume average World Cup teams (~1.3 xG each).",
-    `Match: ${input.homeTeam} vs ${input.awayTeam} (Group ${input.groupLabel}, kickoff ${input.kickoff.toISOString()})`,
+    `Match: ${input.homeTeam} vs ${input.awayTeam} (${input.knockout ? "" : "Group "}${input.groupLabel}, kickoff ${input.kickoff.toISOString()})`,
     directionLine,
     "Return expectedHomeGoals (typical 0.3-3.5), expectedAwayGoals, and a one-sentence reasoning.",
   ]
@@ -179,6 +194,64 @@ function poisson(k: number, lambda: number): number {
   for (let i = 2; i <= k; i++) logFactK += Math.log(i);
   const logP = -lambda + k * Math.log(lambda) - logFactK;
   return Math.exp(logP);
+}
+
+// --- Knockout odds (2-way "advances" + legal-time score) ------------------
+
+export type KnockoutOdds = {
+  /** Decimal odds that HOME advances (win in 90'/120' or on penalties). */
+  oddsHome: number;
+  /** Decimal odds that AWAY advances. */
+  oddsAway: number;
+  scoreOdds: ScoreOddsCache;
+  reasoning: string;
+};
+
+/**
+ * Knockout match odds. We estimate the legal-time 1X2 (home win / level after
+ * ET / away win) with Gemini, then:
+ *   - "advance" odds (2-way): P(advance) = P(win in legal time) + 0.5·P(draw),
+ *     treating a penalty shootout as a coin flip.
+ *   - exact-score odds: the legal-time score grid (draws included), via the
+ *     same Poisson model used for the group stage.
+ */
+export async function generateKnockoutOdds(input: {
+  homeTeam: string;
+  awayTeam: string;
+  roundLabel: string; // e.g. "R32"
+  kickoff: Date;
+}): Promise<KnockoutOdds> {
+  const legal = await generate1X2Odds({
+    homeTeam: input.homeTeam,
+    awayTeam: input.awayTeam,
+    groupLabel: input.roundLabel,
+    kickoff: input.kickoff,
+    knockout: true,
+  });
+
+  // Penalties ≈ 50/50, so split the draw probability between the two sides.
+  const advanceHome = legal.homeProb + legal.drawProb / 2;
+  const advanceAway = legal.awayProb + legal.drawProb / 2;
+
+  const score = await generateScoreOdds({
+    homeTeam: input.homeTeam,
+    awayTeam: input.awayTeam,
+    groupLabel: input.roundLabel,
+    kickoff: input.kickoff,
+    knockout: true,
+    direction: {
+      homeProb: legal.homeProb,
+      drawProb: legal.drawProb,
+      awayProb: legal.awayProb,
+    },
+  });
+
+  return {
+    oddsHome: probToOdds(advanceHome, MAX_DIRECTION_ODDS),
+    oddsAway: probToOdds(advanceAway, MAX_DIRECTION_ODDS),
+    scoreOdds: score.scoreOdds,
+    reasoning: `${legal.reasoning} ${score.reasoning}`,
+  };
 }
 
 // --- Custom bet odds ------------------------------------------------------

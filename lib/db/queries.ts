@@ -1,5 +1,10 @@
-import { and, asc, desc, eq, gt, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNotNull, notInArray, sql } from "drizzle-orm";
 import { ensureFreshCustomBetOdds } from "@/lib/custom-bet-odds";
+import {
+  KNOCKOUT_BETTING_ENABLED,
+  KNOCKOUT_ROUNDS,
+  isPlaceholderTeam,
+} from "@/lib/knockout";
 import { TEAM_CONTINENTS, type FifaConfederation } from "@/lib/team-i18n";
 import { db } from "./index";
 import {
@@ -537,23 +542,54 @@ export async function getUser(userId: string) {
   return u ?? null;
 }
 
+// Until knockout betting is released, hide knockout rounds from every match
+// listing (group-stage behavior is unchanged). Flip KNOCKOUT_BETTING_ENABLED
+// to surface them. Returns undefined (no filter) once enabled.
+function hideKnockoutFilter() {
+  return KNOCKOUT_BETTING_ENABLED
+    ? undefined
+    : notInArray(matches.groupLabel, [...KNOCKOUT_ROUNDS]);
+}
+
+// A knockout match with an unresolved opponent (e.g. "Mexico vs 3rd Group C/E")
+// isn't bettable — drop it from listings until the source fills in both teams.
+type MatchRow = typeof matches.$inferSelect;
+function dropUnresolvedKnockout(rows: MatchRow[]): MatchRow[] {
+  return rows.filter(
+    (m) => !(isPlaceholderTeam(m.homeTeam) || isPlaceholderTeam(m.awayTeam))
+  );
+}
+
 export async function listMatches() {
-  return db.select().from(matches).orderBy(matches.kickoff);
+  const rows = await db
+    .select()
+    .from(matches)
+    .where(hideKnockoutFilter())
+    .orderBy(matches.kickoff);
+  return dropUnresolvedKnockout(rows);
 }
 
 export async function listUpcomingMatches(limit = 12) {
-  return db
+  const rows = await db
     .select()
     .from(matches)
-    .where(inArray(matches.status, ["scheduled", "live"]))
+    .where(
+      and(inArray(matches.status, ["scheduled", "live"]), hideKnockoutFilter())
+    )
     .orderBy(matches.kickoff)
     .limit(limit);
+  return dropUnresolvedKnockout(rows);
 }
 
 /** Every fixture, played and upcoming, in kickoff order — the dashboard
  *  shows finished matches (with the user's result) instead of hiding them. */
 export async function listAllMatches() {
-  return db.select().from(matches).orderBy(matches.kickoff);
+  const rows = await db
+    .select()
+    .from(matches)
+    .where(hideKnockoutFilter())
+    .orderBy(matches.kickoff);
+  return dropUnresolvedKnockout(rows);
 }
 
 export async function getMatch(matchId: string) {

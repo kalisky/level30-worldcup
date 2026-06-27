@@ -59,6 +59,40 @@ test("DRAW direction settles on equal scores", () => {
   assert.equal(r.scoreWon, true);
 });
 
+test("knockout: direction settles on who advanced, not the score", () => {
+  // Picked AWAY to advance; legal time 1-1, away won on penalties.
+  const r = computeMatchBetSettlement(
+    bet({ directionPick: "AWAY", predictedHomeScore: 1, predictedAwayScore: 1 }),
+    1,
+    1,
+    { knockout: true, advancer: "AWAY" }
+  );
+  assert.equal(r.directionWon, true); // advanced on pens
+  assert.equal(r.scoreWon, true); // legal-time score 1-1 predicted exactly
+});
+
+test("knockout: a draw scoreline does not make HOME/AWAY direction win by score", () => {
+  // Picked HOME, but AWAY advanced after a 2-2 draw + shootout.
+  const r = computeMatchBetSettlement(
+    bet({ directionPick: "HOME", predictedHomeScore: 0, predictedAwayScore: 0 }),
+    2,
+    2,
+    { knockout: true, advancer: "AWAY" }
+  );
+  assert.equal(r.directionWon, false); // HOME did not advance
+  assert.equal(r.scoreWon, false);
+});
+
+test("knockout: direction can't win before the advancer is known", () => {
+  const r = computeMatchBetSettlement(
+    bet({ directionPick: "HOME" }),
+    1,
+    1,
+    { knockout: true, advancer: null }
+  );
+  assert.equal(r.directionWon, false);
+});
+
 test("payouts round up (ceil), never down", () => {
   // 10 * 1.65 = 16.5 -> ceil 17
   const r = computeMatchBetSettlement(

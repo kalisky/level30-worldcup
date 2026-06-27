@@ -11,6 +11,7 @@ import {
   scoreKey,
 } from "@/lib/db/schema";
 import { requireRoomUser } from "@/lib/auth-context";
+import { isKnockout } from "@/lib/knockout";
 import { listRoomsForAuthUser } from "@/lib/db/queries";
 import { recordLedger } from "@/lib/ledger";
 import { touchRoomLiveRevision } from "@/lib/live-updates";
@@ -75,12 +76,16 @@ async function applyDesiredMatchBetTx(
   const { roomId, userId, match, desired } = args;
   const { directionPick, directionStake, predictedHomeScore, predictedAwayScore, scoreStake } =
     desired;
+  const knockout = isKnockout(match.groupLabel);
 
   if (new Date(match.kickoff).getTime() <= Date.now()) {
     throw new Error("Betting closed — kickoff has already happened.");
   }
   if (match.status !== "scheduled") {
     throw new Error("This match is no longer open for changes.");
+  }
+  if (knockout && directionPick === "DRAW") {
+    throw new Error("Knockout matches have no draw — pick which team advances.");
   }
 
   const hasDirection = directionPick !== null && directionStake > 0;
@@ -125,7 +130,11 @@ async function applyDesiredMatchBetTx(
     return;
   }
 
-  if (!match.oddsHome || !match.oddsDraw || !match.oddsAway) {
+  // Knockout is a 2-way (advance) market, so there's no draw odds to require.
+  const directionOddsReady = knockout
+    ? !!match.oddsHome && !!match.oddsAway
+    : !!match.oddsHome && !!match.oddsDraw && !!match.oddsAway;
+  if (!directionOddsReady) {
     throw new Error("Direction odds aren't ready for this match yet.");
   }
   if (!match.scoreOdds) {
@@ -140,14 +149,17 @@ async function applyDesiredMatchBetTx(
   }
 
   // The row requires a pick and a score even for inactive parts; derive
-  // sensible placeholders (stake 0 keeps them out of settlement).
+  // sensible placeholders (stake 0 keeps them out of settlement). Knockout
+  // never stores DRAW — fall back to the higher predicted side (HOME on a tie).
   const storedPick: "HOME" | "DRAW" | "AWAY" =
     directionPick ??
     (predictedHomeScore! > predictedAwayScore!
       ? "HOME"
       : predictedAwayScore! > predictedHomeScore!
         ? "AWAY"
-        : "DRAW");
+        : knockout
+          ? "HOME"
+          : "DRAW");
   const storedHome = hasScore ? predictedHomeScore! : 0;
   const storedAway = hasScore ? predictedAwayScore! : 0;
 

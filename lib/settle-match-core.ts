@@ -9,6 +9,7 @@ import {
   type MatchBet,
 } from "@/lib/db/schema";
 import { recordLedger } from "@/lib/ledger";
+import { isKnockout } from "@/lib/knockout";
 import {
   touchMatchLiveRevisions,
   touchRoomLiveRevision,
@@ -29,11 +30,19 @@ export type MatchBetSettlement = {
 
 /**
  * The single source of truth for match-bet payout math. A score prediction is
- * two independent bets sharing the stake 50/50: a direction bet (the user's
- * explicit HOME/DRAW/AWAY pick, which can disagree with their predicted score)
- * and an exact-score bet. Winning payouts are rounded up (ceil) at the locked
- * odds. Used by settlement, the correction engine, and the verification cron so
- * they can never drift apart.
+ * two independent bets sharing the stake 50/50: a direction bet and an
+ * exact-score bet, each paid at the locked odds (ceil-rounded). Used by
+ * settlement, the correction engine, and the verification cron so they can
+ * never drift apart.
+ *
+ * Group stage: the direction is derived from the score (HOME/DRAW/AWAY), and a
+ * draw scoreline means the DRAW side wins.
+ *
+ * Knockout (pass `opts.advancer`): the direction bet is 2-way — it wins if the
+ * user's pick matches the side that ADVANCED (regulation, extra time, or
+ * penalties). The exact-score bet still uses the legal-time score in
+ * homeScore/awayScore, which may be a draw. If `advancer` is null (not yet
+ * known) the direction can't win.
  */
 export function computeMatchBetSettlement(
   bet: Pick<
@@ -47,12 +56,13 @@ export function computeMatchBetSettlement(
     | "scoreOddsLocked"
   >,
   homeScore: number,
-  awayScore: number
+  awayScore: number,
+  opts?: { knockout?: boolean; advancer?: "HOME" | "AWAY" | null }
 ): MatchBetSettlement {
-  const actualDirection: "HOME" | "DRAW" | "AWAY" =
-    homeScore > awayScore ? "HOME" : awayScore > homeScore ? "AWAY" : "DRAW";
-
-  const directionWon = bet.directionPick === actualDirection;
+  const directionWon = opts?.knockout
+    ? opts.advancer != null && bet.directionPick === opts.advancer
+    : bet.directionPick ===
+      (homeScore > awayScore ? "HOME" : awayScore > homeScore ? "AWAY" : "DRAW");
   const scoreWon =
     bet.predictedHomeScore === homeScore &&
     bet.predictedAwayScore === awayScore;
@@ -89,10 +99,14 @@ export async function settleMatchBetsForRoom(
     match: Match;
     homeScore: number;
     awayScore: number;
+    /** Knockout only: which side advanced. Defaults to match.advancer. */
+    advancer?: "HOME" | "AWAY" | null;
     repair?: boolean;
   }
 ): Promise<{ betsSettled: number; totalPaidOut: number }> {
   const { roomId, actorId, match, homeScore, awayScore } = args;
+  const knockout = isKnockout(match.groupLabel);
+  const advancer = args.advancer ?? match.advancer ?? null;
 
   const openBets = await tx
     .select()
@@ -110,7 +124,8 @@ export async function settleMatchBetsForRoom(
     const { directionWon, scoreWon, payout } = computeMatchBetSettlement(
       bet,
       homeScore,
-      awayScore
+      awayScore,
+      { knockout, advancer }
     );
     totalPaidOut += payout;
 
@@ -156,12 +171,14 @@ export async function settleMatchBetsForRoom(
     payload: {
       homeScore,
       awayScore,
-      direction:
-        homeScore > awayScore
+      direction: knockout
+        ? advancer
+        : homeScore > awayScore
           ? "HOME"
           : awayScore > homeScore
             ? "AWAY"
             : "DRAW",
+      ...(knockout ? { knockout: true, advancer } : {}),
       betsSettled: openBets.length,
       totalPaidOut,
       ...(args.repair ? { repair: true } : {}),

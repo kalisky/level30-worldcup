@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { matchBets, matches, rooms } from "@/lib/db/schema";
 import { buildWikipediaIndex, resolveFromWikipedia } from "@/lib/result-oracle";
 import { settleMatchBetsForRoom } from "@/lib/settle-match-core";
+import { isKnockout } from "@/lib/knockout";
 import { revalidateRoomChipPaths } from "@/lib/revalidate-room-chip-paths";
 
 // A match can't be over before kickoff + 90' + half-time + stoppage (giving 10 minutes for the combined stoppage).
@@ -125,7 +126,8 @@ export async function autoSettleFinishedMatches(options?: {
       .returning({ id: matches.id });
     if (claimed.length === 0) continue;
 
-    const result = resolveFromWikipedia(match, wikiIndex);
+    const knockout = isKnockout(match.groupLabel);
+    const result = resolveFromWikipedia(match, wikiIndex, knockout);
 
     if (
       !result.found ||
@@ -149,6 +151,19 @@ export async function autoSettleFinishedMatches(options?: {
 
     const homeScore = result.homeScore;
     const awayScore = result.awayScore;
+    const advancer = result.advancer ?? null;
+
+    // Knockout decided on penalties but we couldn't read the shootout winner —
+    // don't settle the direction bets blind; wait for the next check.
+    if (knockout && homeScore === awayScore && advancer === null) {
+      checked.push({
+        matchId: match.id,
+        match: label,
+        found: false,
+        reasoning: `${result.reasoning} (level after extra time — penalty-shootout winner not yet confirmed; will retry)`,
+      });
+      continue;
+    }
 
     const settledRoomIds: string[] = [];
     let betsSettled = 0;
@@ -164,7 +179,12 @@ export async function autoSettleFinishedMatches(options?: {
 
       await tx
         .update(matches)
-        .set({ homeScore, awayScore, status: "final" })
+        .set({
+          homeScore,
+          awayScore,
+          status: "final",
+          ...(knockout ? { advancer } : {}),
+        })
         .where(eq(matches.id, match.id));
 
       const roomsWithBets = await tx
@@ -181,6 +201,7 @@ export async function autoSettleFinishedMatches(options?: {
           match,
           homeScore,
           awayScore,
+          advancer,
         });
         settledRoomIds.push(roomId);
         betsSettled += res.betsSettled;

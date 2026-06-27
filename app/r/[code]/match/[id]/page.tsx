@@ -238,6 +238,7 @@ export default async function MatchPage(props: {
       <MatchBetPanel
         roomCode={room.code}
         matchId={match.id}
+        groupLabel={match.groupLabel}
         matchStatus={match.status}
         kickoff={new Date(match.kickoff).toISOString()}
         myBet={myBet}

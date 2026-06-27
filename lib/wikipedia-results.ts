@@ -129,3 +129,82 @@ export async function fetchAllGroupResults(): Promise<{
   });
   return { results, errors };
 }
+
+// --- Knockout stage -------------------------------------------------------
+
+export type WikipediaKnockoutResult = {
+  homeTeam: string;
+  awayTeam: string;
+  /** Legal-time score (after 90'/120', before penalties) — may be a draw. */
+  homeScore: number;
+  awayScore: number;
+  /** Which side advanced. Null if it can't be determined (e.g. pen score
+   *  missing) — callers should treat that as unverified, never auto-settle. */
+  advancer: "HOME" | "AWAY" | null;
+};
+
+/** Inner HTML of the first cell with the given class within a footballbox block. */
+function firstCellHtml(block: string, className: string): string {
+  const m = new RegExp(
+    `class="[^"]*\\b${className}\\b[^"]*"[^>]*>([\\s\\S]*?)</(?:th|td)>`
+  ).exec(block);
+  return m ? m[1] : "";
+}
+
+/**
+ * Parse the 2026 knockout-stage page's footballbox blocks. The legal-time
+ * score comes from `fscore`; the advancer is the higher legal-time side, or —
+ * on a draw — the winner of the penalty shootout, read from the `<th>4–2</th>`
+ * score Wikipedia renders inside the "Penalties" row. Validated against the
+ * 2022 knockout page (all shootouts resolved correctly).
+ */
+export function parseKnockoutHtml(html: string): WikipediaKnockoutResult[] {
+  const blocks = html.split(/class="[^"]*\bfootballbox\b[^"]*"/);
+  const out: WikipediaKnockoutResult[] = [];
+  for (let i = 1; i < blocks.length; i++) {
+    const block = blocks[i].slice(0, 9000); // bound to this match's box
+    const homeTeam = cellText(firstCellHtml(block, "fhome"));
+    const awayTeam = cellText(firstCellHtml(block, "faway"));
+    const sm = /(\d+)\s*[–\-:]\s*(\d+)/.exec(cellText(firstCellHtml(block, "fscore")));
+    if (!sm || !homeTeam || !awayTeam) continue;
+    const homeScore = Number(sm[1]);
+    const awayScore = Number(sm[2]);
+
+    let advancer: "HOME" | "AWAY" | null =
+      homeScore > awayScore ? "HOME" : awayScore > homeScore ? "AWAY" : null;
+
+    if (advancer === null) {
+      // Draw → decided on penalties. The shootout score is a <th>H–A</th>
+      // immediately after the "Penalties" sub-header.
+      const pIdx = block.search(/>\s*Penalties\s*</i);
+      if (pIdx >= 0) {
+        // Decode entities first so an en-dash entity (&#8211;) in the shootout
+        // score matches the same way a literal "–" does.
+        const pm = /<th[^>]*>\s*(\d+)\s*[–\-:]\s*(\d+)\s*<\/th>/.exec(
+          decodeEntities(block.slice(pIdx))
+        );
+        if (pm) {
+          const ph = Number(pm[1]);
+          const pa = Number(pm[2]);
+          advancer = ph > pa ? "HOME" : pa > ph ? "AWAY" : null;
+        }
+      }
+    }
+
+    out.push({ homeTeam, awayTeam, homeScore, awayScore, advancer });
+  }
+  return out;
+}
+
+/** Fetch + parse the 2026 World Cup knockout-stage page. */
+export async function fetchKnockoutResults(): Promise<WikipediaKnockoutResult[]> {
+  const url = "https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_knockout_stage";
+  const res = await fetch(url, {
+    headers: { "User-Agent": WIKI_USER_AGENT },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Wikipedia knockout stage returned HTTP ${res.status}`);
+  }
+  return parseKnockoutHtml(await res.text());
+}

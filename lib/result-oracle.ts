@@ -39,6 +39,7 @@ const NAME_ALIASES: Record<string, string> = {
   turkiye: "turkey",
   czechia: "czechrepublic",
   bosnia: "bosniaandherzegovina",
+  caboverde: "capeverde",
 };
 
 function canon(name: string): string {

@@ -23,7 +23,7 @@ function roundForMatchNo(n: number): string | null {
   if (n >= 97 && n <= 100) return "QF";
   if (n >= 101 && n <= 102) return "SF";
   if (n === 103) return "3RD";
-  if (n === 104) return "F";
+  if (n === 104) return "FINAL";
   return null;
 }
 

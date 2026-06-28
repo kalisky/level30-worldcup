@@ -88,7 +88,9 @@ export async function correctMatchSettlement(
           homeScore,
           awayScore,
           status: "final",
-          ...(knockout ? { advancer } : {}),
+          // Always write advancer (null for group) so a stale value from a
+          // prior mis-settlement is cleared, not just overwritten for knockout.
+          advancer,
         })
         .where(eq(matches.id, match.id));
       await touchMatchLiveRevisions(tx, match.id);

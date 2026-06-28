@@ -6,8 +6,10 @@
 //      penalties), which CAN be a draw.
 // Settlement therefore needs the advancer (HOME/AWAY) stored on the match.
 
-/** groupLabel values used for knockout rounds (matches.groupLabel is free text). */
-export const KNOCKOUT_ROUNDS = ["R32", "R16", "QF", "SF", "3RD", "F"] as const;
+// groupLabel values used for knockout rounds (matches.groupLabel is free text).
+// NOTE: the Final is "FINAL", NOT "F" — "F" collides with group F and would
+// make every group-F match look like a knockout tie.
+export const KNOCKOUT_ROUNDS = ["R32", "R16", "QF", "SF", "3RD", "FINAL"] as const;
 export type KnockoutRound = (typeof KNOCKOUT_ROUNDS)[number];
 
 const KNOCKOUT_SET = new Set<string>(KNOCKOUT_ROUNDS);
@@ -22,7 +24,7 @@ const ROUND_NAMES: Record<KnockoutRound, string> = {
   QF: "Quarter-final",
   SF: "Semi-final",
   "3RD": "Third place",
-  F: "Final",
+  FINAL: "Final",
 };
 
 export function knockoutRoundName(groupLabel: string): string {

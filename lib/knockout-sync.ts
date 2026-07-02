@@ -201,7 +201,18 @@ export async function syncKnockoutFixtures(options?: {
     result.resolved += 1;
     const home = normalize(f.home);
     const away = normalize(f.away);
-    if (existingByPair.has(pairKey(home, away))) continue; // already seeded
+
+    const existingRow = existingByPair.get(pairKey(home, away));
+    if (existingRow) {
+      // Already seeded. Odds are generated once, at insert time, via a single
+      // Gemini call. If that call ever failed the row is left oddsless — and
+      // because the fixture now exists it would be skipped forever. Backfill it
+      // here so a later run self-heals instead of stranding the match.
+      if (!options?.rowsOnly && isMissingOdds(existingRow)) {
+        await generateAndStoreOdds(result, existingRow.id, home, away, f.round, f.kickoff);
+      }
+      continue;
+    }
 
     const [row] = await db
       .insert(matches)
@@ -210,32 +221,66 @@ export async function syncKnockoutFixtures(options?: {
     result.inserted.push({ home, away });
 
     if (!options?.rowsOnly) {
-      try {
-        const odds = await generateKnockoutOdds({
-          homeTeam: home,
-          awayTeam: away,
-          roundLabel: f.round,
-          kickoff: f.kickoff,
-        });
-        await db
-          .update(matches)
-          .set({
-            oddsHome: odds.oddsHome.toFixed(2),
-            oddsAway: odds.oddsAway.toFixed(2),
-            oddsDraw: null,
-            scoreOdds: odds.scoreOdds,
-            oddsLastSyncedAt: new Date(),
-            oddsLastSyncStatus: "success",
-          })
-          .where(eq(matches.id, row.id));
-        result.oddsGenerated += 1;
-      } catch (e) {
-        result.errors.push(
-          `odds ${home} vs ${away}: ${e instanceof Error ? e.message : String(e)}`
-        );
-      }
+      await generateAndStoreOdds(result, row.id, home, away, f.round, f.kickoff);
     }
   }
 
   return result;
+}
+
+/** True when a match still lacks the 2-way direction odds or the score grid. */
+function isMissingOdds(m: {
+  oddsHome: string | null;
+  oddsAway: string | null;
+  scoreOdds: Record<string, number> | null;
+}): boolean {
+  const hasScore = !!m.scoreOdds && Object.keys(m.scoreOdds).length > 0;
+  return m.oddsHome == null || m.oddsAway == null || !hasScore;
+}
+
+/**
+ * Generate knockout odds for a match and persist them. On failure, records the
+ * error on the row (status "error") so it's visible and gets retried on the next
+ * sync — rather than silently leaving the status at "never".
+ */
+async function generateAndStoreOdds(
+  result: KnockoutSyncResult,
+  matchId: string,
+  home: string,
+  away: string,
+  round: string,
+  kickoff: Date
+): Promise<void> {
+  try {
+    const odds = await generateKnockoutOdds({
+      homeTeam: home,
+      awayTeam: away,
+      roundLabel: round,
+      kickoff,
+    });
+    await db
+      .update(matches)
+      .set({
+        oddsHome: odds.oddsHome.toFixed(2),
+        oddsAway: odds.oddsAway.toFixed(2),
+        oddsDraw: null,
+        scoreOdds: odds.scoreOdds,
+        oddsLastSyncedAt: new Date(),
+        oddsLastSyncStatus: "success",
+        oddsLastSyncError: null,
+      })
+      .where(eq(matches.id, matchId));
+    result.oddsGenerated += 1;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    result.errors.push(`odds ${home} vs ${away}: ${msg}`);
+    await db
+      .update(matches)
+      .set({
+        oddsLastSyncStatus: "error",
+        oddsLastSyncError: msg,
+        oddsLastSyncedAt: new Date(),
+      })
+      .where(eq(matches.id, matchId));
+  }
 }

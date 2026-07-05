@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { isAppAdmin } from "@/lib/app-admin";
 import { db } from "@/lib/db";
@@ -25,7 +25,13 @@ export default async function AdminRoomPage(props: {
   const [room] = await db.select().from(rooms).where(eq(rooms.code, code)).limit(1);
   if (!room) notFound();
 
-  const [participants, matchBetCounts, customWagerCounts] = await Promise.all([
+  const [
+    participantRows,
+    matchBetCounts,
+    customWagerCounts,
+    openMatchStakes,
+    openWagerStakes,
+  ] = await Promise.all([
     db
       .select({
         id: users.id,
@@ -37,8 +43,7 @@ export default async function AdminRoomPage(props: {
       })
       .from(users)
       .leftJoin(authUsers, eq(authUsers.id, users.authUserId))
-      .where(eq(users.roomId, room.id))
-      .orderBy(desc(users.chips)),
+      .where(eq(users.roomId, room.id)),
     db
       .select({
         userId: matchBets.userId,
@@ -56,11 +61,55 @@ export default async function AdminRoomPage(props: {
       .innerJoin(customBets, eq(customBets.id, customWagers.customBetId))
       .where(and(eq(customBets.roomId, room.id)))
       .groupBy(customWagers.userId),
+    // Stakes locked in still-open bets — added back so chip totals match the
+    // player-facing leaderboard (which shows balance + chips in play), not the
+    // spent-down "available" balance.
+    db
+      .select({
+        userId: matchBets.userId,
+        stake: sql<number>`coalesce(sum(${matchBets.totalStake}), 0)::int`,
+      })
+      .from(matchBets)
+      .where(and(eq(matchBets.roomId, room.id), eq(matchBets.status, "open")))
+      .groupBy(matchBets.userId),
+    db
+      .select({
+        userId: customWagers.userId,
+        stake: sql<number>`coalesce(sum(${customWagers.stake}), 0)::int`,
+      })
+      .from(customWagers)
+      .innerJoin(customBets, eq(customBets.id, customWagers.customBetId))
+      .where(and(eq(customBets.roomId, room.id), eq(customWagers.status, "open")))
+      .groupBy(customWagers.userId),
   ]);
 
   const matchBetsByUser = new Map(matchBetCounts.map((r) => [r.userId, r.count]));
   const customWagersByUser = new Map(customWagerCounts.map((r) => [r.userId, r.count]));
-  const totalChips = participants.reduce((sum, p) => sum + p.chips, 0);
+
+  const openBetChipsByUser = new Map<string, number>();
+  for (const r of openMatchStakes) {
+    openBetChipsByUser.set(r.userId, r.stake);
+  }
+  for (const r of openWagerStakes) {
+    openBetChipsByUser.set(r.userId, (openBetChipsByUser.get(r.userId) ?? 0) + r.stake);
+  }
+
+  // Leaderboard-style standing: available balance + chips locked in open bets,
+  // sorted the same way the room leaderboard sorts (total, then available,
+  // then name).
+  const participants = participantRows
+    .map((p) => {
+      const openBetChips = openBetChipsByUser.get(p.id) ?? 0;
+      return { ...p, openBetChips, chipsIncludingOpenBets: p.chips + openBetChips };
+    })
+    .sort((a, b) => {
+      if (b.chipsIncludingOpenBets !== a.chipsIncludingOpenBets)
+        return b.chipsIncludingOpenBets - a.chipsIncludingOpenBets;
+      if (b.chips !== a.chips) return b.chips - a.chips;
+      return a.name.localeCompare(b.name);
+    });
+
+  const totalChips = participants.reduce((sum, p) => sum + p.chipsIncludingOpenBets, 0);
 
   const fmtDate = (d: Date) =>
     new Date(d).toLocaleDateString("en-GB", {
@@ -116,7 +165,12 @@ export default async function AdminRoomPage(props: {
                 </td>
                 <td className="px-4 py-3 text-slate-500">{p.email || "—"}</td>
                 <td className="px-4 py-3 text-right font-mono tabular-nums text-[#1E3A8A]">
-                  {p.chips.toLocaleString()}
+                  {p.chipsIncludingOpenBets.toLocaleString()}
+                  {p.openBetChips > 0 && (
+                    <span className="mt-0.5 block text-[0.7rem] font-medium text-slate-400">
+                      {p.openBetChips.toLocaleString()} in play
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums">
                   {matchBetsByUser.get(p.id) ?? 0}

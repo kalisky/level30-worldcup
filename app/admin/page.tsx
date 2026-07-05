@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { desc, eq, gt, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNotNull, sql } from "drizzle-orm";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { isAppAdmin } from "@/lib/app-admin";
 import { db } from "@/lib/db";
@@ -88,6 +88,10 @@ export default async function AdminPage() {
     customBetActivity,
     customWagerActivity,
     customBetsByRoomRows,
+    openMatchByRoomRows,
+    openWagerByRoomRows,
+    openMatchByAuthRows,
+    openWagerByAuthRows,
   ] = await Promise.all([
     scalar(db.select({ value: sql<number>`count(*)::int` }).from(authUsers)),
     scalar(db.select({ value: sql<number>`count(*)::int` }).from(rooms)),
@@ -194,11 +198,80 @@ export default async function AdminPage() {
       })
       .from(customBets)
       .groupBy(customBets.roomId),
+    // Chips locked in still-open bets, so chip totals below match the
+    // player-facing leaderboard (balance + chips in play) rather than the
+    // spent-down "available" balance. Aggregated per room and per account.
+    db
+      .select({
+        roomId: matchBets.roomId,
+        stake: sql<number>`coalesce(sum(${matchBets.totalStake}), 0)::int`,
+      })
+      .from(matchBets)
+      .where(eq(matchBets.status, "open"))
+      .groupBy(matchBets.roomId),
+    db
+      .select({
+        roomId: customBets.roomId,
+        stake: sql<number>`coalesce(sum(${customWagers.stake}), 0)::int`,
+      })
+      .from(customWagers)
+      .innerJoin(customBets, eq(customBets.id, customWagers.customBetId))
+      .where(eq(customWagers.status, "open"))
+      .groupBy(customBets.roomId),
+    db
+      .select({
+        authUserId: users.authUserId,
+        stake: sql<number>`coalesce(sum(${matchBets.totalStake}), 0)::int`,
+      })
+      .from(matchBets)
+      .innerJoin(users, eq(users.id, matchBets.userId))
+      .where(and(eq(matchBets.status, "open"), isNotNull(users.authUserId)))
+      .groupBy(users.authUserId),
+    db
+      .select({
+        authUserId: users.authUserId,
+        stake: sql<number>`coalesce(sum(${customWagers.stake}), 0)::int`,
+      })
+      .from(customWagers)
+      .innerJoin(users, eq(users.id, customWagers.userId))
+      .where(and(eq(customWagers.status, "open"), isNotNull(users.authUserId)))
+      .groupBy(users.authUserId),
   ]);
 
   const customBetsByRoom = new Map(
     customBetsByRoomRows.map((r) => [r.roomId, { inRoom: r.inRoom, inGame: r.inGame }])
   );
+
+  // Chips locked in open bets, added back so the totals below match the
+  // player-facing leaderboard (balance + chips in play).
+  const openByRoom = new Map<string, number>();
+  for (const r of openMatchByRoomRows) {
+    openByRoom.set(r.roomId, (openByRoom.get(r.roomId) ?? 0) + r.stake);
+  }
+  for (const r of openWagerByRoomRows) {
+    openByRoom.set(r.roomId, (openByRoom.get(r.roomId) ?? 0) + r.stake);
+  }
+  const openByAuth = new Map<string, number>();
+  for (const r of openMatchByAuthRows) {
+    if (r.authUserId)
+      openByAuth.set(r.authUserId, (openByAuth.get(r.authUserId) ?? 0) + r.stake);
+  }
+  for (const r of openWagerByAuthRows) {
+    if (r.authUserId)
+      openByAuth.set(r.authUserId, (openByAuth.get(r.authUserId) ?? 0) + r.stake);
+  }
+  const totalOpenStakes = [...openByRoom.values()].reduce((s, v) => s + v, 0);
+
+  // Fold open-bet stakes into each room's and account's chip total so admin
+  // matches the leaderboard. Accounts get re-sorted since the added stakes can
+  // change the order (the SQL had ordered by available chips only).
+  const roomRowsWithOpen = roomRows.map((r) => ({
+    ...r,
+    totalChips: r.totalChips + (openByRoom.get(r.id) ?? 0),
+  }));
+  const userRowsWithOpen = userRows
+    .map((u) => ({ ...u, totalChips: u.totalChips + (openByAuth.get(u.id) ?? 0) }))
+    .sort((a, b) => b.totalChips - a.totalChips);
 
   const activityByRoom = new Map<string, RoomActivity>();
   mergeActivity(activityByRoom, matchBetActivity);
@@ -218,7 +291,7 @@ export default async function AdminPage() {
 
   // Most active rooms first: by 7-day action count, then by recency of the
   // last action, then by size.
-  const sortedRooms = [...roomRows].sort((a, b) => {
+  const sortedRooms = [...roomRowsWithOpen].sort((a, b) => {
     const aa = activityByRoom.get(a.id) ?? { recent: 0, lastAt: null };
     const bb = activityByRoom.get(b.id) ?? { recent: 0, lastAt: null };
     if (bb.recent !== aa.recent) return bb.recent - aa.recent;
@@ -234,7 +307,10 @@ export default async function AdminPage() {
     { label: "Active sessions", value: activeSessions.toLocaleString() },
     { label: "Rooms", value: totalRooms.toLocaleString() },
     { label: "Room memberships", value: totalMemberships.toLocaleString() },
-    { label: "Chips in circulation", value: chipsInCirculation.toLocaleString() },
+    {
+      label: "Chips in circulation",
+      value: (chipsInCirculation + totalOpenStakes).toLocaleString(),
+    },
     {
       label: "Match bets (open)",
       value: `${totalMatchBets.toLocaleString()} (${openMatchBets.toLocaleString()})`,
@@ -364,7 +440,7 @@ export default async function AdminPage() {
 
       <section>
         <h2 className="mb-3 text-sm font-bold uppercase tracking-[0.18em] text-slate-500">
-          Accounts ({userRows.length})
+          Accounts ({userRowsWithOpen.length})
         </h2>
         <div className="overflow-x-auto rounded-[22px] border border-[#dbe5f2] bg-white">
           <table className="w-full text-sm">
@@ -378,7 +454,7 @@ export default async function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {userRows.map((u) => (
+              {userRowsWithOpen.map((u) => (
                 <tr key={u.id} className="border-b border-[#f1f5fb] last:border-0">
                   <td className="px-4 py-3 font-bold text-[#1E3A8A]">
                     {u.displayName || u.googleName || "—"}
